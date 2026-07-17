@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { SignOutButton } from "@clerk/nextjs";
-import { LogOut, MessageSquare, Settings, UserRound } from "lucide-react";
+import { signOut } from "next-auth/react";
+import { LogOut, MessageSquare, Send, Settings, UserRound } from "lucide-react";
 
 type Message = {
+  id?: string;
   role: "assistant" | "user";
-  text: string;
+  content: string;
 };
 
 export function AppShell({
@@ -20,7 +21,7 @@ export function AppShell({
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
-      text: "You are signed in. Paste a job description, ask for help with a CV, or tell me what you want to build next."
+      content: "Paste your first job link or job description here when the chat backend is connected."
     }
   ]);
 
@@ -31,10 +32,11 @@ export function AppShell({
 
     setMessages((current) => [
       ...current,
-      { role: "user", text: trimmed },
+      { id: `user-${Date.now()}`, role: "user", content: trimmed },
       {
+        id: `assistant-${Date.now()}`,
         role: "assistant",
-        text: "Got it. The next backend step will connect this chat to profile setup and CV generation."
+        content: "Auth is ready. The chat API can be connected here next."
       }
     ]);
     setMessage("");
@@ -65,12 +67,14 @@ export function AppShell({
           </button>
         </nav>
 
-        <SignOutButton>
-          <button className="logout-button" type="button">
-            <LogOut size={18} />
-            Logout
-          </button>
-        </SignOutButton>
+        <button
+          className="logout-button"
+          type="button"
+          onClick={() => signOut({ callbackUrl: "/sign-in" })}
+        >
+          <LogOut size={18} />
+          Logout
+        </button>
       </aside>
 
       <section className="chat-area">
@@ -81,8 +85,8 @@ export function AppShell({
 
         <div className="message-list">
           {messages.map((item, index) => (
-            <article className={`message ${item.role}`} key={`${item.role}-${index}`}>
-              <p>{item.text}</p>
+            <article className={`message ${item.role}`} key={item.id ?? `${item.role}-${index}`}>
+              <p>{item.content}</p>
             </article>
           ))}
         </div>
@@ -91,9 +95,12 @@ export function AppShell({
           <input
             value={message}
             onChange={(event) => setMessage(event.target.value)}
-            placeholder="Type here..."
+            placeholder="Ask CVhelp..."
           />
-          <button type="submit">Send</button>
+          <button type="submit" disabled={!message.trim()}>
+            <Send size={18} />
+            Send
+          </button>
         </form>
       </section>
     </main>

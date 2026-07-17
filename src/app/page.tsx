@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { currentUser } from "@clerk/nextjs/server";
+import { getServerSession } from "next-auth";
 import { ArrowRight } from "lucide-react";
+import { authOptions } from "@/lib/auth";
 
 export default async function Home() {
-  const user = await currentUser();
+  const session = await getServerSession(authOptions);
 
   return (
     <main className="auth-shell">
@@ -15,11 +16,11 @@ export default async function Home() {
           a time.
         </p>
         <div className="auth-actions">
-          <Link className="primary-link" href={user ? "/app" : "/sign-in"}>
-            {user ? "Open workspace" : "Login"}
+          <Link className="primary-link" href={session ? "/app" : "/sign-in"}>
+            {session ? "Open workspace" : "Login"}
             <ArrowRight size={18} />
           </Link>
-          {!user ? (
+          {!session ? (
             <Link className="secondary-link" href="/sign-up">
               Signup
             </Link>

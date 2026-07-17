@@ -3,9 +3,7 @@ node_modules
 out
 .env
 .env.local
-.clerk
 *.log
 *.tsbuildinfo
-
-# clerk configuration (can include secrets)
-/.clerk/
+prisma/dev.db
+prisma/dev.db-journal

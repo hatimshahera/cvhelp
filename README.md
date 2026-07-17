@@ -1,32 +1,56 @@
 # CVhelp
 
-Fresh CVhelp app shell: Clerk authentication, Google/Apple sign-in entry points, protected chat workspace, and left-side settings/logout rail.
+Fresh CVhelp app shell with owned, database-backed authentication through Auth.js and Prisma. The app supports email/password accounts locally and can enable Google, Apple, GitHub, and LinkedIn as provider integrations through environment variables.
 
 ## Local setup
 
 ```bash
 npm install
 cp .env.example .env.local
+npm run db:push
 npm run dev
 ```
 
-Fill `.env.local` with Clerk keys from the Clerk dashboard:
+Set the required local values:
 
-```bash
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_your_key_here
-CLERK_SECRET_KEY=sk_test_your_key_here
-NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
-NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
-NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/app
-NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/app
+```env
+DATABASE_URL="file:./dev.db"
+NEXTAUTH_URL="http://localhost:3000"
+NEXTAUTH_SECRET="generate-a-long-random-secret"
 ```
 
-Enable Google and Apple sign-in inside Clerk's dashboard. Apple sign-in also requires Apple Developer configuration.
+Generate a secret with:
+
+```bash
+openssl rand -base64 32
+```
+
+## OAuth providers
+
+Google and Apple buttons enable automatically when these are present in `.env.local`:
+
+```env
+GOOGLE_CLIENT_ID=""
+GOOGLE_CLIENT_SECRET=""
+APPLE_ID=""
+APPLE_SECRET=""
+```
+
+GitHub and LinkedIn provider wiring is already present for later account linking/profile enrichment:
+
+```env
+GITHUB_ID=""
+GITHUB_SECRET=""
+LINKEDIN_CLIENT_ID=""
+LINKEDIN_CLIENT_SECRET=""
+```
 
 ## Current scope
 
 - Public landing page with login/signup.
-- Clerk sign-in/sign-up pages.
+- Custom sign-in/sign-up pages.
+- Email/password account creation with hashed passwords.
+- Optional Google and Apple sign-in providers.
 - Protected `/app` route.
 - Chat interface after login.
 - Left settings rail with logout.
