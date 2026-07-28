@@ -13,6 +13,7 @@ const chatSchema = z.object({
 });
 
 const modeSchema = z.enum(["build_profile", "general"]).default("build_profile");
+const DEFAULT_OPENAI_MODEL = "gpt-5-mini";
 
 const defaultChecklist = [
   { id: "cv", label: "Add current CV", done: false },
@@ -39,6 +40,12 @@ type ProfileBankShape = {
 function toTitle(message: string) {
   const compact = message.replace(/\s+/g, " ").trim();
   return compact.length > 58 ? `${compact.slice(0, 58)}...` : compact || "New chat";
+}
+
+function getOpenAIModel() {
+  const configured = process.env.OPENAI_MODEL?.trim();
+  if (!configured || configured === "gpt-5.6-luna") return DEFAULT_OPENAI_MODEL;
+  return configured;
 }
 
 function summarizeProfileBank(profileBank: {
@@ -178,7 +185,7 @@ async function updateMasterProfile({
 }) {
   try {
     const response = await openai.responses.create({
-      model: process.env.OPENAI_MODEL ?? "gpt-5.6-luna",
+      model: getOpenAIModel(),
       instructions: [
         "Update a user's private career master profile JSON from the latest chat turn.",
         "Return only valid JSON. No markdown. No prose.",
@@ -348,7 +355,7 @@ export async function POST(request: Request) {
         : "";
 
     const response = await openai.responses.create({
-      model: process.env.OPENAI_MODEL ?? "gpt-5.6-luna",
+      model: getOpenAIModel(),
       instructions: getInstructions(mode),
       input: `The signed-in user's name is ${user.name}. Continue this private conversation.${profileContext}\n\n${transcript}`
     });
