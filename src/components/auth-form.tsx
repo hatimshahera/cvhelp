@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { useState } from "react";
+import { ArrowRight, CheckCircle2, LockKeyhole, Mail } from "lucide-react";
 
 type EnabledProviders = {
   google: boolean;
@@ -21,6 +22,10 @@ export function AuthForm({
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isSignup = mode === "sign-up";
+  const title = isSignup ? "Create your CVhelp account" : "Sign in to CVhelp";
+  const subtitle = isSignup
+    ? "Start with email and password, or use a connected provider once OAuth is enabled."
+    : "Return to your private application workspace.";
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -68,31 +73,36 @@ export function AuthForm({
   }
 
   return (
-    <section className="auth-panel">
-      <div>
-        <p className="brand">CVhelp</p>
-        <h1>{isSignup ? "Create your account." : "Welcome back."}</h1>
-        <p className="lead">
-          {isSignup
-            ? "Use your email now, or connect Google and Apple once provider keys are added."
-            : "Sign in to continue to your private workspace."}
-        </p>
+    <section className="auth-panel" aria-labelledby="auth-title">
+      <div className="auth-intro">
+        <Link className="brand auth-brand" href="/">
+          CVhelp
+        </Link>
+        <p className="auth-kicker">{isSignup ? "New workspace" : "Private workspace"}</p>
+        <h1 id="auth-title">{title}</h1>
+        <p className="lead">{subtitle}</p>
       </div>
 
       <div className="oauth-grid">
         <button
+          className="provider-button"
           type="button"
           onClick={() => signIn("google", { callbackUrl: "/app" })}
           disabled={!enabledProviders.google}
+          aria-describedby={!enabledProviders.google ? "provider-status" : undefined}
         >
-          Continue with Google
+          <span className="provider-mark">G</span>
+          <span>Continue with Google</span>
         </button>
         <button
+          className="provider-button"
           type="button"
           onClick={() => signIn("apple", { callbackUrl: "/app" })}
           disabled={!enabledProviders.apple}
+          aria-describedby={!enabledProviders.apple ? "provider-status" : undefined}
         >
-          Continue with Apple
+          <span className="provider-mark">A</span>
+          <span>Continue with Apple</span>
         </button>
       </div>
 
@@ -106,34 +116,56 @@ export function AuthForm({
         {isSignup ? (
           <label>
             Name
-            <input name="name" autoComplete="name" minLength={2} required />
+            <input
+              name="name"
+              autoComplete="name"
+              minLength={2}
+              placeholder="Jane Applicant"
+              required
+            />
           </label>
         ) : null}
         <label>
           Email
-          <input name="email" type="email" autoComplete="email" required />
+          <span className="input-frame">
+            <Mail size={17} />
+            <input
+              name="email"
+              type="email"
+              autoComplete="email"
+              placeholder="you@example.com"
+              required
+            />
+          </span>
         </label>
         <label>
           Password
-          <input
-            name="password"
-            type="password"
-            autoComplete={isSignup ? "new-password" : "current-password"}
-            minLength={isSignup ? 10 : undefined}
-            required
-          />
+          <span className="input-frame">
+            <LockKeyhole size={17} />
+            <input
+              name="password"
+              type="password"
+              autoComplete={isSignup ? "new-password" : "current-password"}
+              minLength={isSignup ? 10 : undefined}
+              placeholder={isSignup ? "At least 10 characters" : "Your password"}
+              required
+            />
+          </span>
         </label>
 
         {error ? <p className="form-error">{error}</p> : null}
 
         <button className="submit-button" type="submit" disabled={isSubmitting}>
-          {isSubmitting
-            ? isSignup
-              ? "Creating account..."
-              : "Signing in..."
-            : isSignup
-              ? "Create account"
-              : "Sign in"}
+          <span>
+            {isSubmitting
+              ? isSignup
+                ? "Creating account..."
+                : "Signing in..."
+              : isSignup
+                ? "Create account"
+                : "Sign in"}
+          </span>
+          <ArrowRight size={18} />
         </button>
       </form>
 
@@ -145,10 +177,10 @@ export function AuthForm({
       </p>
 
       {!enabledProviders.google || !enabledProviders.apple ? (
-        <p className="provider-note">
-          Google and Apple buttons enable automatically when their environment
-          variables are configured.
-        </p>
+        <div className="provider-note" id="provider-status">
+          <CheckCircle2 size={16} />
+          <p>Google and Apple unlock when their OAuth environment variables are added.</p>
+        </div>
       ) : null}
     </section>
   );

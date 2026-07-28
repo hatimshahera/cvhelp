@@ -36,6 +36,35 @@ APPLE_ID=""
 APPLE_SECRET=""
 ```
 
+Use these callback URLs in the provider dashboards:
+
+```text
+https://your-domain.com/api/auth/callback/google
+https://your-domain.com/api/auth/callback/apple
+```
+
+For local testing, use:
+
+```text
+http://localhost:3000/api/auth/callback/google
+http://localhost:3000/api/auth/callback/apple
+```
+
+Google setup:
+
+- Create OAuth credentials in Google Cloud Console.
+- Add the production and local callback URLs above as authorized redirect URIs.
+- Set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in Vercel.
+
+Apple setup:
+
+- Create a Services ID in Apple Developer.
+- Add the production callback URL as the return URL.
+- Generate the client secret JWT for Sign in with Apple.
+- Set `APPLE_ID` to the Services ID and `APPLE_SECRET` to that generated JWT in Vercel.
+
+Also make sure `NEXTAUTH_URL` is the production site URL in Vercel, not the local URL.
+
 GitHub and LinkedIn provider wiring is already present for later account linking/profile enrichment:
 
 ```env
