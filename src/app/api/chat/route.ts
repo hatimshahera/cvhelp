@@ -8,7 +8,7 @@ import { prisma } from "@/lib/prisma";
 
 const chatSchema = z.object({
   message: z.string().trim().min(1, "Enter a message.").max(8000),
-  conversationId: z.string().optional(),
+  conversationId: z.string().nullable().optional(),
   mode: z.enum(["build_profile", "general"]).default("build_profile")
 });
 
