@@ -6,6 +6,7 @@ import {
   BriefcaseBusiness,
   CheckCircle2,
   Database,
+  FilePlus2,
   Loader2,
   LogOut,
   Paperclip,
@@ -20,7 +21,7 @@ type Message = {
   content: string;
 };
 
-type ChatMode = "build_profile" | "general";
+type ChatMode = "build_profile" | "application";
 
 type ProfileBankSummary = {
   sourceCount: number;
@@ -29,25 +30,13 @@ type ProfileBankSummary = {
   sections: string[];
 };
 
-const modes: Array<{
-  id: ChatMode;
-  label: string;
-  description: string;
-  icon: typeof UserRound;
-}> = [
-  {
-    id: "build_profile",
-    label: "Build profile",
-    description: "Add CV, LinkedIn, GitHub, projects, evidence",
-    icon: UserRound
-  },
-  {
-    id: "general",
-    label: "Application chat",
-    description: "General CV and job application help",
-    icon: BriefcaseBusiness
-  }
-];
+type ApplicationItem = {
+  id: string;
+  company: string;
+  role: string;
+  slug: string;
+  status: string;
+};
 
 export function AppShell({
   userName,
@@ -57,6 +46,11 @@ export function AppShell({
   userEmail: string;
 }) {
   const [activeMode, setActiveMode] = useState<ChatMode>("build_profile");
+  const [activeApplicationId, setActiveApplicationId] = useState<string | null>(null);
+  const [applications, setApplications] = useState<ApplicationItem[]>([]);
+  const [isAddingApplication, setIsAddingApplication] = useState(false);
+  const [jobDescription, setJobDescription] = useState("");
+  const [isCreatingApplication, setIsCreatingApplication] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
@@ -67,7 +61,38 @@ export function AppShell({
   const [error, setError] = useState("");
   const listRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const activeModeConfig = modes.find((mode) => mode.id === activeMode) ?? modes[0];
+  const activeApplication = applications.find((item) => item.id === activeApplicationId) ?? null;
+  const activeTitle =
+    activeMode === "build_profile"
+      ? "Build profile"
+      : activeApplication
+        ? `${activeApplication.company} - ${activeApplication.role}`
+        : "Applications";
+  const activeDescription =
+    activeMode === "build_profile"
+      ? "Add CV, LinkedIn, GitHub, projects, evidence"
+      : activeApplication
+        ? "Application-specific chat, notes, CV tailoring, cover letters, and answers"
+        : "Add a job description to create an application workspace";
+
+  async function loadApplications() {
+    try {
+      const response = await fetch("/api/applications", { cache: "no-store" });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Could not load applications.");
+      }
+
+      setApplications(data.applications ?? []);
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : "Could not load applications.");
+    }
+  }
+
+  useEffect(() => {
+    loadApplications();
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -76,7 +101,17 @@ export function AppShell({
       setIsLoadingHistory(true);
       setError("");
       try {
-        const response = await fetch(`/api/chat?mode=${activeMode}`, { cache: "no-store" });
+        if (activeMode === "application" && !activeApplicationId) {
+          setConversationId(null);
+          setMessages([]);
+          setProfileBank((current) => current);
+          setIsLoadingHistory(false);
+          return;
+        }
+
+        const params = new URLSearchParams({ mode: activeMode });
+        if (activeApplicationId) params.set("applicationId", activeApplicationId);
+        const response = await fetch(`/api/chat?${params.toString()}`, { cache: "no-store" });
         const data = await response.json();
 
         if (!response.ok) {
@@ -104,7 +139,7 @@ export function AppShell({
     return () => {
       isMounted = false;
     };
-  }, [activeMode]);
+  }, [activeMode, activeApplicationId]);
 
   useEffect(() => {
     listRef.current?.scrollTo({
@@ -172,7 +207,8 @@ export function AppShell({
         body: JSON.stringify({
           conversationId,
           message: messageWithFiles,
-          mode: activeMode
+          mode: activeMode,
+          applicationId: activeApplicationId
         })
       });
       const data = await response.json();
@@ -197,6 +233,42 @@ export function AppShell({
     }
   }
 
+  async function createApplication(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const trimmed = jobDescription.trim();
+    if (!trimmed || isCreatingApplication) return;
+
+    setError("");
+    setIsCreatingApplication(true);
+
+    try {
+      const response = await fetch("/api/applications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jobDescription: trimmed })
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Could not create the application.");
+      }
+
+      await loadApplications();
+      setJobDescription("");
+      setIsAddingApplication(false);
+      setActiveMode("application");
+      setActiveApplicationId(data.application.id);
+      setConversationId(null);
+      setMessages([]);
+      setMessage("");
+      setSelectedFiles([]);
+    } catch (createError) {
+      setError(createError instanceof Error ? createError.message : "Could not create the application.");
+    } finally {
+      setIsCreatingApplication(false);
+    }
+  }
+
   return (
     <main className="workspace-shell">
       <aside className="settings-rail">
@@ -212,30 +284,82 @@ export function AppShell({
         </div>
 
         <nav className="rail-nav" aria-label="Workspace navigation">
-          {modes.map((mode) => {
-            const Icon = mode.icon;
-            return (
-              <button
-                className={activeMode === mode.id ? "active" : ""}
-                type="button"
-                key={mode.id}
-                onClick={() => {
-                  setActiveMode(mode.id);
-                  setConversationId(null);
-                  setMessages([]);
-                  setMessage("");
-                  setSelectedFiles([]);
-                }}
-              >
-                <Icon size={18} />
-                <span>
-                  <strong>{mode.label}</strong>
-                  <small>{mode.description}</small>
-                </span>
-              </button>
-            );
-          })}
+          <button
+            className={activeMode === "build_profile" ? "active" : ""}
+            type="button"
+            onClick={() => {
+              setActiveMode("build_profile");
+              setActiveApplicationId(null);
+              setConversationId(null);
+              setMessages([]);
+              setMessage("");
+              setSelectedFiles([]);
+            }}
+          >
+            <UserRound size={18} />
+            <span>
+              <strong>Build profile</strong>
+              <small>Add CV, LinkedIn, GitHub, projects, evidence</small>
+            </span>
+          </button>
         </nav>
+
+        <section className="applications-panel" aria-label="Applications">
+          <div className="applications-heading">
+            <BriefcaseBusiness size={17} />
+            <strong>Applications</strong>
+          </div>
+          <button
+            className="add-application-button"
+            type="button"
+            onClick={() => setIsAddingApplication((current) => !current)}
+          >
+            <FilePlus2 size={16} />
+            Add job description
+          </button>
+
+          {isAddingApplication ? (
+            <form className="job-description-form" onSubmit={createApplication}>
+              <textarea
+                value={jobDescription}
+                onChange={(event) => setJobDescription(event.target.value)}
+                placeholder="Paste the job description..."
+                disabled={isCreatingApplication}
+              />
+              <button type="submit" disabled={isCreatingApplication || jobDescription.trim().length < 50}>
+                {isCreatingApplication ? <Loader2 className="spin" size={15} /> : null}
+                Create application
+              </button>
+            </form>
+          ) : null}
+
+          <div className="applications-list">
+            {applications.length ? (
+              applications.map((application) => (
+                <button
+                  className={
+                    activeMode === "application" && activeApplicationId === application.id ? "active" : ""
+                  }
+                  type="button"
+                  key={application.id}
+                  onClick={() => {
+                    setActiveMode("application");
+                    setActiveApplicationId(application.id);
+                    setConversationId(null);
+                    setMessages([]);
+                    setMessage("");
+                    setSelectedFiles([]);
+                  }}
+                >
+                  <strong>{application.company}</strong>
+                  <span>{application.role}</span>
+                </button>
+              ))
+            ) : (
+              <p>No applications yet.</p>
+            )}
+          </div>
+        </section>
 
         {profileBank ? (
           <section className="profile-bank-panel" aria-label="Profile bank status">
@@ -275,8 +399,8 @@ export function AppShell({
       <section className="chat-area">
         <header className="chat-header">
           <p className="eyebrow">Workspace</p>
-          <h1>{activeModeConfig.label}</h1>
-          <p>{activeModeConfig.description}</p>
+          <h1>{activeTitle}</h1>
+          <p>{activeDescription}</p>
         </header>
 
         <div className="message-list" ref={listRef}>
@@ -295,7 +419,9 @@ export function AppShell({
             <div className="empty-state">
               {activeMode === "build_profile"
                 ? "Start by pasting your CV, LinkedIn summary, GitHub/project list, or tell me what you want added to your profile."
-                : "Paste a job description, ask for CV help, or start with the role you are targeting."}
+                : activeApplication
+                  ? "Ask about this role, tailor your CV, draft a cover letter, or paste application questions."
+                  : "Add a job description from the sidebar to create a separate chat for that application."}
             </div>
           )}
           {isSending ? (
@@ -351,14 +477,21 @@ export function AppShell({
               placeholder={
                 activeMode === "build_profile"
                   ? "Add to your profile..."
-                  : "Ask CVhelp..."
+                  : activeApplication
+                    ? "Ask about this application..."
+                    : "Add a job description first..."
               }
-              disabled={isSending || isLoadingHistory}
+              disabled={isSending || isLoadingHistory || (activeMode === "application" && !activeApplication)}
             />
           </div>
           <button
             type="submit"
-            disabled={isSending || isLoadingHistory || (!message.trim() && !selectedFiles.length)}
+            disabled={
+              isSending ||
+              isLoadingHistory ||
+              (!message.trim() && !selectedFiles.length) ||
+              (activeMode === "application" && !activeApplication)
+            }
           >
             {isSending ? <Loader2 className="spin" size={18} /> : <Send size={18} />}
             Send

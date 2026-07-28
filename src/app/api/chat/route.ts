@@ -9,10 +9,11 @@ import { prisma } from "@/lib/prisma";
 const chatSchema = z.object({
   message: z.string().trim().min(1, "Enter a message.").max(8000),
   conversationId: z.string().nullable().optional(),
-  mode: z.enum(["build_profile", "general"]).default("build_profile")
+  mode: z.enum(["build_profile", "application", "general"]).default("build_profile"),
+  applicationId: z.string().nullable().optional()
 });
 
-const modeSchema = z.enum(["build_profile", "general"]).default("build_profile");
+const modeSchema = z.enum(["build_profile", "application", "general"]).default("build_profile");
 const DEFAULT_OPENAI_MODEL = "gpt-5-mini";
 
 const defaultChecklist = [
@@ -154,7 +155,7 @@ async function updateProfileBankFromMessage({
   });
 }
 
-function getInstructions(mode: "build_profile" | "general") {
+function getInstructions(mode: "build_profile" | "application" | "general") {
   if (mode === "build_profile") {
     return [
       "You are CVhelp's profile-building agent.",
@@ -165,6 +166,19 @@ function getInstructions(mode: "build_profile" | "general") {
       "When useful, summarize what you added to the profile bank and what is still missing.",
       "If the user asks to remove or correct something, acknowledge the correction clearly and ask for the exact replacement if needed.",
       "Be concise and practical."
+    ].join(" ");
+  }
+
+  if (mode === "application") {
+    return [
+      "You are CVhelp's application agent.",
+      "Your job is to help with one specific job application, using the selected job post and the user's profile bank.",
+      "Keep application-specific notes, analysis, CV tailoring, cover letters, and answers focused on this role only.",
+      "Do not pollute or rewrite the user's global profile unless they explicitly ask to update reusable profile facts.",
+      "Compare the job requirements against the profile bank, identify best evidence, gaps, risks, and concrete next steps.",
+      "Help draft tailored CV bullets, cover notes, recruiter messages, and application answers.",
+      "Never invent experience, metrics, dates, employers, links, or credentials. If evidence is missing, ask for it.",
+      "Be practical, concise, and specific to this application."
     ].join(" ");
   }
 
@@ -251,10 +265,35 @@ export async function GET(request: Request) {
   }
 
   const mode = modeSchema.parse(new URL(request.url).searchParams.get("mode") ?? undefined);
-  const profileBank = mode === "build_profile" ? await getOrCreateProfileBank(user.id) : null;
+  const applicationId = new URL(request.url).searchParams.get("applicationId");
+  const profileBank =
+    mode === "build_profile" || mode === "application" ? await getOrCreateProfileBank(user.id) : null;
+  const application =
+    mode === "application" && applicationId
+      ? await prisma.application.findFirst({
+          where: { id: applicationId, userId: user.id },
+          select: {
+            id: true,
+            company: true,
+            role: true,
+            slug: true,
+            status: true,
+            jobPost: true,
+            jobSummary: true,
+            notes: true,
+            drafts: true,
+            createdAt: true,
+            updatedAt: true
+          }
+        })
+      : null;
+
+  if (mode === "application" && !application) {
+    return NextResponse.json({ error: "Choose an application first." }, { status: 400 });
+  }
 
   const conversation = await prisma.conversation.findFirst({
-    where: { userId: user.id, mode },
+    where: { userId: user.id, mode, applicationId: application?.id ?? null },
     orderBy: { updatedAt: "desc" },
     include: {
       messages: {
@@ -272,7 +311,8 @@ export async function GET(request: Request) {
   return NextResponse.json({
     conversationId: conversation?.id ?? null,
     messages: conversation?.messages ?? [],
-    profileBank: summarizeProfileBank(profileBank)
+    profileBank: summarizeProfileBank(profileBank),
+    application
   });
 }
 
@@ -300,20 +340,33 @@ export async function POST(request: Request) {
   }
 
   const mode = parsed.data.mode;
-  const profileBank = mode === "build_profile" ? await getOrCreateProfileBank(user.id) : null;
+  const profileBank =
+    mode === "build_profile" || mode === "application" ? await getOrCreateProfileBank(user.id) : null;
+  const application =
+    mode === "application" && parsed.data.applicationId
+      ? await prisma.application.findFirst({
+          where: { id: parsed.data.applicationId, userId: user.id }
+        })
+      : null;
+
+  if (mode === "application" && !application) {
+    return NextResponse.json({ error: "Choose an application first." }, { status: 400 });
+  }
 
   const conversation = parsed.data.conversationId
     ? await prisma.conversation.findFirst({
         where: {
           id: parsed.data.conversationId,
           userId: user.id,
-          mode
+          mode,
+          applicationId: application?.id ?? null
         }
       })
     : await prisma.conversation.create({
         data: {
           userId: user.id,
           mode,
+          applicationId: application?.id ?? null,
           title: toTitle(parsed.data.message)
         }
       });
@@ -361,18 +414,34 @@ export async function POST(request: Request) {
       .map((item) => `${item.role === "assistant" ? "Assistant" : "User"}: ${item.content}`)
       .join("\n\n");
     const profileContext =
-      mode === "build_profile"
+      mode === "build_profile" || mode === "application"
         ? `\n\nCurrent profile bank summary:\n${JSON.stringify(
             summarizeProfileBank(updatedProfileBank),
             null,
-            2
+          2
           )}\n\nRecent profile-bank sources:\n${getRecentSourceContext(updatedProfileBank) || "No sources yet."}`
+        : "";
+    const applicationContext =
+      mode === "application" && application
+        ? `\n\nSelected application:\n${JSON.stringify(
+            {
+              company: application.company,
+              role: application.role,
+              status: application.status,
+              jobPost: application.jobPost,
+              jobSummary: application.jobSummary,
+              notes: application.notes,
+              drafts: application.drafts
+            },
+            null,
+            2
+          )}`
         : "";
 
     const response = await openai.responses.create({
       model: getOpenAIModel(),
       instructions: getInstructions(mode),
-      input: `The signed-in user's name is ${user.name}. Continue this private conversation.${profileContext}\n\n${transcript}`
+      input: `The signed-in user's name is ${user.name}. Continue this private conversation.${profileContext}${applicationContext}\n\n${transcript}`
     });
 
     const assistantText =
@@ -405,10 +474,38 @@ export async function POST(request: Request) {
       data: { updatedAt: new Date() }
     });
 
+    if (mode === "application" && application) {
+      const existingNotes =
+        application.notes && typeof application.notes === "object" && !Array.isArray(application.notes)
+          ? (application.notes as { entries?: unknown[] })
+          : {};
+      const entries = Array.isArray(existingNotes.entries) ? existingNotes.entries : [];
+
+      await prisma.application.update({
+        where: { id: application.id },
+        data: {
+          notes: {
+            ...existingNotes,
+            entries: [
+              ...entries,
+              {
+                id: crypto.randomUUID(),
+                type: "chat_turn",
+                userMessage: parsed.data.message,
+                assistantSummary: assistantText.slice(0, 1200),
+                createdAt: new Date().toISOString()
+              }
+            ].slice(-80)
+          } as Prisma.InputJsonValue
+        }
+      });
+    }
+
     return NextResponse.json({
       conversationId: conversation.id,
       messages: [userMessage, assistantMessage],
-      profileBank: summarizeProfileBank(finalProfileBank)
+      profileBank: summarizeProfileBank(finalProfileBank),
+      application
     });
   } catch (error) {
     await prisma.chatMessage.delete({
