@@ -12,8 +12,7 @@ export default async function SignUpPage() {
       <AuthForm
         mode="sign-up"
         enabledProviders={{
-          google: enabledAuthProviders.google,
-          apple: enabledAuthProviders.apple
+          google: enabledAuthProviders.google
         }}
       />
     </main>

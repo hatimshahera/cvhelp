@@ -1,7 +1,6 @@
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import bcrypt from "bcryptjs";
 import type { NextAuthOptions } from "next-auth";
-import AppleProvider from "next-auth/providers/apple";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GitHubProvider from "next-auth/providers/github";
 import GoogleProvider from "next-auth/providers/google";
@@ -10,7 +9,6 @@ import { prisma } from "@/lib/prisma";
 
 export const enabledAuthProviders = {
   google: Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET),
-  apple: Boolean(process.env.APPLE_ID && process.env.APPLE_SECRET),
   github: Boolean(process.env.GITHUB_ID && process.env.GITHUB_SECRET),
   linkedin: Boolean(process.env.LINKEDIN_CLIENT_ID && process.env.LINKEDIN_CLIENT_SECRET)
 };
@@ -55,14 +53,6 @@ export const authOptions: NextAuthOptions = {
           GoogleProvider({
             clientId: process.env.GOOGLE_CLIENT_ID!,
             clientSecret: process.env.GOOGLE_CLIENT_SECRET!
-          })
-        ]
-      : []),
-    ...(enabledAuthProviders.apple
-      ? [
-          AppleProvider({
-            clientId: process.env.APPLE_ID!,
-            clientSecret: process.env.APPLE_SECRET!
           })
         ]
       : []),

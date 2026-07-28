@@ -1,6 +1,6 @@
 # CVhelp
 
-Fresh CVhelp app shell with owned, database-backed authentication through Auth.js and Prisma. The app supports email/password accounts locally and can enable Google, Apple, GitHub, and LinkedIn as provider integrations through environment variables.
+Fresh CVhelp app shell with owned, database-backed authentication through Auth.js and Prisma. The app supports email/password accounts locally and can enable Google, GitHub, and LinkedIn as provider integrations through environment variables.
 
 ## Local setup
 
@@ -27,27 +27,23 @@ openssl rand -base64 32
 
 ## OAuth providers
 
-Google and Apple buttons enable automatically when these are present in `.env.local`:
+The Google button enables automatically when these are present in `.env.local`:
 
 ```env
 GOOGLE_CLIENT_ID=""
 GOOGLE_CLIENT_SECRET=""
-APPLE_ID=""
-APPLE_SECRET=""
 ```
 
-Use these callback URLs in the provider dashboards:
+Use this callback URL in the Google provider dashboard:
 
 ```text
 https://your-domain.com/api/auth/callback/google
-https://your-domain.com/api/auth/callback/apple
 ```
 
 For local testing, use:
 
 ```text
 http://localhost:3000/api/auth/callback/google
-http://localhost:3000/api/auth/callback/apple
 ```
 
 Google setup:
@@ -55,13 +51,6 @@ Google setup:
 - Create OAuth credentials in Google Cloud Console.
 - Add the production and local callback URLs above as authorized redirect URIs.
 - Set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in Vercel.
-
-Apple setup:
-
-- Create a Services ID in Apple Developer.
-- Add the production callback URL as the return URL.
-- Generate the client secret JWT for Sign in with Apple.
-- Set `APPLE_ID` to the Services ID and `APPLE_SECRET` to that generated JWT in Vercel.
 
 Also make sure `NEXTAUTH_URL` is the production site URL in Vercel, not the local URL.
 
@@ -79,7 +68,7 @@ LINKEDIN_CLIENT_SECRET=""
 - Public landing page with login/signup.
 - Custom sign-in/sign-up pages.
 - Email/password account creation with hashed passwords.
-- Optional Google and Apple sign-in providers.
+- Optional Google sign-in provider.
 - Protected `/app` route.
 - Chat interface after login.
 - Left settings rail with logout.

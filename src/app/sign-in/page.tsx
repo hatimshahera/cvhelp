@@ -12,8 +12,7 @@ export default async function SignInPage() {
       <AuthForm
         mode="sign-in"
         enabledProviders={{
-          google: enabledAuthProviders.google,
-          apple: enabledAuthProviders.apple
+          google: enabledAuthProviders.google
         }}
       />
     </main>

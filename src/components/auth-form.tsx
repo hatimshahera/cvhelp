@@ -8,7 +8,6 @@ import { ArrowRight, CheckCircle2, LockKeyhole, Mail } from "lucide-react";
 
 type EnabledProviders = {
   google: boolean;
-  apple: boolean;
 };
 
 export function AuthForm({
@@ -24,7 +23,7 @@ export function AuthForm({
   const isSignup = mode === "sign-up";
   const title = isSignup ? "Create your CVhelp account" : "Sign in to CVhelp";
   const subtitle = isSignup
-    ? "Start with email and password, or use a connected provider once OAuth is enabled."
+    ? "Start with email and password, or continue with Google once OAuth is enabled."
     : "Return to your private application workspace.";
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -93,16 +92,6 @@ export function AuthForm({
         >
           <span className="provider-mark">G</span>
           <span>Continue with Google</span>
-        </button>
-        <button
-          className="provider-button"
-          type="button"
-          onClick={() => signIn("apple", { callbackUrl: "/app" })}
-          disabled={!enabledProviders.apple}
-          aria-describedby={!enabledProviders.apple ? "provider-status" : undefined}
-        >
-          <span className="provider-mark">A</span>
-          <span>Continue with Apple</span>
         </button>
       </div>
 
@@ -176,10 +165,10 @@ export function AuthForm({
         </Link>
       </p>
 
-      {!enabledProviders.google || !enabledProviders.apple ? (
+      {!enabledProviders.google ? (
         <div className="provider-note" id="provider-status">
           <CheckCircle2 size={16} />
-          <p>Google and Apple unlock when their OAuth environment variables are added.</p>
+          <p>Google unlocks when its OAuth environment variables are added.</p>
         </div>
       ) : null}
     </section>
