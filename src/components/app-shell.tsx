@@ -40,7 +40,14 @@ type ApplicationItem = {
 };
 
 async function readJsonResponse(response: Response) {
-  return response.json().catch(() => ({}));
+  const text = await response.text().catch(() => "");
+  if (!text) return {};
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { error: `${response.status} ${response.statusText || "Request failed"}`.trim() };
+  }
 }
 
 export function AppShell({
@@ -200,7 +207,10 @@ export function AppShell({
         const uploadData = await readJsonResponse(uploadResponse);
 
         if (!uploadResponse.ok) {
-          throw new Error(uploadData.error || "The files could not be uploaded.");
+          throw new Error(
+            uploadData.error ||
+              `The files could not be uploaded. (${uploadResponse.status} ${uploadResponse.statusText})`
+          );
         }
 
         setProfileBank(uploadData.profileBank ?? profileBank);
