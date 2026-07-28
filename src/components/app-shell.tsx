@@ -61,6 +61,7 @@ export function AppShell({
   const [error, setError] = useState("");
   const listRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const loadRequestRef = useRef(0);
   const activeApplication = applications.find((item) => item.id === activeApplicationId) ?? null;
   const activeTitle =
     activeMode === "build_profile"
@@ -96,16 +97,20 @@ export function AppShell({
 
   useEffect(() => {
     let isMounted = true;
+    const requestId = loadRequestRef.current + 1;
+    loadRequestRef.current = requestId;
 
     async function loadConversation() {
       setIsLoadingHistory(true);
       setError("");
       try {
         if (activeMode === "application" && !activeApplicationId) {
-          setConversationId(null);
-          setMessages([]);
-          setProfileBank((current) => current);
-          setIsLoadingHistory(false);
+          if (isMounted && loadRequestRef.current === requestId) {
+            setConversationId(null);
+            setMessages([]);
+            setProfileBank((current) => current);
+            setIsLoadingHistory(false);
+          }
           return;
         }
 
@@ -118,17 +123,17 @@ export function AppShell({
           throw new Error(data.error || "Could not load the chat.");
         }
 
-        if (isMounted) {
+        if (isMounted && loadRequestRef.current === requestId) {
           setConversationId(data.conversationId);
           setMessages(data.messages);
           setProfileBank(data.profileBank ?? null);
         }
       } catch (loadError) {
-        if (isMounted) {
+        if (isMounted && loadRequestRef.current === requestId) {
           setError(loadError instanceof Error ? loadError.message : "Could not load the chat.");
         }
       } finally {
-        if (isMounted) {
+        if (isMounted && loadRequestRef.current === requestId) {
           setIsLoadingHistory(false);
         }
       }
@@ -219,10 +224,7 @@ export function AppShell({
 
       setConversationId(data.conversationId);
       setProfileBank(data.profileBank ?? profileBank);
-      setMessages((current) => [
-        ...current.filter((item) => item.id !== optimisticMessage.id),
-        ...data.messages
-      ]);
+      setMessages(data.messages ?? []);
     } catch (sendError) {
       setMessages((current) => current.filter((item) => item.id !== optimisticMessage.id));
       setMessage(trimmed);

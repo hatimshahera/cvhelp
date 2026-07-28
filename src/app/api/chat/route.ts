@@ -393,18 +393,20 @@ export async function POST(request: Request) {
         })
       : profileBank;
 
-  const recentMessages = await prisma.chatMessage.findMany({
-    where: {
-      conversationId: conversation.id,
-      userId: user.id
-    },
-    orderBy: { createdAt: "asc" },
-    take: 24,
-    select: {
-      role: true,
-      content: true
-    }
-  });
+  const recentMessages = (
+    await prisma.chatMessage.findMany({
+      where: {
+        conversationId: conversation.id,
+        userId: user.id
+      },
+      orderBy: { createdAt: "desc" },
+      take: 24,
+      select: {
+        role: true,
+        content: true
+      }
+    })
+  ).reverse();
 
   try {
     const openai = new OpenAI({
@@ -501,9 +503,23 @@ export async function POST(request: Request) {
       });
     }
 
+    const conversationMessages = await prisma.chatMessage.findMany({
+      where: {
+        conversationId: conversation.id,
+        userId: user.id
+      },
+      orderBy: { createdAt: "asc" },
+      select: {
+        id: true,
+        role: true,
+        content: true,
+        createdAt: true
+      }
+    });
+
     return NextResponse.json({
       conversationId: conversation.id,
-      messages: [userMessage, assistantMessage],
+      messages: conversationMessages,
       profileBank: summarizeProfileBank(finalProfileBank),
       application
     });
