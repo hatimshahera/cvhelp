@@ -4,6 +4,8 @@ import { PDFParse } from "pdf-parse";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
+export const runtime = "nodejs";
+
 const maxFiles = 6;
 const maxFileBytes = 5 * 1024 * 1024;
 
@@ -216,6 +218,7 @@ export async function POST(request: Request) {
       name: file.name,
       size: file.size,
       type: file.type || "unknown",
+      isPdf: isPdf(file),
       extractedText: extraction.extracted
     });
 
@@ -255,7 +258,9 @@ export async function POST(request: Request) {
       .map((file) =>
         file.extractedText
           ? `Uploaded ${file.name}; text was extracted and saved to the profile bank.`
-          : `Uploaded ${file.name}; metadata was saved, but text extraction is not available for this file type yet.`
+          : file.isPdf
+            ? `Uploaded ${file.name}; metadata was saved, but PDF text extraction failed. If this is a scanned PDF, paste the text or upload a text-based PDF.`
+            : `Uploaded ${file.name}; metadata was saved, but text extraction is not available for this file type yet.`
       )
       .join("\n")
   });

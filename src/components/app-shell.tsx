@@ -38,6 +38,10 @@ type ApplicationItem = {
   status: string;
 };
 
+async function readJsonResponse(response: Response) {
+  return response.json().catch(() => ({}));
+}
+
 export function AppShell({
   userName,
   userEmail
@@ -79,7 +83,7 @@ export function AppShell({
   async function loadApplications() {
     try {
       const response = await fetch("/api/applications", { cache: "no-store" });
-      const data = await response.json();
+      const data = await readJsonResponse(response);
 
       if (!response.ok) {
         throw new Error(data.error || "Could not load applications.");
@@ -117,7 +121,7 @@ export function AppShell({
         const params = new URLSearchParams({ mode: activeMode });
         if (activeApplicationId) params.set("applicationId", activeApplicationId);
         const response = await fetch(`/api/chat?${params.toString()}`, { cache: "no-store" });
-        const data = await response.json();
+        const data = await readJsonResponse(response);
 
         if (!response.ok) {
           throw new Error(data.error || "Could not load the chat.");
@@ -191,7 +195,7 @@ export function AppShell({
           method: "POST",
           body: formData
         });
-        const uploadData = await uploadResponse.json();
+        const uploadData = await readJsonResponse(uploadResponse);
 
         if (!uploadResponse.ok) {
           throw new Error(uploadData.error || "The files could not be uploaded.");
@@ -216,7 +220,7 @@ export function AppShell({
           applicationId: activeApplicationId
         })
       });
-      const data = await response.json();
+      const data = await readJsonResponse(response);
 
       if (!response.ok) {
         throw new Error(data.error || "The message could not be sent.");
@@ -249,7 +253,7 @@ export function AppShell({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ jobSource: trimmed })
       });
-      const data = await response.json();
+      const data = await readJsonResponse(response);
 
       if (!response.ok) {
         throw new Error(data.error || "Could not create the application.");
@@ -469,6 +473,7 @@ export function AppShell({
               ref={fileInputRef}
               className="file-input"
               type="file"
+              name="files"
               multiple
               onChange={(event) => setSelectedFiles(Array.from(event.target.files ?? []))}
               disabled={isSending || isLoadingHistory}
