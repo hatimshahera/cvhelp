@@ -78,6 +78,21 @@ function summarizeProfileBank(profileBank: {
   };
 }
 
+function getRecentSourceContext(profileBank: {
+  rawSources: unknown;
+} | null) {
+  const rawSources = profileBank?.rawSources as ProfileBankShape["rawSources"] | null;
+  const entries = Array.isArray(rawSources?.entries) ? rawSources.entries : [];
+
+  return entries
+    .slice(-6)
+    .map((entry) => {
+      const content = entry.content.length > 1800 ? `${entry.content.slice(0, 1800)}...` : entry.content;
+      return `Source ${entry.id} (${entry.type}):\n${content}`;
+    })
+    .join("\n\n");
+}
+
 async function getOrCreateProfileBank(userId: string) {
   return prisma.profileBank.upsert({
     where: { userId },
@@ -351,7 +366,7 @@ export async function POST(request: Request) {
             summarizeProfileBank(updatedProfileBank),
             null,
             2
-          )}`
+          )}\n\nRecent profile-bank sources:\n${getRecentSourceContext(updatedProfileBank) || "No sources yet."}`
         : "";
 
     const response = await openai.responses.create({

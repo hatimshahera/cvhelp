@@ -828,6 +828,57 @@ h3 {
   background: #fbfcfb;
 }
 
+.selected-files {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.selected-files span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  max-width: min(100%, 320px);
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: white;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.selected-files span button {
+  display: inline-grid;
+  width: 18px;
+  height: 18px;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: #edf2ee;
+  color: var(--muted);
+}
+
+.composer-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 10px;
+}
+
+.composer .file-input {
+  display: none;
+}
+
+.attach-button {
+  width: 48px;
+  padding: 0;
+  border: 1px solid var(--line);
+  background: white;
+  color: var(--text);
+}
+
 .composer input {
   min-width: 0;
   min-height: 48px;
@@ -855,6 +906,12 @@ h3 {
   background: var(--accent);
   color: white;
   font-weight: 800;
+}
+
+.composer .attach-button {
+  border: 1px solid var(--line);
+  background: white;
+  color: var(--text);
 }
 
 .spin {

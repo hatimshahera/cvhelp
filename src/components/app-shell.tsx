@@ -8,7 +8,9 @@ import {
   Database,
   Loader2,
   LogOut,
+  Paperclip,
   Send,
+  X,
   UserRound
 } from "lucide-react";
 
@@ -58,11 +60,13 @@ export function AppShell({
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [profileBank, setProfileBank] = useState<ProfileBankSummary | null>(null);
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState("");
   const listRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const activeModeConfig = modes.find((mode) => mode.id === activeMode) ?? modes[0];
 
   useEffect(() => {
@@ -112,26 +116,62 @@ export function AppShell({
   async function sendMessage(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const trimmed = message.trim();
-    if (!trimmed || isSending) return;
+    if ((!trimmed && !selectedFiles.length) || isSending) return;
+    const filesToUpload = selectedFiles;
+    const optimisticContent = [
+      trimmed,
+      filesToUpload.length
+        ? `Uploaded ${filesToUpload.map((file) => file.name).join(", ")}`
+        : ""
+    ]
+      .filter(Boolean)
+      .join("\n\n");
 
     const optimisticMessage: Message = {
       id: `pending-${Date.now()}`,
       role: "user",
-      content: trimmed
+      content: optimisticContent
     };
 
     setError("");
     setMessages((current) => [...current, optimisticMessage]);
     setMessage("");
+    setSelectedFiles([]);
+    if (fileInputRef.current) fileInputRef.current.value = "";
     setIsSending(true);
 
     try {
+      let fileContext = "";
+
+      if (filesToUpload.length) {
+        const formData = new FormData();
+        filesToUpload.forEach((file) => formData.append("files", file));
+
+        const uploadResponse = await fetch("/api/profile-sources", {
+          method: "POST",
+          body: formData
+        });
+        const uploadData = await uploadResponse.json();
+
+        if (!uploadResponse.ok) {
+          throw new Error(uploadData.error || "The files could not be uploaded.");
+        }
+
+        setProfileBank(uploadData.profileBank ?? profileBank);
+        fileContext = uploadData.messageContext || "";
+      }
+
+      const finalMessage =
+        trimmed ||
+        "I uploaded files to my profile bank. Please review what you can use and tell me what else you need.";
+      const messageWithFiles = [finalMessage, fileContext].filter(Boolean).join("\n\n");
+
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           conversationId,
-          message: trimmed,
+          message: messageWithFiles,
           mode: activeMode
         })
       });
@@ -150,6 +190,7 @@ export function AppShell({
     } catch (sendError) {
       setMessages((current) => current.filter((item) => item.id !== optimisticMessage.id));
       setMessage(trimmed);
+      setSelectedFiles(filesToUpload);
       setError(sendError instanceof Error ? sendError.message : "The message could not be sent.");
     } finally {
       setIsSending(false);
@@ -183,6 +224,7 @@ export function AppShell({
                   setConversationId(null);
                   setMessages([]);
                   setMessage("");
+                  setSelectedFiles([]);
                 }}
               >
                 <Icon size={18} />
@@ -267,17 +309,57 @@ export function AppShell({
         {error ? <p className="chat-error">{error}</p> : null}
 
         <form className="composer" onSubmit={sendMessage}>
-          <input
-            value={message}
-            onChange={(event) => setMessage(event.target.value)}
-            placeholder={
-              activeMode === "build_profile"
-                ? "Add to your profile..."
-                : "Ask CVhelp..."
-            }
-            disabled={isSending || isLoadingHistory}
-          />
-          <button type="submit" disabled={isSending || isLoadingHistory || !message.trim()}>
+          {selectedFiles.length ? (
+            <div className="selected-files">
+              {selectedFiles.map((file) => (
+                <span key={`${file.name}-${file.size}`}>
+                  {file.name}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setSelectedFiles((current) => current.filter((item) => item !== file))
+                    }
+                    aria-label={`Remove ${file.name}`}
+                  >
+                    <X size={13} />
+                  </button>
+                </span>
+              ))}
+            </div>
+          ) : null}
+          <div className="composer-row">
+            <button
+              className="attach-button"
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isSending || isLoadingHistory}
+              aria-label="Attach files"
+            >
+              <Paperclip size={18} />
+            </button>
+            <input
+              ref={fileInputRef}
+              className="file-input"
+              type="file"
+              multiple
+              onChange={(event) => setSelectedFiles(Array.from(event.target.files ?? []))}
+              disabled={isSending || isLoadingHistory}
+            />
+            <input
+              value={message}
+              onChange={(event) => setMessage(event.target.value)}
+              placeholder={
+                activeMode === "build_profile"
+                  ? "Add to your profile..."
+                  : "Ask CVhelp..."
+              }
+              disabled={isSending || isLoadingHistory}
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={isSending || isLoadingHistory || (!message.trim() && !selectedFiles.length)}
+          >
             {isSending ? <Loader2 className="spin" size={18} /> : <Send size={18} />}
             Send
           </button>
