@@ -1,5 +1,6 @@
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
+import { PDFParse } from "pdf-parse";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
@@ -55,6 +56,41 @@ function isTextLike(file: File) {
       ".html"
     ].some((extension) => name.endsWith(extension))
   );
+}
+
+function isPdf(file: File) {
+  return file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+}
+
+async function extractFileText(file: File) {
+  if (isTextLike(file)) {
+    return {
+      extractedText: await file.text(),
+      extracted: true,
+      sourceType: "file_upload_text"
+    };
+  }
+
+  if (isPdf(file)) {
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const parser = new PDFParse({ data: buffer });
+    try {
+      const parsed = await parser.getText();
+      return {
+        extractedText: parsed.text.trim(),
+        extracted: Boolean(parsed.text.trim()),
+        sourceType: "file_upload_pdf"
+      };
+    } finally {
+      await parser.destroy();
+    }
+  }
+
+  return {
+    extractedText: "",
+    extracted: false,
+    sourceType: "file_upload_binary"
+  };
 }
 
 function isChecklistItem(value: unknown): value is ChecklistItem {
@@ -150,34 +186,42 @@ export async function POST(request: Request) {
       );
     }
 
-    const textLike = isTextLike(file);
-    const extractedText = textLike ? await file.text() : "";
-    const content = textLike
+    const extraction = await extractFileText(file).catch((error) => {
+      console.error("File extraction failed", error);
+      return {
+        extractedText: "",
+        extracted: false,
+        sourceType: isPdf(file) ? "file_upload_pdf_failed" : "file_upload_binary"
+      };
+    });
+    const content = extraction.extracted
       ? [
           `Uploaded file: ${file.name}`,
           `Type: ${file.type || "unknown"}`,
           `Size: ${file.size} bytes`,
           "",
-          extractedText.slice(0, 20000)
+          extraction.extractedText.slice(0, 20000)
         ].join("\n")
       : [
           `Uploaded file: ${file.name}`,
           `Type: ${file.type || "unknown"}`,
           `Size: ${file.size} bytes`,
           "",
-          "This file was saved as an uploaded source, but text extraction is not available for this file type yet. If this is a PDF or image, paste the relevant text into chat for now."
+          isPdf(file)
+            ? "This PDF was saved as an uploaded source, but text extraction failed. If it is scanned or image-only, paste the relevant text into chat for now."
+            : "This file was saved as an uploaded source, but text extraction is not available for this file type yet."
         ].join("\n");
 
     uploaded.push({
       name: file.name,
       size: file.size,
       type: file.type || "unknown",
-      extractedText: textLike
+      extractedText: extraction.extracted
     });
 
     entries.push({
       id: crypto.randomUUID(),
-      type: textLike ? "file_upload_text" : "file_upload_binary",
+      type: extraction.sourceType,
       content,
       createdAt: new Date().toISOString()
     });
