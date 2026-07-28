@@ -316,6 +316,62 @@ export async function GET(request: Request) {
   });
 }
 
+export async function DELETE(request: Request) {
+  const user = await requireUser();
+
+  if (!user) {
+    return NextResponse.json({ error: "Sign in to use chat." }, { status: 401 });
+  }
+
+  const requestUrl = new URL(request.url);
+  const mode = modeSchema.parse(requestUrl.searchParams.get("mode") ?? undefined);
+  const applicationId = requestUrl.searchParams.get("applicationId");
+  const profileBank =
+    mode === "build_profile" || mode === "application" ? await getOrCreateProfileBank(user.id) : null;
+  const application =
+    mode === "application" && applicationId
+      ? await prisma.application.findFirst({
+          where: { id: applicationId, userId: user.id }
+        })
+      : null;
+
+  if (mode === "application" && !application) {
+    return NextResponse.json({ error: "Choose an application first." }, { status: 400 });
+  }
+
+  const conversation = await prisma.conversation.findFirst({
+    where: {
+      userId: user.id,
+      mode,
+      applicationId: application?.id ?? null
+    }
+  });
+
+  if (conversation) {
+    await prisma.chatMessage.deleteMany({
+      where: {
+        conversationId: conversation.id,
+        userId: user.id
+      }
+    });
+
+    await prisma.conversation.update({
+      where: { id: conversation.id },
+      data: {
+        title: "New chat",
+        updatedAt: new Date()
+      }
+    });
+  }
+
+  return NextResponse.json({
+    conversationId: conversation?.id ?? null,
+    messages: [],
+    profileBank: summarizeProfileBank(profileBank),
+    application
+  });
+}
+
 export async function POST(request: Request) {
   const user = await requireUser();
 

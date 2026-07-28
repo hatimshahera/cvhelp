@@ -11,6 +11,7 @@ import {
   LogOut,
   Paperclip,
   Send,
+  Trash2,
   X,
   UserRound
 } from "lucide-react";
@@ -62,6 +63,7 @@ export function AppShell({
   const [profileBank, setProfileBank] = useState<ProfileBankSummary | null>(null);
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const [isSending, setIsSending] = useState(false);
+  const [isClearingConversation, setIsClearingConversation] = useState(false);
   const [error, setError] = useState("");
   const listRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -275,6 +277,38 @@ export function AppShell({
     }
   }
 
+  async function clearConversation() {
+    if (activeMode !== "build_profile" || isClearingConversation || isSending || isLoadingHistory) return;
+    if (!conversationId && !messages.length) return;
+
+    const confirmed = window.confirm("Clear this profile builder conversation? Your profile bank stays saved.");
+    if (!confirmed) return;
+
+    setError("");
+    setIsClearingConversation(true);
+
+    try {
+      const params = new URLSearchParams({ mode: activeMode });
+      const response = await fetch(`/api/chat?${params.toString()}`, { method: "DELETE" });
+      const data = await readJsonResponse(response);
+
+      if (!response.ok) {
+        throw new Error(data.error || "Could not clear the conversation.");
+      }
+
+      setConversationId(data.conversationId);
+      setMessages([]);
+      setMessage("");
+      setSelectedFiles([]);
+      setProfileBank(data.profileBank ?? profileBank);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    } catch (clearError) {
+      setError(clearError instanceof Error ? clearError.message : "Could not clear the conversation.");
+    } finally {
+      setIsClearingConversation(false);
+    }
+  }
+
   return (
     <main className="workspace-shell">
       <aside className="settings-rail">
@@ -404,9 +438,27 @@ export function AppShell({
 
       <section className="chat-area">
         <header className="chat-header">
-          <p className="eyebrow">Workspace</p>
-          <h1>{activeTitle}</h1>
-          <p>{activeDescription}</p>
+          <div className="chat-header-main">
+            <p className="eyebrow">Workspace</p>
+            <h1>{activeTitle}</h1>
+            <p>{activeDescription}</p>
+          </div>
+          {activeMode === "build_profile" ? (
+            <button
+              className="clear-conversation-button"
+              type="button"
+              onClick={clearConversation}
+              disabled={
+                isClearingConversation ||
+                isSending ||
+                isLoadingHistory ||
+                (!conversationId && !messages.length)
+              }
+            >
+              {isClearingConversation ? <Loader2 className="spin" size={16} /> : <Trash2 size={16} />}
+              Clear conversation
+            </button>
+          ) : null}
         </header>
 
         <div className="message-list" ref={listRef}>
