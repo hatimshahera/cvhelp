@@ -6,10 +6,76 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 const createApplicationSchema = z.object({
-  jobDescription: z.string().trim().min(50, "Paste the full job description.").max(50000),
+  jobSource: z.string().trim().min(10, "Paste a job link or description.").max(50000),
   company: z.string().trim().max(120).optional(),
   role: z.string().trim().max(160).optional()
 });
+
+function isLikelyUrl(value: string) {
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+function extractReadableText(html: string) {
+  return html
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<noscript[\s\S]*?<\/noscript>/gi, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&#39;/g, "'")
+    .replace(/&quot;/g, "\"")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+async function resolveJobSource(jobSource: string) {
+  if (!isLikelyUrl(jobSource)) {
+    if (jobSource.length < 50) {
+      throw new Error("Paste the full job description, or paste a valid job post URL.");
+    }
+
+    return {
+      sourceType: "pasted_job_description",
+      sourceUrl: null,
+      content: jobSource
+    };
+  }
+
+  const response = await fetch(jobSource, {
+    headers: {
+      "User-Agent": "CVhelp/1.0 (+https://cvhelp.vercel.app)",
+      Accept: "text/html,application/xhtml+xml,text/plain;q=0.9,*/*;q=0.8"
+    },
+    redirect: "follow",
+    signal: AbortSignal.timeout(10000)
+  });
+
+  if (!response.ok) {
+    throw new Error("I could not open that job link. Paste the job description instead.");
+  }
+
+  const contentType = response.headers.get("content-type") || "";
+  const raw = await response.text();
+  const content = contentType.includes("text/html") ? extractReadableText(raw) : raw.trim();
+
+  if (content.length < 200) {
+    throw new Error("I could not extract enough job text from that link. Paste the job description instead.");
+  }
+
+  return {
+    sourceType: "job_post_url",
+    sourceUrl: jobSource,
+    content: content.slice(0, 50000)
+  };
+}
 
 function slugify(value: string) {
   return value
@@ -113,7 +179,18 @@ export async function POST(request: Request) {
     );
   }
 
-  const inferred = inferJobMetadata(parsed.data.jobDescription);
+  let resolvedJob;
+
+  try {
+    resolvedJob = await resolveJobSource(parsed.data.jobSource);
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Could not read the job source." },
+      { status: 400 }
+    );
+  }
+
+  const inferred = inferJobMetadata(resolvedJob.content);
   const company = parsed.data.company || inferred.company;
   const role = parsed.data.role || inferred.role;
   const slug = await uniqueSlug(user.id, company, role);
@@ -125,8 +202,9 @@ export async function POST(request: Request) {
       role,
       slug,
       jobPost: {
-        source: "pasted_job_description",
-        content: parsed.data.jobDescription,
+        source: resolvedJob.sourceType,
+        sourceUrl: resolvedJob.sourceUrl,
+        content: resolvedJob.content,
         capturedAt: new Date().toISOString()
       } as Prisma.InputJsonValue,
       jobSummary: {

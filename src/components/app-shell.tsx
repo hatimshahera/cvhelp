@@ -49,7 +49,7 @@ export function AppShell({
   const [activeApplicationId, setActiveApplicationId] = useState<string | null>(null);
   const [applications, setApplications] = useState<ApplicationItem[]>([]);
   const [isAddingApplication, setIsAddingApplication] = useState(false);
-  const [jobDescription, setJobDescription] = useState("");
+  const [jobSource, setJobSource] = useState("");
   const [isCreatingApplication, setIsCreatingApplication] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [message, setMessage] = useState("");
@@ -235,7 +235,7 @@ export function AppShell({
 
   async function createApplication(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const trimmed = jobDescription.trim();
+    const trimmed = jobSource.trim();
     if (!trimmed || isCreatingApplication) return;
 
     setError("");
@@ -245,7 +245,7 @@ export function AppShell({
       const response = await fetch("/api/applications", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jobDescription: trimmed })
+        body: JSON.stringify({ jobSource: trimmed })
       });
       const data = await response.json();
 
@@ -254,7 +254,7 @@ export function AppShell({
       }
 
       await loadApplications();
-      setJobDescription("");
+      setJobSource("");
       setIsAddingApplication(false);
       setActiveMode("application");
       setActiveApplicationId(data.application.id);
@@ -321,12 +321,12 @@ export function AppShell({
           {isAddingApplication ? (
             <form className="job-description-form" onSubmit={createApplication}>
               <textarea
-                value={jobDescription}
-                onChange={(event) => setJobDescription(event.target.value)}
-                placeholder="Paste the job description..."
+                value={jobSource}
+                onChange={(event) => setJobSource(event.target.value)}
+                placeholder="Paste a job post link or the full job description..."
                 disabled={isCreatingApplication}
               />
-              <button type="submit" disabled={isCreatingApplication || jobDescription.trim().length < 50}>
+              <button type="submit" disabled={isCreatingApplication || jobSource.trim().length < 10}>
                 {isCreatingApplication ? <Loader2 className="spin" size={15} /> : null}
                 Create application
               </button>
