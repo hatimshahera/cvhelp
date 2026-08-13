@@ -38,11 +38,11 @@ Use this as the live tracker while implementing the plan. Mark items complete on
 - [x] Add account settings shell.
 - [x] Ensure all private app routes require signin.
 - [x] Ensure all private API routes require signin.
-- [ ] Add user ownership checks for application/detail/artifact routes.
+- [x] Add user ownership checks for application/detail/artifact routes.
 - [x] Decide OAuth MVP scope.
 - [ ] Add auth tests for signup/signin.
 - [x] Add auth tests for protected routes.
-- [ ] Add auth tests for cross-user access denial.
+- [x] Add auth tests for cross-user access denial.
 - [x] Run `npm run typecheck`.
 - [x] Run `npm run build`.
 
@@ -168,8 +168,8 @@ Use this as the live tracker while implementing the plan. Mark items complete on
 - [ ] Add generation/artifact E2E test.
 - [ ] Add billing route E2E or integration test.
 - [x] Add cross-user access denial tests.
-- [ ] Add local quality script.
-- [ ] Run full quality gate.
+- [x] Add local quality script.
+- [x] Run full quality gate.
 
 ## Phase 10: Production Readiness and Vercel Deployment
 
