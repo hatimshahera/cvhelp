@@ -5,6 +5,7 @@ import {
   canonicalProfileSections,
   createDefaultProfileBankData,
   parseCanonicalProfile,
+  parseRawSources,
   summarizeProfileBank,
   updateCanonicalProfileSection
 } from "@/lib/memory";
@@ -31,6 +32,19 @@ async function getOrCreateProfileBank(userId: string) {
   });
 }
 
+function summarizeProfileSources(rawSources: unknown) {
+  return parseRawSources(rawSources).entries
+    .slice(-10)
+    .reverse()
+    .map((entry) => ({
+      id: entry.id,
+      type: entry.type,
+      name: entry.name ?? null,
+      createdAt: entry.createdAt,
+      preview: entry.content.replace(/\s+/g, " ").trim().slice(0, 220)
+    }));
+}
+
 export async function GET() {
   const user = await getCurrentUser();
 
@@ -43,7 +57,8 @@ export async function GET() {
 
   return NextResponse.json({
     profile,
-    profileBank: summarizeProfileBank(profileBank)
+    profileBank: summarizeProfileBank(profileBank),
+    sources: summarizeProfileSources(profileBank.rawSources)
   });
 }
 
@@ -88,6 +103,7 @@ export async function PATCH(request: Request) {
 
   return NextResponse.json({
     profile: nextProfile,
-    profileBank: summarizeProfileBank(updatedProfileBank)
+    profileBank: summarizeProfileBank(updatedProfileBank),
+    sources: summarizeProfileSources(updatedProfileBank.rawSources)
   });
 }

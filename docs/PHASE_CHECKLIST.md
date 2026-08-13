@@ -52,7 +52,7 @@ Use this as the live tracker while implementing the plan. Mark items complete on
 - [x] Add guided intake states.
 - [x] Add stronger profile-builder system instructions.
 - [x] Add profile memory update validation.
-- [ ] Add source cards UI.
+- [x] Add source cards UI.
 - [x] Add editable profile facts UI.
 - [ ] Add correction flow for saved facts.
 - [ ] Add delete/exclude flow for saved facts.

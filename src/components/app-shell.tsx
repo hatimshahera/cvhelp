@@ -52,6 +52,14 @@ type ProfileBankSummary = {
   };
 };
 
+type ProfileSourceSummary = {
+  id: string;
+  type: string;
+  name: string | null;
+  createdAt: string;
+  preview: string;
+};
+
 type ApplicationItem = {
   id: string;
   company: string;
@@ -136,6 +144,17 @@ function formatLabel(value: string) {
   return value
     .replace(/_/g, " ")
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function formatShortDate(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+
+  return new Intl.DateTimeFormat("en", {
+    month: "short",
+    day: "numeric",
+    year: "numeric"
+  }).format(date);
 }
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -301,6 +320,7 @@ export function AppShell({
   const [messages, setMessages] = useState<Message[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [profileBank, setProfileBank] = useState<ProfileBankSummary | null>(null);
+  const [profileSources, setProfileSources] = useState<ProfileSourceSummary[]>([]);
   const [profileDetails, setProfileDetails] = useState<CanonicalProfile | null>(null);
   const [selectedProfileSection, setSelectedProfileSection] = useState<ProfileSection>("identity");
   const [profileSectionDraft, setProfileSectionDraft] = useState("");
@@ -362,6 +382,7 @@ export function AppShell({
 
       setProfileDetails(data.profile);
       setProfileBank(data.profileBank ?? profileBank);
+      setProfileSources(data.sources ?? []);
       setProfileSectionDraft(JSON.stringify(data.profile?.[selectedProfileSection] ?? null, null, 2));
     } catch (profileError) {
       setProfileEditorMessage(
@@ -671,6 +692,7 @@ export function AppShell({
 
       setProfileDetails(data.profile);
       setProfileBank(data.profileBank ?? profileBank);
+      setProfileSources(data.sources ?? profileSources);
       setProfileEditorMessage("Saved.");
     } catch (saveError) {
       setProfileEditorMessage(
@@ -1096,6 +1118,28 @@ export function AppShell({
                 Save section
               </button>
             </form>
+
+            <section className="profile-source-list" aria-label="Saved profile sources">
+              <div className="source-list-heading">
+                <h3>Saved sources</h3>
+                <span>{profileSources.length}</span>
+              </div>
+              {profileSources.length ? (
+                <ul>
+                  {profileSources.map((source) => (
+                    <li key={source.id}>
+                      <div>
+                        <strong>{source.name || formatLabel(source.type)}</strong>
+                        <span>{formatShortDate(source.createdAt)}</span>
+                      </div>
+                      <p>{source.preview || "No source preview saved."}</p>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p>No saved sources yet.</p>
+              )}
+            </section>
           </>
         ) : (
           <>

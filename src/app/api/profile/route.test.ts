@@ -40,7 +40,16 @@ describe("profile API", () => {
         identity: { name: "Hatim Shaherawala" },
         projects: [{ name: "AI API Gateway" }]
       },
-      rawSources: { entries: [] },
+      rawSources: {
+        entries: [
+          {
+            id: "source-1",
+            type: "chat_note",
+            content: "Built AI API Gateway with request tracking and model routing.",
+            createdAt: "2026-08-13T00:00:00.000Z"
+          }
+        ]
+      },
       checklist: []
     });
     const { GET } = await import("./route");
@@ -50,6 +59,13 @@ describe("profile API", () => {
     expect(response.status).toBe(200);
     expect(body.profile.identity).toEqual({ name: "Hatim Shaherawala" });
     expect(body.profile.projects).toEqual([{ name: "AI API Gateway" }]);
+    expect(body.sources).toEqual([
+      expect.objectContaining({
+        id: "source-1",
+        type: "chat_note",
+        preview: "Built AI API Gateway with request tracking and model routing."
+      })
+    ]);
     expect(upsert).toHaveBeenCalledWith(expect.objectContaining({ where: { userId: "user-1" } }));
   });
 
@@ -76,7 +92,17 @@ describe("profile API", () => {
         evidence: [],
         openQuestions: []
       },
-      rawSources: { entries: [] },
+      rawSources: {
+        entries: [
+          {
+            id: "source-2",
+            type: "file_upload_text",
+            name: "cv.txt",
+            content: "Uploaded file: cv.txt Profile content.",
+            createdAt: "2026-08-13T00:00:00.000Z"
+          }
+        ]
+      },
       checklist: []
     });
     const { PATCH } = await import("./route");
@@ -93,6 +119,12 @@ describe("profile API", () => {
 
     expect(response.status).toBe(200);
     expect(body.profile.links.github).toBe("https://github.com/hatimshahera");
+    expect(body.sources[0]).toEqual(
+      expect.objectContaining({
+        id: "source-2",
+        name: "cv.txt"
+      })
+    );
     expect(update).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { userId: "user-1" },
