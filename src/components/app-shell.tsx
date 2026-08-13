@@ -170,6 +170,7 @@ export function AppShell({
   const [isLoadingApplicationDetail, setIsLoadingApplicationDetail] = useState(false);
   const [isSavingApplicationDetail, setIsSavingApplicationDetail] = useState(false);
   const [generatingArtifactType, setGeneratingArtifactType] = useState<string | null>(null);
+  const [selectedArtifactId, setSelectedArtifactId] = useState<string | null>(null);
   const [applicationEditorMessage, setApplicationEditorMessage] = useState("");
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [message, setMessage] = useState("");
@@ -261,6 +262,12 @@ export function AppShell({
       setApplicationDetail(data.application);
       setApplicationStatusDraft(data.application.status || "draft");
       setApplicationNextActionDraft(data.application.nextAction || "");
+      setSelectedArtifactId((current) => {
+        if (current && data.application.artifacts?.some((artifact: { id: string }) => artifact.id === current)) {
+          return current;
+        }
+        return data.application.artifacts?.[0]?.id ?? null;
+      });
     } catch (applicationError) {
       setApplicationEditorMessage(
         applicationError instanceof Error ? applicationError.message : "Could not load application details."
@@ -573,6 +580,7 @@ export function AppShell({
       }
 
       setApplicationDetail(data.application);
+      setSelectedArtifactId(data.application.artifacts?.[0]?.id ?? null);
       setApplications((current) =>
         current.map((item) =>
           item.id === data.application.id
@@ -626,6 +634,16 @@ export function AppShell({
 
   const applicationMemory = applicationDetail?.memory;
   const selectedEvidence = applicationMemory?.selectedEvidence;
+  const selectedArtifact =
+    applicationDetail?.artifacts.find((artifact) => artifact.id === selectedArtifactId) ??
+    applicationDetail?.artifacts[0] ??
+    null;
+  const selectedArtifactJson = selectedArtifact?.content
+    ? JSON.stringify(selectedArtifact.content, null, 2)
+    : "";
+  const selectedArtifactDownloadHref = selectedArtifactJson
+    ? `data:application/json;charset=utf-8,${encodeURIComponent(selectedArtifactJson)}`
+    : "";
 
   return (
     <main className="workspace-shell">
@@ -1067,9 +1085,9 @@ export function AppShell({
                         <li key={artifact.id}>
                           <div className="artifact-title-line">
                             <FileText size={14} />
-                            <span>
+                            <button type="button" onClick={() => setSelectedArtifactId(artifact.id)}>
                               {artifact.title} v{artifact.version}
-                            </span>
+                            </button>
                           </div>
                           {summarizeArtifactContent(artifact.content) ? (
                             <p>{summarizeArtifactContent(artifact.content)}</p>
@@ -1081,6 +1099,23 @@ export function AppShell({
                     <p>No generated artifacts yet.</p>
                   )}
                 </section>
+
+                {selectedArtifact ? (
+                  <section className="artifact-preview-panel" aria-label="Selected artifact preview">
+                    <div>
+                      <h3>{selectedArtifact.title}</h3>
+                      {selectedArtifactDownloadHref ? (
+                        <a
+                          href={selectedArtifactDownloadHref}
+                          download={`${selectedArtifact.type}-v${selectedArtifact.version}.json`}
+                        >
+                          Download JSON
+                        </a>
+                      ) : null}
+                    </div>
+                    <pre>{selectedArtifactJson || "No artifact content saved."}</pre>
+                  </section>
+                ) : null}
               </>
             ) : (
               <p className="empty-side-panel">Choose an application to view its saved memory.</p>

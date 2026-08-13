@@ -83,7 +83,7 @@ Use this as the live tracker while implementing the plan. Mark items complete on
 - [x] Add per-application memory panel.
 - [x] Add separate chats per application.
 - [x] Add support for multiple task chats if selected.
-- [ ] Add tests for application creation.
+- [x] Add tests for application creation.
 - [ ] Add tests for switching application chats.
 - [x] Add tests for application memory isolation.
 - [x] Add tests for status/archive persistence.
@@ -123,7 +123,7 @@ Use this as the live tracker while implementing the plan. Mark items complete on
 - [x] Add application count limit gate.
 - [x] Add generation/export limit gate.
 - [x] Add upload limit gate.
-- [ ] Add billing status UI placeholder.
+- [x] Add billing status UI placeholder.
 - [x] Add tests for auth on billing routes.
 - [x] Add tests for free/default billing status.
 - [x] Add tests for feature gates.

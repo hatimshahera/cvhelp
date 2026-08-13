@@ -1,11 +1,17 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowLeft, ShieldCheck, UserRound } from "lucide-react";
+import { ArrowLeft, CreditCard, ShieldCheck, UserRound } from "lucide-react";
+import { getBillingStatus } from "@/lib/billing";
+import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/session";
 
 export default async function AccountPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/sign-in");
+  const subscription = await prisma.subscription.findUnique({
+    where: { userId: user.id }
+  });
+  const billing = getBillingStatus(subscription);
 
   return (
     <main className="account-page">
@@ -33,6 +39,34 @@ export default async function AccountPage() {
             <dd>{user.email || "No email on session"}</dd>
           </div>
         </dl>
+
+        <section className="account-billing" aria-labelledby="billing-title">
+          <div className="account-heading compact">
+            <CreditCard size={20} />
+            <div>
+              <p className="eyebrow">Billing</p>
+              <h2 id="billing-title">{billing.plan} plan</h2>
+            </div>
+          </div>
+          <dl className="billing-details">
+            <div>
+              <dt>Status</dt>
+              <dd>{billing.status}</dd>
+            </div>
+            <div>
+              <dt>Applications</dt>
+              <dd>{billing.limits.applications}</dd>
+            </div>
+            <div>
+              <dt>Generations</dt>
+              <dd>{billing.limits.generations}</dd>
+            </div>
+            <div>
+              <dt>Exports</dt>
+              <dd>{billing.limits.exports}</dd>
+            </div>
+          </dl>
+        </section>
 
         <div className="account-note">
           <ShieldCheck size={18} />

@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { checkFeatureLimit, getBillingStatus } from "@/lib/billing";
 import { createInitialApplicationMemory } from "@/lib/memory";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/session";
@@ -160,6 +161,31 @@ export async function POST(request: Request) {
 
   if (!user) {
     return NextResponse.json({ error: "Sign in to add applications." }, { status: 401 });
+  }
+
+  const [subscription, applicationCount] = await Promise.all([
+    prisma.subscription.findUnique({
+      where: { userId: user.id }
+    }),
+    prisma.application.count({
+      where: { userId: user.id, archivedAt: null }
+    })
+  ]);
+  const billing = getBillingStatus(subscription);
+  const applicationLimit = checkFeatureLimit({
+    plan: billing.plan,
+    feature: "applications",
+    used: applicationCount
+  });
+
+  if (!applicationLimit.allowed) {
+    return NextResponse.json(
+      {
+        error: `You have reached the ${applicationLimit.limit} application limit for the ${billing.plan} plan.`,
+        billing
+      },
+      { status: 402 }
+    );
   }
 
   const parsed = createApplicationSchema.safeParse(await request.json().catch(() => null));

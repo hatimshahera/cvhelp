@@ -661,6 +661,13 @@ h3 {
   align-items: center;
 }
 
+.account-heading.compact h2 {
+  margin-top: 3px;
+  font-size: 24px;
+  line-height: 1.05;
+  text-transform: capitalize;
+}
+
 .account-heading h1 {
   margin-top: 4px;
   font-size: 34px;
@@ -673,7 +680,8 @@ h3 {
   margin: 0;
 }
 
-.account-details div {
+.account-details div,
+.billing-details div {
   display: grid;
   gap: 4px;
   padding: 14px;
@@ -682,16 +690,30 @@ h3 {
   background: #fbfcfb;
 }
 
-.account-details dt {
+.account-details dt,
+.billing-details dt {
   color: var(--muted);
   font-size: 12px;
   font-weight: 850;
   text-transform: uppercase;
 }
 
-.account-details dd {
+.account-details dd,
+.billing-details dd {
   margin: 0;
   font-weight: 800;
+}
+
+.account-billing {
+  display: grid;
+  gap: 14px;
+}
+
+.billing-details {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
 }
 
 .account-note {
@@ -1153,6 +1175,20 @@ h3 {
   align-items: flex-start;
 }
 
+.artifact-title-line button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-weight: 850;
+  text-align: left;
+}
+
+.artifact-title-line button:hover {
+  color: var(--accent-dark);
+}
+
 .artifact-title-line svg {
   flex: 0 0 auto;
   margin-top: 1px;
@@ -1195,6 +1231,44 @@ h3 {
   color: var(--muted);
   font-size: 13px;
   line-height: 1.45;
+}
+
+.artifact-preview-panel {
+  display: grid;
+  gap: 10px;
+  padding-top: 4px;
+}
+
+.artifact-preview-panel > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.artifact-preview-panel h3 {
+  font-size: 14px;
+}
+
+.artifact-preview-panel a {
+  color: var(--accent-dark);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.artifact-preview-panel pre {
+  max-height: 360px;
+  overflow: auto;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #101914;
+  color: #e7f2eb;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 11px;
+  line-height: 1.5;
+  white-space: pre-wrap;
 }
 
 .editor-error,
