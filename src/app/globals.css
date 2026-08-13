@@ -925,6 +925,38 @@ h3 {
   font-size: 13px;
 }
 
+.profile-intake-status {
+  display: grid;
+  gap: 8px;
+  padding: 11px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fbfcfb;
+}
+
+.profile-intake-status div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.profile-intake-status strong {
+  color: var(--accent-dark);
+  font-size: 18px;
+}
+
+.profile-intake-status span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.profile-intake-status p {
+  color: #33433a;
+  line-height: 1.45;
+}
+
 .profile-completeness {
   display: grid;
   gap: 8px;

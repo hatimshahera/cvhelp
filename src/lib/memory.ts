@@ -108,8 +108,21 @@ export const defaultChecklist: ChecklistItem[] = [
   { id: "github", label: "Add GitHub/projects", done: false },
   { id: "experience", label: "Confirm work experience", done: false },
   { id: "education", label: "Confirm education", done: false },
-  { id: "proof", label: "Collect evidence and metrics", done: false }
+  { id: "proof", label: "Collect evidence and metrics", done: false },
+  { id: "preferences", label: "Confirm role preferences", done: false },
+  { id: "review", label: "Review reusable profile", done: false }
 ];
+
+export const profileIntakePrompts: Record<string, string> = {
+  cv: "Paste or upload your current CV so I can build the first profile draft.",
+  linkedin: "Add your LinkedIn summary or background notes.",
+  github: "Add your GitHub, portfolio, or project list with links where possible.",
+  experience: "Confirm your work experience, responsibilities, dates, and scope.",
+  education: "Confirm your education, certifications, and relevant coursework.",
+  proof: "Add evidence, metrics, outcomes, links, or proof for the strongest claims.",
+  preferences: "Tell me the roles, industries, locations, salary range, and constraints you want me to optimize for.",
+  review: "Review the structured profile and correct anything that is missing or overstated."
+};
 
 function isObject(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -117,7 +130,13 @@ function isObject(value: unknown): value is Record<string, unknown> {
 
 export function parseChecklist(value: unknown): ChecklistItem[] {
   const parsed = z.array(checklistItemSchema).safeParse(value);
-  return parsed.success && parsed.data.length ? parsed.data : defaultChecklist;
+  const current = parsed.success && parsed.data.length ? parsed.data : [];
+  const byId = new Map(current.map((item) => [item.id, item]));
+
+  return defaultChecklist.map((defaultItem) => ({
+    ...defaultItem,
+    done: byId.get(defaultItem.id)?.done ?? defaultItem.done
+  }));
 }
 
 export function parseRawSources(value: unknown): RawSources {
@@ -195,6 +214,7 @@ export function summarizeProfileBank(input: {
     return Boolean(value);
   });
   const checklistDoneCount = checklist.filter((item) => item.done).length;
+  const intake = getProfileIntakeState(checklist);
   const sectionScore = completedSections.length / requiredSections.length;
   const checklistScore = checklist.length ? checklistDoneCount / checklist.length : 0;
   const completeness = Math.round((sectionScore * 0.65 + checklistScore * 0.35) * 100);
@@ -205,6 +225,7 @@ export function summarizeProfileBank(input: {
   return {
     sourceCount: rawSources.entries.length,
     checklist,
+    intake,
     hasMasterProfile: sections.length > 0,
     sections,
     completeness,
@@ -217,6 +238,20 @@ export function summarizeProfileBank(input: {
       skills: canonicalProfile.skills.length,
       evidence: canonicalProfile.evidence.length
     }
+  };
+}
+
+export function getProfileIntakeState(checklistInput: unknown) {
+  const checklist = parseChecklist(checklistInput);
+  const activeStep = checklist.find((item) => !item.done) ?? checklist[checklist.length - 1] ?? null;
+  const completedCount = checklist.filter((item) => item.done).length;
+
+  return {
+    activeStep,
+    nextPrompt: activeStep ? profileIntakePrompts[activeStep.id] ?? activeStep.label : "Profile intake is complete.",
+    completedCount,
+    totalCount: checklist.length,
+    complete: checklist.length > 0 && completedCount === checklist.length
   };
 }
 
@@ -247,6 +282,12 @@ export function markChecklistFromText(checklist: unknown, text: string): Checkli
       return { ...item, done: true };
     }
     if (item.id === "proof" && /metric|impact|result|evidence|users|revenue|latency|accuracy/.test(lower)) {
+      return { ...item, done: true };
+    }
+    if (item.id === "preferences" && /preference|remote|hybrid|onsite|salary|location|industry|role|roles/.test(lower)) {
+      return { ...item, done: true };
+    }
+    if (item.id === "review" && /review|correct|correction|final|looks good|approved/.test(lower)) {
       return { ...item, done: true };
     }
     return item;

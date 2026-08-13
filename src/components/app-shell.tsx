@@ -31,6 +31,13 @@ type ChatMode = "build_profile" | "application";
 type ProfileBankSummary = {
   sourceCount: number;
   checklist: Array<{ id: string; label: string; done: boolean }>;
+  intake: {
+    activeStep: { id: string; label: string; done: boolean } | null;
+    nextPrompt: string;
+    completedCount: number;
+    totalCount: number;
+    complete: boolean;
+  };
   hasMasterProfile: boolean;
   sections: string[];
   completeness: number;
@@ -869,6 +876,15 @@ export function AppShell({
               <strong>Profile bank</strong>
             </div>
             <p>{profileBank.sourceCount} saved source notes</p>
+            <div className="profile-intake-status" aria-label="Profile intake next step">
+              <div>
+                <strong>
+                  {profileBank.intake.completedCount}/{profileBank.intake.totalCount}
+                </strong>
+                <span>{profileBank.intake.complete ? "intake complete" : "intake steps"}</span>
+              </div>
+              <p>{profileBank.intake.nextPrompt}</p>
+            </div>
             <div className="profile-completeness" aria-label="Profile completeness">
               <div>
                 <strong>{profileBank.completeness}%</strong>

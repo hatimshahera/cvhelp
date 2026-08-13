@@ -4,7 +4,9 @@ import {
   appendRawSource,
   createDefaultProfileBankData,
   createInitialApplicationMemory,
+  getProfileIntakeState,
   markChecklistFromText,
+  parseChecklist,
   parseCanonicalProfile,
   parseApplicationMemory,
   summarizeProfileBank,
@@ -49,6 +51,27 @@ describe("profile memory helpers", () => {
     expect(checklist.find((item) => item.id === "proof")?.done).toBe(true);
   });
 
+  it("merges older stored checklist data into the current guided intake sequence", () => {
+    const checklist = parseChecklist([{ id: "cv", label: "Old CV label", done: true }]);
+
+    expect(checklist.find((item) => item.id === "cv")?.done).toBe(true);
+    expect(checklist.find((item) => item.id === "preferences")?.done).toBe(false);
+    expect(checklist.find((item) => item.id === "review")?.done).toBe(false);
+  });
+
+  it("reports the next guided profile intake step", () => {
+    const checklist = markChecklistFromText(
+      createDefaultProfileBankData().checklist,
+      "My CV, LinkedIn, GitHub, work experience, education, and latency metrics are here."
+    );
+    const intake = getProfileIntakeState(checklist);
+
+    expect(intake.activeStep?.id).toBe("preferences");
+    expect(intake.nextPrompt).toContain("roles");
+    expect(intake.completedCount).toBe(6);
+    expect(intake.totalCount).toBe(8);
+  });
+
   it("summarizes populated profile sections", () => {
     const summary = summarizeProfileBank({
       masterProfile: {
@@ -67,6 +90,7 @@ describe("profile memory helpers", () => {
     expect(summary.hasMasterProfile).toBe(true);
     expect(summary.sections).toEqual(["projects"]);
     expect(summary.completeness).toBeGreaterThan(0);
+    expect(summary.intake.activeStep?.id).toBe("cv");
     expect(summary.missingSections).toContain("education");
     expect(summary.evidenceCounts.projects).toBe(1);
   });

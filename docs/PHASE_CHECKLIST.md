@@ -49,7 +49,7 @@ Use this as the live tracker while implementing the plan. Mark items complete on
 ## Phase 4: Profile Builder Chat System
 
 - [x] Define canonical profile schema.
-- [ ] Add guided intake states.
+- [x] Add guided intake states.
 - [x] Add stronger profile-builder system instructions.
 - [x] Add profile memory update validation.
 - [ ] Add source cards UI.
@@ -57,7 +57,7 @@ Use this as the live tracker while implementing the plan. Mark items complete on
 - [ ] Add correction flow for saved facts.
 - [ ] Add delete/exclude flow for saved facts.
 - [x] Add profile completeness scoring.
-- [ ] Add profile checklist based on actual evidence.
+- [x] Add profile checklist based on actual evidence.
 - [ ] Add tests for CV/text upload.
 - [ ] Add tests for PDF extraction behavior.
 - [ ] Add tests for chat-to-profile extraction.
