@@ -155,12 +155,12 @@ Use this as the live tracker while implementing the plan. Mark items complete on
 
 ## Phase 9: End-to-End Tests and Quality Gates
 
-- [ ] Choose test runner setup.
-- [ ] Add test database setup.
-- [ ] Add mocked OpenAI response utilities.
-- [ ] Add CV text fixture.
-- [ ] Add job post fixture.
-- [ ] Add application data fixture.
+- [x] Choose test runner setup.
+- [x] Add test database setup.
+- [x] Add mocked OpenAI response utilities.
+- [x] Add CV text fixture.
+- [x] Add job post fixture.
+- [x] Add application data fixture.
 - [ ] Add signup/signin E2E test.
 - [ ] Add profile builder E2E test.
 - [ ] Add application creation E2E test.
