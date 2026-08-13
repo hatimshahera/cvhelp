@@ -92,20 +92,20 @@ Use this as the live tracker while implementing the plan. Mark items complete on
 
 ## Phase 6: Generation and Outputs
 
-- [ ] Define artifact data model.
-- [ ] Add artifact versioning.
+- [x] Define artifact data model.
+- [x] Add artifact versioning.
 - [ ] Add tailored CV generation route.
 - [ ] Add cover note/recruiter message generation route.
 - [ ] Add application Q&A generation route.
 - [ ] Add artifact review UI.
 - [ ] Add regenerate/refine flow.
-- [ ] Add ProofCV-compatible `cv_data` export.
+- [x] Add ProofCV-compatible `cv_data` export.
 - [ ] Decide PDF rendering strategy.
 - [ ] Add PDF or TeX export route.
 - [ ] Add artifact download flow.
-- [ ] Add tests for artifact generation.
-- [ ] Add tests for version history.
-- [ ] Add tests for export scoping.
+- [x] Add tests for artifact generation.
+- [x] Add tests for version history.
+- [x] Add tests for export scoping.
 - [ ] Add tests for unsupported-claim prevention.
 - [ ] Run `npm run typecheck`.
 - [ ] Run `npm run build`.
