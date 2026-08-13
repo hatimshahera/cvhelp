@@ -152,6 +152,7 @@ async function updateMasterProfile({
         "Use stable sections such as summary, links, experience, projects, education, skills, achievements, preferences, evidence, openQuestions.",
         "Prefer the canonical sections identity, links, education, experience, projects, research, skills, achievements, preferences, constraints, evidence, openQuestions.",
         "Prefer arrays of concise objects for experience, projects, skills, achievements, and evidence.",
+        "When adding or updating profile fact objects, include a provenance array with sourceType, quote, confidence, and createdAt when available.",
         "Do not invent dates, metrics, employers, credentials, links, or technologies."
       ].join(" "),
       input: JSON.stringify({
@@ -198,6 +199,7 @@ async function updateApplicationMemory({
         "Do not invent dates, employers, metrics, credentials, links, project facts, or submitted status.",
         "Preserve existing useful memory unless the latest turn corrects or removes it.",
         "Use this exact JSON shape: candidateSnapshot, target, jobPost, requirements, responsibilities, keywords, selectedEvidence, profileSummary, honestyNotes, risks, gaps, notes, drafts, nextActions.",
+        "Preserve and update claimProvenance as a map from claim groups to provenance arrays with sourceType, quote, confidence, and createdAt.",
         "selectedEvidence must contain arrays for projects, research, experience, and skills.",
         "Use short strings in requirements, responsibilities, keywords, honestyNotes, risks, gaps, and nextActions."
       ].join(" "),

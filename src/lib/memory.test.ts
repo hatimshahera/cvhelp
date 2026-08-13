@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   appendApplicationMemoryNote,
   appendRawSource,
+  attachProvenanceToProfileFact,
   createDefaultProfileBankData,
   createInitialApplicationMemory,
   getProfileIntakeState,
@@ -106,6 +107,29 @@ describe("profile memory helpers", () => {
     expect(profile.education).toEqual([]);
     expect(profile.openQuestions).toEqual([]);
   });
+
+  it("attaches normalized provenance to profile facts", () => {
+    const fact = attachProvenanceToProfileFact(
+      { name: "AI API Gateway" },
+      {
+        sourceId: "source-1",
+        sourceType: "chat_note",
+        quote: "My project is AI API Gateway.",
+        confidence: "user_provided",
+        createdAt: "2026-08-13T00:00:00.000Z"
+      }
+    );
+
+    expect(fact.provenance).toEqual([
+      {
+        sourceId: "source-1",
+        sourceType: "chat_note",
+        quote: "My project is AI API Gateway.",
+        confidence: "user_provided",
+        createdAt: "2026-08-13T00:00:00.000Z"
+      }
+    ]);
+  });
 });
 
 describe("application memory helpers", () => {
@@ -131,6 +155,12 @@ describe("application memory helpers", () => {
     expect(memory.target.company).toBe("Example AI");
     expect(memory.target.role).toBe("AI Engineer");
     expect(memory.requirements).toEqual(["Python"]);
+    expect(memory.claimProvenance.requirements?.[0]).toEqual(
+      expect.objectContaining({
+        sourceType: "pasted_job_description",
+        confidence: "extracted"
+      })
+    );
     expect(memory.selectedEvidence.projects).toEqual([]);
     expect(memory.nextActions[0]).toContain("Review the role");
   });
@@ -186,6 +216,7 @@ describe("application memory helpers", () => {
     });
     expect(cvData.selected_projects).toEqual(["AI API Gateway"]);
     expect(cvData.honesty_notes).toEqual(["Do not claim enterprise-scale production ownership."]);
+    expect(cvData.claim_provenance).toEqual(memory.claimProvenance);
   });
 
   it("imports ProofCV application data into application memory", () => {

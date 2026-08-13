@@ -21,6 +21,16 @@ export const rawSourcesSchema = z.object({
 
 export const profileMasterSchema = z.record(z.string(), z.unknown());
 
+export const provenanceEntrySchema = z.object({
+  sourceId: z.string().optional(),
+  sourceType: z.string(),
+  quote: z.string().optional(),
+  confidence: z.enum(["user_provided", "extracted", "inferred"]).default("user_provided"),
+  createdAt: z.string()
+});
+
+export const claimProvenanceSchema = z.record(z.string(), z.array(provenanceEntrySchema));
+
 export const canonicalProfileSchema = z.object({
   identity: z.record(z.string(), z.unknown()).default({}),
   links: z.record(z.string(), z.unknown()).default({}),
@@ -86,6 +96,7 @@ export const applicationMemorySchema = z.object({
     })
   ).default([]),
   drafts: z.record(z.string(), z.unknown()).default({}),
+  claimProvenance: claimProvenanceSchema.default({}),
   nextActions: z.array(z.string()).default([])
 });
 
@@ -93,6 +104,7 @@ export type ChecklistItem = z.infer<typeof checklistItemSchema>;
 export type RawSourceEntry = z.infer<typeof rawSourceEntrySchema>;
 export type RawSources = z.infer<typeof rawSourcesSchema>;
 export type ProfileBankMemory = z.infer<typeof profileBankMemorySchema>;
+export type ProvenanceEntry = z.infer<typeof provenanceEntrySchema>;
 export type CanonicalProfile = z.infer<typeof canonicalProfileSchema>;
 export type ApplicationMemory = z.infer<typeof applicationMemorySchema>;
 export type SelectedEvidence = z.infer<typeof selectedEvidenceSchema>;
@@ -173,6 +185,18 @@ export function updateCanonicalProfileSection(
     ...profile,
     [section]: parsedValue
   });
+}
+
+export function attachProvenanceToProfileFact<T extends Record<string, unknown>>(
+  fact: T,
+  provenance: ProvenanceEntry
+) {
+  const current = Array.isArray(fact.provenance) ? fact.provenance : [];
+
+  return {
+    ...fact,
+    provenance: [...current, provenanceEntrySchema.parse(provenance)]
+  };
 }
 
 export function createDefaultProfileBankData(): ProfileBankMemory {
@@ -320,6 +344,14 @@ export function createInitialApplicationMemory(input: {
   };
   candidateSnapshot?: Record<string, unknown>;
 }): ApplicationMemory {
+  const sourceProvenance = provenanceEntrySchema.parse({
+    sourceType: input.jobPost.source,
+    sourceId: input.jobPost.sourceUrl ?? "job_post",
+    quote: input.jobPost.content.slice(0, 500),
+    confidence: "extracted",
+    createdAt: input.jobPost.capturedAt
+  });
+
   return applicationMemorySchema.parse({
     candidateSnapshot: input.candidateSnapshot ?? {},
     target: {
@@ -343,6 +375,11 @@ export function createInitialApplicationMemory(input: {
     gaps: [],
     notes: [],
     drafts: {},
+    claimProvenance: {
+      requirements: input.jobSummary?.requirements?.length ? [sourceProvenance] : [],
+      responsibilities: input.jobSummary?.responsibilities?.length ? [sourceProvenance] : [],
+      keywords: input.jobSummary?.keywords?.length ? [sourceProvenance] : []
+    },
     nextActions: ["Review the role requirements and choose strongest matching evidence."]
   });
 }
@@ -379,6 +416,7 @@ export function toProofCvData(input: {
     selected_experience: input.application.selectedEvidence.experience,
     selected_skills: input.application.selectedEvidence.skills,
     profile_summary: input.application.profileSummary,
-    honesty_notes: input.application.honestyNotes
+    honesty_notes: input.application.honestyNotes,
+    claim_provenance: input.application.claimProvenance
   };
 }

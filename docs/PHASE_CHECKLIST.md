@@ -21,11 +21,11 @@ Use this as the live tracker while implementing the plan. Mark items complete on
 - [x] Add Prisma migration for selected memory/artifact changes.
 - [x] Add profile memory read/write helpers.
 - [x] Add application memory read/write helpers.
-- [ ] Add provenance fields for profile facts and application claims.
+- [x] Add provenance fields for profile facts and application claims.
 - [x] Add ProofCV-compatible application export shape.
 - [x] Add import utility for existing `proofcv/applications/*` data.
 - [x] Add tests for memory schema validation.
-- [ ] Add tests for user/application memory isolation.
+- [x] Add tests for user/application memory isolation.
 - [x] Run `npm run typecheck`.
 - [x] Run `npm run build`.
 - [x] Verify Prisma migration status.
