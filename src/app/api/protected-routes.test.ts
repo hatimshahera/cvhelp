@@ -60,4 +60,13 @@ describe("protected API routes", () => {
     expect(response.status).toBe(401);
     expect(body.error).toBe("Sign in to upload files.");
   });
+
+  it("rejects signed-out profile detail requests", async () => {
+    const { GET } = await import("./profile/route");
+    const response = await GET();
+    const body = await response.json();
+
+    expect(response.status).toBe(401);
+    expect(body.error).toBe("Sign in to view your profile.");
+  });
 });

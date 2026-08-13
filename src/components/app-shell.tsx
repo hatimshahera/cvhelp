@@ -11,6 +11,7 @@ import {
   Loader2,
   LogOut,
   Paperclip,
+  Save,
   Send,
   Settings,
   Trash2,
@@ -51,6 +52,37 @@ type ApplicationItem = {
   status: string;
 };
 
+type ProfileSection =
+  | "identity"
+  | "links"
+  | "education"
+  | "experience"
+  | "projects"
+  | "research"
+  | "skills"
+  | "achievements"
+  | "preferences"
+  | "constraints"
+  | "evidence"
+  | "openQuestions";
+
+type CanonicalProfile = Record<ProfileSection, unknown>;
+
+const profileSections: ProfileSection[] = [
+  "identity",
+  "links",
+  "education",
+  "experience",
+  "projects",
+  "research",
+  "skills",
+  "achievements",
+  "preferences",
+  "constraints",
+  "evidence",
+  "openQuestions"
+];
+
 async function readJsonResponse(response: Response) {
   const text = await response.text().catch(() => "");
   if (!text) return {};
@@ -80,6 +112,12 @@ export function AppShell({
   const [messages, setMessages] = useState<Message[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [profileBank, setProfileBank] = useState<ProfileBankSummary | null>(null);
+  const [profileDetails, setProfileDetails] = useState<CanonicalProfile | null>(null);
+  const [selectedProfileSection, setSelectedProfileSection] = useState<ProfileSection>("identity");
+  const [profileSectionDraft, setProfileSectionDraft] = useState("");
+  const [isLoadingProfileDetails, setIsLoadingProfileDetails] = useState(false);
+  const [isSavingProfileSection, setIsSavingProfileSection] = useState(false);
+  const [profileEditorMessage, setProfileEditorMessage] = useState("");
   const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const [isClearingConversation, setIsClearingConversation] = useState(false);
@@ -119,6 +157,42 @@ export function AppShell({
   useEffect(() => {
     loadApplications();
   }, []);
+
+  async function loadProfileDetails() {
+    if (activeMode !== "build_profile") return;
+
+    setIsLoadingProfileDetails(true);
+    setProfileEditorMessage("");
+    try {
+      const response = await fetch("/api/profile", { cache: "no-store" });
+      const data = await readJsonResponse(response);
+
+      if (!response.ok) {
+        throw new Error(data.error || "Could not load profile details.");
+      }
+
+      setProfileDetails(data.profile);
+      setProfileBank(data.profileBank ?? profileBank);
+      setProfileSectionDraft(JSON.stringify(data.profile?.[selectedProfileSection] ?? null, null, 2));
+    } catch (profileError) {
+      setProfileEditorMessage(
+        profileError instanceof Error ? profileError.message : "Could not load profile details."
+      );
+    } finally {
+      setIsLoadingProfileDetails(false);
+    }
+  }
+
+  useEffect(() => {
+    loadProfileDetails();
+    // The selected section is intentionally excluded so changing tabs does not refetch the whole profile.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeMode]);
+
+  useEffect(() => {
+    if (!profileDetails) return;
+    setProfileSectionDraft(JSON.stringify(profileDetails[selectedProfileSection] ?? null, null, 2));
+  }, [profileDetails, selectedProfileSection]);
 
   useEffect(() => {
     let isMounted = true;
@@ -253,6 +327,9 @@ export function AppShell({
       setConversationId(data.conversationId);
       setProfileBank(data.profileBank ?? profileBank);
       setMessages(data.messages ?? []);
+      if (activeMode === "build_profile") {
+        await loadProfileDetails();
+      }
     } catch (sendError) {
       setMessages((current) => current.filter((item) => item.id !== optimisticMessage.id));
       setMessage(trimmed);
@@ -328,6 +405,49 @@ export function AppShell({
       setError(clearError instanceof Error ? clearError.message : "Could not clear the conversation.");
     } finally {
       setIsClearingConversation(false);
+    }
+  }
+
+  async function saveProfileSection(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (isSavingProfileSection) return;
+
+    let parsedValue: unknown;
+
+    try {
+      parsedValue = JSON.parse(profileSectionDraft);
+    } catch {
+      setProfileEditorMessage("This section must be valid JSON before it can be saved.");
+      return;
+    }
+
+    setIsSavingProfileSection(true);
+    setProfileEditorMessage("");
+
+    try {
+      const response = await fetch("/api/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          section: selectedProfileSection,
+          value: parsedValue
+        })
+      });
+      const data = await readJsonResponse(response);
+
+      if (!response.ok) {
+        throw new Error(data.error || "Could not save this profile section.");
+      }
+
+      setProfileDetails(data.profile);
+      setProfileBank(data.profileBank ?? profileBank);
+      setProfileEditorMessage("Saved.");
+    } catch (saveError) {
+      setProfileEditorMessage(
+        saveError instanceof Error ? saveError.message : "Could not save this profile section."
+      );
+    } finally {
+      setIsSavingProfileSection(false);
     }
   }
 
@@ -595,6 +715,59 @@ export function AppShell({
           </button>
         </form>
       </section>
+
+      <aside className="memory-side-panel" aria-label="Structured profile editor">
+        {activeMode === "build_profile" ? (
+          <>
+            <div className="side-panel-heading">
+              <p className="eyebrow">Profile</p>
+              <h2>Structured editor</h2>
+            </div>
+
+            <div className="section-tabs" role="tablist" aria-label="Profile sections">
+              {profileSections.map((section) => (
+                <button
+                  key={section}
+                  type="button"
+                  className={selectedProfileSection === section ? "active" : ""}
+                  onClick={() => setSelectedProfileSection(section)}
+                >
+                  {section}
+                </button>
+              ))}
+            </div>
+
+            <form className="profile-section-editor" onSubmit={saveProfileSection}>
+              <label>
+                {selectedProfileSection}
+                <textarea
+                  value={profileSectionDraft}
+                  onChange={(event) => setProfileSectionDraft(event.target.value)}
+                  disabled={isLoadingProfileDetails || isSavingProfileSection}
+                  spellCheck={false}
+                />
+              </label>
+
+              {profileEditorMessage ? (
+                <p className={profileEditorMessage === "Saved." ? "editor-success" : "editor-error"}>
+                  {profileEditorMessage}
+                </p>
+              ) : null}
+
+              <button type="submit" disabled={isLoadingProfileDetails || isSavingProfileSection}>
+                {isSavingProfileSection ? <Loader2 className="spin" size={16} /> : <Save size={16} />}
+                Save section
+              </button>
+            </form>
+          </>
+        ) : (
+          <div className="side-panel-heading">
+            <p className="eyebrow">Application</p>
+            <h2>Memory</h2>
+            <p>Application memory stays scoped to this role and one chat thread.</p>
+          </div>
+        )}
+      </aside>
     </main>
   );
 }

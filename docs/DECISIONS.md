@@ -74,6 +74,26 @@ Reasoning:
 
 The user needs different chats for each application. A chat for one role should not leak notes or drafts into another role.
 
+### Application Chat Threads
+
+Decision:
+
+Each application will use one chat thread for the MVP.
+
+Reasoning:
+
+Multiple threads for CV tailoring, cover letters, interview prep, and application questions could add avoidable complexity. One thread keeps the product easier to understand while memory and artifacts remain structured behind it.
+
+### Profile Editing
+
+Decision:
+
+Profile building remains primarily chat-command based, with a structured side-panel editor for direct user edits.
+
+Reasoning:
+
+Chat is the easiest input path for most users, but users still need a manual way to correct and maintain their own profile facts without negotiating every change through the agent.
+
 ### AI Grounding
 
 Decision:
@@ -122,14 +142,13 @@ Build route and feature-gate scaffolding, but do not hardcode final Stripe produ
 
 ### OAuth Scope
 
-Open:
+Decision:
 
-- Whether Google OAuth ships in MVP.
-- Whether GitHub/LinkedIn OAuth should be used only for signin or also profile enrichment.
+The MVP will use email/password auth only.
 
-Default for now:
+Reasoning:
 
-Keep provider wiring optional through env vars.
+Google, GitHub, and LinkedIn can be added later. Keeping the MVP to email/password reduces auth surface area while the core profile/application workflow is still being built.
 
 ### PDF Rendering Strategy
 
@@ -155,17 +174,6 @@ Open:
 Default for now:
 
 Use a hybrid approach: stable JSON shapes for flexible AI memory, with normalized rows for records that need listing, ownership checks, and versioning.
-
-### Multiple Chats Per Application
-
-Open:
-
-- One default chat per application.
-- Multiple chats per application by task type.
-
-Default for now:
-
-Support at least one chat per application immediately. Design schema so multiple threads can be added without data migration pain.
 
 ### Background Jobs
 
@@ -197,4 +205,3 @@ Continue storing extracted text and metadata first. Add object storage when orig
 - URL job scraping may fail for dynamic or protected job boards.
 - PDF generation may be difficult inside Vercel serverless constraints.
 - Payment implementation should not be mixed into core application logic.
-

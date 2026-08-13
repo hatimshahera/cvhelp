@@ -53,7 +53,7 @@ Use this as the live tracker while implementing the plan. Mark items complete on
 - [x] Add stronger profile-builder system instructions.
 - [x] Add profile memory update validation.
 - [ ] Add source cards UI.
-- [ ] Add editable profile facts UI.
+- [x] Add editable profile facts UI.
 - [ ] Add correction flow for saved facts.
 - [ ] Add delete/exclude flow for saved facts.
 - [x] Add profile completeness scoring.
@@ -63,8 +63,8 @@ Use this as the live tracker while implementing the plan. Mark items complete on
 - [ ] Add tests for chat-to-profile extraction.
 - [ ] Add tests for corrections and deletions.
 - [ ] Add grounding tests to prevent invented facts.
-- [ ] Run `npm run typecheck`.
-- [ ] Run `npm run build`.
+- [x] Run `npm run typecheck`.
+- [x] Run `npm run build`.
 
 ## Phase 5: Application Workspace System
 
@@ -81,14 +81,14 @@ Use this as the live tracker while implementing the plan. Mark items complete on
 - [ ] Add gap/risk/honesty notes storage.
 - [ ] Add selected projects/research/experience storage.
 - [ ] Add per-application memory panel.
-- [ ] Add separate chats per application.
-- [ ] Add support for multiple task chats if selected.
+- [x] Add separate chats per application.
+- [x] Add support for multiple task chats if selected.
 - [ ] Add tests for application creation.
 - [ ] Add tests for switching application chats.
 - [x] Add tests for application memory isolation.
 - [x] Add tests for status/archive persistence.
-- [ ] Run `npm run typecheck`.
-- [ ] Run `npm run build`.
+- [x] Run `npm run typecheck`.
+- [x] Run `npm run build`.
 
 ## Phase 6: Generation and Outputs
 

@@ -96,6 +96,11 @@ export type ProfileBankMemory = z.infer<typeof profileBankMemorySchema>;
 export type CanonicalProfile = z.infer<typeof canonicalProfileSchema>;
 export type ApplicationMemory = z.infer<typeof applicationMemorySchema>;
 export type SelectedEvidence = z.infer<typeof selectedEvidenceSchema>;
+export type CanonicalProfileSection = keyof CanonicalProfile;
+
+export const canonicalProfileSections = Object.keys(
+  canonicalProfileSchema.shape
+) as CanonicalProfileSection[];
 
 export const defaultChecklist: ChecklistItem[] = [
   { id: "cv", label: "Add current CV", done: false },
@@ -127,6 +132,28 @@ export function parseMasterProfile(value: unknown): Record<string, unknown> {
 
 export function parseCanonicalProfile(value: unknown): CanonicalProfile {
   return canonicalProfileSchema.parse(parseMasterProfile(value));
+}
+
+export function parseCanonicalProfileSection(
+  section: CanonicalProfileSection,
+  value: unknown
+): CanonicalProfile[CanonicalProfileSection] {
+  const sectionSchema = canonicalProfileSchema.shape[section];
+  return sectionSchema.parse(value);
+}
+
+export function updateCanonicalProfileSection(
+  currentProfile: unknown,
+  section: CanonicalProfileSection,
+  value: unknown
+): CanonicalProfile {
+  const profile = parseCanonicalProfile(currentProfile);
+  const parsedValue = parseCanonicalProfileSection(section, value);
+
+  return canonicalProfileSchema.parse({
+    ...profile,
+    [section]: parsedValue
+  });
 }
 
 export function createDefaultProfileBankData(): ProfileBankMemory {
