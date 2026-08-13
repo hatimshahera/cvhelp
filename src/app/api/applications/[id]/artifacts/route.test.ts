@@ -4,6 +4,8 @@ const applicationFindFirst = vi.fn();
 const artifactFindMany = vi.fn();
 const artifactFindFirst = vi.fn();
 const artifactCreate = vi.fn();
+const artifactCount = vi.fn();
+const subscriptionFindUnique = vi.fn();
 const responsesCreate = vi.fn();
 
 vi.mock("next-auth", () => ({
@@ -22,7 +24,11 @@ vi.mock("@/lib/prisma", () => ({
     applicationArtifact: {
       findMany: artifactFindMany,
       findFirst: artifactFindFirst,
-      create: artifactCreate
+      create: artifactCreate,
+      count: artifactCount
+    },
+    subscription: {
+      findUnique: subscriptionFindUnique
     }
   }
 }));
@@ -82,6 +88,8 @@ describe("application artifacts API", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     delete process.env.OPENAI_API_KEY;
+    subscriptionFindUnique.mockResolvedValue(null);
+    artifactCount.mockResolvedValue(0);
     const { getServerSession } = await import("next-auth");
     vi.mocked(getServerSession).mockResolvedValue({
       user: {
@@ -160,6 +168,43 @@ describe("application artifacts API", () => {
 
     expect(response.status).toBe(502);
     expect(body.error).toBe("OPENAI_API_KEY is not configured on the server.");
+    expect(artifactCreate).not.toHaveBeenCalled();
+  });
+
+  it("blocks ProofCV exports when the export limit is reached", async () => {
+    applicationFindFirst.mockResolvedValueOnce(applicationWithMemory);
+    artifactCount.mockResolvedValueOnce(3);
+    const { POST } = await import("./route");
+    const response = await POST(
+      new Request("http://localhost/api/applications/app-1/artifacts", {
+        method: "POST",
+        body: JSON.stringify({ type: "proofcv_data" })
+      }),
+      { params: Promise.resolve({ id: "app-1" }) }
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(402);
+    expect(body.error).toContain("3 exports limit");
+    expect(artifactCreate).not.toHaveBeenCalled();
+  });
+
+  it("blocks AI artifacts when the generation limit is reached", async () => {
+    applicationFindFirst.mockResolvedValueOnce(applicationWithMemory);
+    artifactCount.mockResolvedValueOnce(10);
+    const { POST } = await import("./route");
+    const response = await POST(
+      new Request("http://localhost/api/applications/app-1/artifacts", {
+        method: "POST",
+        body: JSON.stringify({ type: "cv_draft" })
+      }),
+      { params: Promise.resolve({ id: "app-1" }) }
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(402);
+    expect(body.error).toContain("10 generations limit");
+    expect(responsesCreate).not.toHaveBeenCalled();
     expect(artifactCreate).not.toHaveBeenCalled();
   });
 

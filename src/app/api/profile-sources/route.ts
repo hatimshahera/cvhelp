@@ -5,8 +5,10 @@ import {
   createDefaultProfileBankData,
   markChecklistFromText,
   parseChecklist,
+  parseRawSources,
   summarizeProfileBank
 } from "@/lib/memory";
+import { checkFeatureLimit, getBillingStatus } from "@/lib/billing";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/session";
 
@@ -122,6 +124,29 @@ export async function POST(request: Request) {
     }
 
     const profileBank = await getOrCreateProfileBank(user.id);
+    const subscription = await prisma.subscription.findUnique({
+      where: { userId: user.id }
+    });
+    const billing = getBillingStatus(subscription);
+    const uploadCount = parseRawSources(profileBank.rawSources).entries.filter((entry) =>
+      entry.type.startsWith("file_upload")
+    ).length;
+    const uploadLimit = checkFeatureLimit({
+      plan: billing.plan,
+      feature: "uploads",
+      used: uploadCount
+    });
+
+    if (files.length > uploadLimit.remaining) {
+      return NextResponse.json(
+        {
+          error: `You have ${uploadLimit.remaining} uploads remaining on the ${billing.plan} plan.`,
+          billing
+        },
+        { status: 402 }
+      );
+    }
+
     let rawSources: unknown = profileBank.rawSources;
     const uploaded = [];
 

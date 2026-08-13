@@ -2,6 +2,7 @@ import OpenAI from "openai";
 import type { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { checkFeatureLimit, getBillingStatus } from "@/lib/billing";
 import { createInitialApplicationMemory, type ApplicationMemory, parseApplicationMemory } from "@/lib/memory";
 import { proofCvDataFromApplicationMemory } from "@/lib/proofcv";
 import { prisma } from "@/lib/prisma";
@@ -203,6 +204,36 @@ export async function POST(request: Request, context: RouteParams) {
     return NextResponse.json(
       { error: parsed.error.issues[0]?.message ?? "Check the artifact request." },
       { status: 400 }
+    );
+  }
+
+  const isExport = parsed.data.type === "proofcv_data";
+  const feature = isExport ? "exports" : "generations";
+  const [subscription, usedCount] = await Promise.all([
+    prisma.subscription.findUnique({
+      where: { userId: user.id }
+    }),
+    prisma.applicationArtifact.count({
+      where: {
+        userId: user.id,
+        type: isExport ? "proofcv_data" : { not: "proofcv_data" }
+      }
+    })
+  ]);
+  const billing = getBillingStatus(subscription);
+  const featureLimit = checkFeatureLimit({
+    plan: billing.plan,
+    feature,
+    used: usedCount
+  });
+
+  if (!featureLimit.allowed) {
+    return NextResponse.json(
+      {
+        error: `You have reached the ${featureLimit.limit} ${feature} limit for the ${billing.plan} plan.`,
+        billing
+      },
+      { status: 402 }
     );
   }
 
