@@ -1205,6 +1205,65 @@ h3 {
   gap: 10px;
 }
 
+.profile-correction-flow {
+  display: grid;
+  gap: 10px;
+  padding: 11px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fbfcfb;
+}
+
+.profile-correction-flow div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.profile-correction-flow h3 {
+  font-size: 14px;
+}
+
+.profile-correction-flow span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.profile-correction-flow textarea {
+  min-height: 90px;
+  resize: vertical;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  outline: none;
+  background: #ffffff;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.profile-correction-flow textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px #e7f5ee;
+}
+
+.profile-correction-flow button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 36px;
+  border: 0;
+  border-radius: 9px;
+  background: var(--accent);
+  color: white;
+  font-size: 12px;
+  font-weight: 850;
+}
+
 .source-list-heading {
   display: flex;
   align-items: baseline;

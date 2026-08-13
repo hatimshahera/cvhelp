@@ -12,6 +12,7 @@ import {
   Loader2,
   LogOut,
   Paperclip,
+  PencilLine,
   Save,
   Send,
   Settings,
@@ -143,6 +144,7 @@ const profileSections: ProfileSection[] = [
 const profileCommandSuggestions = [
   "What profile info do you still need from me?",
   "Summarize my strongest evidence and missing proof.",
+  "I need to correct something saved in my profile.",
   "Review the structured profile for gaps or overstated claims."
 ];
 
@@ -176,6 +178,10 @@ function asRecord(value: unknown): Record<string, unknown> | null {
 
 function asStringArray(value: unknown) {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+}
+
+function isEditorSuccessMessage(message: string) {
+  return message === "Saved." || message === "Source deleted." || message.startsWith("Correction queued");
 }
 
 function renderMessageContent(content: string) {
@@ -363,6 +369,7 @@ export function AppShell({
   const [profileDetails, setProfileDetails] = useState<CanonicalProfile | null>(null);
   const [selectedProfileSection, setSelectedProfileSection] = useState<ProfileSection>("identity");
   const [profileSectionDraft, setProfileSectionDraft] = useState("");
+  const [profileCorrectionDraft, setProfileCorrectionDraft] = useState("");
   const [isLoadingProfileDetails, setIsLoadingProfileDetails] = useState(false);
   const [isSavingProfileSection, setIsSavingProfileSection] = useState(false);
   const [profileEditorMessage, setProfileEditorMessage] = useState("");
@@ -770,6 +777,25 @@ export function AppShell({
     } finally {
       setDeletingProfileSourceId(null);
     }
+  }
+
+  function queueProfileCorrection() {
+    const correction = profileCorrectionDraft.trim();
+    if (!correction) {
+      setProfileEditorMessage("Describe the correction before queueing it.");
+      return;
+    }
+
+    setActiveMode("build_profile");
+    setMessage(
+      [
+        `Please correct the saved ${selectedProfileSection} section in my profile.`,
+        `Correction: ${correction}`,
+        "Only update facts that are supported by this correction. If anything is ambiguous, ask me one focused question before saving it."
+      ].join("\n\n")
+    );
+    setProfileCorrectionDraft("");
+    setProfileEditorMessage("Correction queued in chat. Press Send when ready.");
   }
 
   async function saveApplicationDetail(event: React.FormEvent<HTMLFormElement>) {
@@ -1196,7 +1222,7 @@ export function AppShell({
               </label>
 
               {profileEditorMessage ? (
-                <p className={profileEditorMessage === "Saved." ? "editor-success" : "editor-error"}>
+                <p className={isEditorSuccessMessage(profileEditorMessage) ? "editor-success" : "editor-error"}>
                   {profileEditorMessage}
                 </p>
               ) : null}
@@ -1206,6 +1232,27 @@ export function AppShell({
                 Save section
               </button>
             </form>
+
+            <section className="profile-correction-flow" aria-label="Profile correction flow">
+              <div>
+                <h3>Correction</h3>
+                <span>{selectedProfileSection}</span>
+              </div>
+              <textarea
+                value={profileCorrectionDraft}
+                onChange={(event) => setProfileCorrectionDraft(event.target.value)}
+                placeholder="Example: remove the AWS claim, change the project metric to 20%, or ask me before saving this employer."
+                disabled={isSending || isLoadingHistory}
+              />
+              <button
+                type="button"
+                onClick={queueProfileCorrection}
+                disabled={isSending || isLoadingHistory || !profileCorrectionDraft.trim()}
+              >
+                <PencilLine size={15} />
+                Queue correction
+              </button>
+            </section>
 
             <section className="profile-source-list" aria-label="Saved profile sources">
               <div className="source-list-heading">
