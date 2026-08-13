@@ -1657,7 +1657,42 @@ h3 {
   padding: 14px 16px;
   border-radius: 16px;
   line-height: 1.5;
+}
+
+.message-meta {
+  margin-bottom: 7px;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.message.user .message-meta {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.message-body {
+  display: grid;
+  gap: 9px;
+}
+
+.message-body p,
+.message-body ul {
+  margin: 0;
+}
+
+.message-body p {
   white-space: pre-wrap;
+}
+
+.message-body ul {
+  display: grid;
+  gap: 6px;
+  padding-left: 18px;
+}
+
+.message-body li {
+  padding-left: 2px;
 }
 
 .message.assistant {
@@ -1705,6 +1740,31 @@ h3 {
   padding: 20px 32px 28px;
   border-top: 1px solid var(--line);
   background: #fbfcfb;
+}
+
+.command-suggestions {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.command-suggestions button {
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: white;
+  color: #33433a;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.command-suggestions button:not(:disabled):hover,
+.command-suggestions button:not(:disabled):focus-visible {
+  border-color: #cce4d6;
+  background: #f4faf6;
+  color: var(--accent-dark);
 }
 
 .selected-files {

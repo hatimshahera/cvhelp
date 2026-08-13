@@ -140,6 +140,18 @@ const profileSections: ProfileSection[] = [
   "openQuestions"
 ];
 
+const profileCommandSuggestions = [
+  "What profile info do you still need from me?",
+  "Summarize my strongest evidence and missing proof.",
+  "Review the structured profile for gaps or overstated claims."
+];
+
+const applicationCommandSuggestions = [
+  "Compare this job against my profile and list the best evidence.",
+  "Draft tailored CV bullets for this application.",
+  "What gaps, risks, and next actions should I handle?"
+];
+
 function formatLabel(value: string) {
   return value
     .replace(/_/g, " ")
@@ -164,6 +176,32 @@ function asRecord(value: unknown): Record<string, unknown> | null {
 
 function asStringArray(value: unknown) {
   return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+}
+
+function renderMessageContent(content: string) {
+  const blocks = content
+    .split(/\n{2,}/)
+    .map((block) => block.trim())
+    .filter(Boolean);
+
+  return blocks.map((block, blockIndex) => {
+    const lines = block.split("\n").map((line) => line.trim()).filter(Boolean);
+    const bulletLines = lines
+      .map((line) => line.match(/^[-*]\s+(.+)$/)?.[1]?.trim())
+      .filter((line): line is string => Boolean(line));
+
+    if (bulletLines.length && bulletLines.length === lines.length) {
+      return (
+        <ul key={`${blockIndex}-${block.slice(0, 16)}`}>
+          {bulletLines.map((line) => (
+            <li key={line}>{line}</li>
+          ))}
+        </ul>
+      );
+    }
+
+    return <p key={`${blockIndex}-${block.slice(0, 16)}`}>{block}</p>;
+  });
 }
 
 function renderArtifactValue(value: unknown) {
@@ -791,6 +829,12 @@ export function AppShell({
   const selectedArtifactDownloadHref = selectedArtifactJson
     ? `data:application/json;charset=utf-8,${encodeURIComponent(selectedArtifactJson)}`
     : "";
+  const commandSuggestions =
+    activeMode === "build_profile" ? profileCommandSuggestions : applicationCommandSuggestions;
+
+  function applyCommandSuggestion(command: string) {
+    setMessage(command);
+  }
 
   return (
     <main className="workspace-shell">
@@ -987,7 +1031,8 @@ export function AppShell({
           ) : messages.length ? (
             messages.map((item, index) => (
               <article className={`message ${item.role}`} key={item.id ?? `${item.role}-${index}`}>
-                <p>{item.content}</p>
+                <div className="message-meta">{item.role === "assistant" ? "CVhelp" : "You"}</div>
+                <div className="message-body">{renderMessageContent(item.content)}</div>
               </article>
             ))
           ) : (
@@ -1010,6 +1055,18 @@ export function AppShell({
         {error ? <p className="chat-error">{error}</p> : null}
 
         <form className="composer" onSubmit={sendMessage}>
+          <div className="command-suggestions" aria-label="Suggested chat commands">
+            {commandSuggestions.map((command) => (
+              <button
+                key={command}
+                type="button"
+                onClick={() => applyCommandSuggestion(command)}
+                disabled={isSending || isLoadingHistory || (activeMode === "application" && !activeApplication)}
+              >
+                {command}
+              </button>
+            ))}
+          </div>
           {selectedFiles.length ? (
             <div className="selected-files">
               {selectedFiles.map((file) => (

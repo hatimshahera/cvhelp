@@ -140,18 +140,18 @@ Use this as the live tracker while implementing the plan. Mark items complete on
 - [x] Add artifact cards.
 - [x] Add status badges.
 - [x] Add progress indicators.
-- [ ] Improve chat message rendering.
+- [x] Improve chat message rendering.
 - [x] Improve empty states.
 - [x] Improve loading states.
 - [x] Improve error states.
 - [x] Make mobile layout usable.
-- [ ] Check keyboard accessibility.
+- [x] Check keyboard accessibility.
 - [x] Check text overflow and overlap.
 - [ ] Add browser smoke tests for main pages.
 - [ ] Add desktop visual checks.
 - [ ] Add mobile visual checks.
-- [ ] Run `npm run typecheck`.
-- [ ] Run `npm run build`.
+- [x] Run `npm run typecheck`.
+- [x] Run `npm run build`.
 
 ## Phase 9: End-to-End Tests and Quality Gates
 
@@ -164,7 +164,7 @@ Use this as the live tracker while implementing the plan. Mark items complete on
 - [ ] Add signup/signin E2E test.
 - [ ] Add profile builder E2E test.
 - [ ] Add application creation E2E test.
-- [x] Add separate application chats E2E test.
+- [ ] Add separate application chats E2E test.
 - [ ] Add generation/artifact E2E test.
 - [ ] Add billing route E2E or integration test.
 - [x] Add cross-user access denial tests.
