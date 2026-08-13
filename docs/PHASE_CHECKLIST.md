@@ -58,11 +58,11 @@ Use this as the live tracker while implementing the plan. Mark items complete on
 - [x] Add delete/exclude flow for saved facts.
 - [x] Add profile completeness scoring.
 - [x] Add profile checklist based on actual evidence.
-- [ ] Add tests for CV/text upload.
-- [ ] Add tests for PDF extraction behavior.
-- [ ] Add tests for chat-to-profile extraction.
-- [ ] Add tests for corrections and deletions.
-- [ ] Add grounding tests to prevent invented facts.
+- [x] Add tests for CV/text upload.
+- [x] Add tests for PDF extraction behavior.
+- [x] Add tests for chat-to-profile extraction.
+- [x] Add tests for corrections and deletions.
+- [x] Add grounding tests to prevent invented facts.
 - [x] Run `npm run typecheck`.
 - [x] Run `npm run build`.
 

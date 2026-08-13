@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const profileBankUpsert = vi.fn();
+const profileBankUpdate = vi.fn();
 const applicationFindFirst = vi.fn();
 const conversationFindFirst = vi.fn();
 const conversationCreate = vi.fn();
@@ -23,7 +24,8 @@ vi.mock("@/lib/auth", () => ({
 vi.mock("@/lib/prisma", () => ({
   prisma: {
     profileBank: {
-      upsert: profileBankUpsert
+      upsert: profileBankUpsert,
+      update: profileBankUpdate
     },
     application: {
       findFirst: applicationFindFirst,
@@ -60,7 +62,7 @@ const profileBank = {
     identity: { name: "Hatim Shaherawala" },
     skills: ["Python"]
   },
-  rawSources: [],
+  rawSources: { entries: [] },
   checklist: []
 };
 
@@ -89,6 +91,7 @@ describe("chat API application scoping", () => {
     vi.clearAllMocks();
     process.env.OPENAI_API_KEY = "test-key";
     profileBankUpsert.mockResolvedValue(profileBank);
+    profileBankUpdate.mockResolvedValue(profileBank);
     const { getServerSession } = await import("next-auth");
     vi.mocked(getServerSession).mockResolvedValue({
       user: {
@@ -166,5 +169,200 @@ describe("chat API application scoping", () => {
     expect(chatMessageCreate).not.toHaveBeenCalled();
     expect(applicationUpdate).not.toHaveBeenCalled();
     expect(responsesCreate).not.toHaveBeenCalled();
+  });
+
+  it("extracts chat-provided profile facts into the profile bank", async () => {
+    profileBankUpdate
+      .mockResolvedValueOnce({
+        ...profileBank,
+        rawSources: {
+          entries: [
+            {
+              id: "source-1",
+              type: "chat_note",
+              content: "My GitHub project is AI API Gateway.",
+              createdAt: "2026-08-13T00:00:00.000Z"
+            }
+          ]
+        },
+        checklist: [
+          { id: "github", label: "Add GitHub/projects", done: true }
+        ]
+      })
+      .mockResolvedValueOnce({
+        ...profileBank,
+        masterProfile: {
+          projects: [{ name: "AI API Gateway", evidence: "User-provided chat note" }]
+        }
+      });
+    conversationCreate.mockResolvedValueOnce({
+      id: "conversation-1",
+      mode: "build_profile",
+      applicationId: null
+    });
+    chatMessageCreate
+      .mockResolvedValueOnce({
+        id: "message-user",
+        role: "user",
+        content: "My GitHub project is AI API Gateway."
+      })
+      .mockResolvedValueOnce({
+        id: "message-assistant",
+        role: "assistant",
+        content: "Saved that project to your profile."
+      });
+    chatMessageFindMany
+      .mockResolvedValueOnce([
+        {
+          role: "user",
+          content: "My GitHub project is AI API Gateway."
+        }
+      ])
+      .mockResolvedValueOnce([
+        {
+          id: "message-user",
+          role: "user",
+          content: "My GitHub project is AI API Gateway.",
+          createdAt: new Date("2026-08-13T00:00:00.000Z")
+        },
+        {
+          id: "message-assistant",
+          role: "assistant",
+          content: "Saved that project to your profile.",
+          createdAt: new Date("2026-08-13T00:00:01.000Z")
+        }
+      ]);
+    responsesCreate
+      .mockResolvedValueOnce({
+        output_text: "Saved that project to your profile."
+      })
+      .mockResolvedValueOnce({
+        output_text: JSON.stringify({
+          projects: [{ name: "AI API Gateway", evidence: "User-provided chat note" }]
+        })
+      });
+    conversationUpdate.mockResolvedValueOnce({ id: "conversation-1" });
+    const { POST } = await import("./route");
+    const response = await POST(
+      new Request("http://localhost/api/chat", {
+        method: "POST",
+        body: JSON.stringify({
+          mode: "build_profile",
+          message: "My GitHub project is AI API Gateway."
+        })
+      })
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.conversationId).toBe("conversation-1");
+    expect(profileBankUpdate).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        where: { userId: "user-1" },
+        data: expect.objectContaining({
+          rawSources: expect.objectContaining({
+            entries: [
+              expect.objectContaining({
+                type: "chat_note",
+                content: "My GitHub project is AI API Gateway."
+              })
+            ]
+          }),
+          checklist: expect.arrayContaining([
+            expect.objectContaining({
+              id: "github",
+              done: true
+            })
+          ])
+        })
+      })
+    );
+    expect(profileBankUpdate).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        where: { userId: "user-1" },
+        data: {
+          masterProfile: {
+            projects: [{ name: "AI API Gateway", evidence: "User-provided chat note" }]
+          }
+        }
+      })
+    );
+  });
+
+  it("instructs the profile updater to keep facts grounded and apply corrections", async () => {
+    profileBankUpdate
+      .mockResolvedValueOnce(profileBank)
+      .mockResolvedValueOnce({
+        ...profileBank,
+        masterProfile: {
+          projects: [{ name: "AI API Gateway", metric: "20% latency reduction" }]
+        }
+      });
+    conversationCreate.mockResolvedValueOnce({
+      id: "conversation-2",
+      mode: "build_profile",
+      applicationId: null
+    });
+    chatMessageCreate
+      .mockResolvedValueOnce({
+        id: "message-user",
+        role: "user",
+        content: "Correction: the project latency reduction was 20%, not 50%."
+      })
+      .mockResolvedValueOnce({
+        id: "message-assistant",
+        role: "assistant",
+        content: "I will keep the supported 20% metric."
+      });
+    chatMessageFindMany
+      .mockResolvedValueOnce([
+        {
+          role: "user",
+          content: "Correction: the project latency reduction was 20%, not 50%."
+        }
+      ])
+      .mockResolvedValueOnce([]);
+    responsesCreate
+      .mockResolvedValueOnce({
+        output_text: "I will keep the supported 20% metric."
+      })
+      .mockResolvedValueOnce({
+        output_text: JSON.stringify({
+          projects: [{ name: "AI API Gateway", metric: "20% latency reduction" }]
+        })
+      });
+    conversationUpdate.mockResolvedValueOnce({ id: "conversation-2" });
+    const { POST } = await import("./route");
+    const response = await POST(
+      new Request("http://localhost/api/chat", {
+        method: "POST",
+        body: JSON.stringify({
+          mode: "build_profile",
+          message: "Correction: the project latency reduction was 20%, not 50%."
+        })
+      })
+    );
+
+    expect(response.status).toBe(200);
+    expect(responsesCreate).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        instructions: expect.stringContaining("Keep only facts grounded in user-provided information.")
+      })
+    );
+    expect(responsesCreate).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        instructions: expect.stringContaining("If the user corrects or deletes information, apply that correction.")
+      })
+    );
+    expect(responsesCreate).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        instructions: expect.stringContaining("Do not invent dates, metrics, employers, credentials, links, or technologies.")
+      })
+    );
   });
 });

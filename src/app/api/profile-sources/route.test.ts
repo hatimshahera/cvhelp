@@ -3,6 +3,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const profileBankUpsert = vi.fn();
 const profileBankUpdate = vi.fn();
 const subscriptionFindUnique = vi.fn();
+const pdfGetText = vi.fn();
+const pdfDestroy = vi.fn();
 
 vi.mock("next-auth", () => ({
   getServerSession: vi.fn()
@@ -24,6 +26,15 @@ vi.mock("@/lib/prisma", () => ({
   }
 }));
 
+vi.mock("pdf-parse", () => ({
+  PDFParse: vi.fn(function MockPDFParse() {
+    return {
+      getText: pdfGetText,
+      destroy: pdfDestroy
+    };
+  })
+}));
+
 function formDataWithFile(file: File) {
   const formData = new FormData();
   formData.append("files", file);
@@ -33,6 +44,8 @@ function formDataWithFile(file: File) {
 describe("profile source uploads", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
+    pdfGetText.mockResolvedValue({ text: "Extracted PDF CV text with education and experience." });
+    pdfDestroy.mockResolvedValue(undefined);
     const { getServerSession } = await import("next-auth");
     vi.mocked(getServerSession).mockResolvedValue({
       user: {
@@ -103,7 +116,79 @@ describe("profile source uploads", () => {
 
     expect(response.status).toBe(200);
     expect(body.uploaded[0].name).toBe("cv.txt");
-    expect(profileBankUpdate).toHaveBeenCalled();
+    expect(body.uploaded[0].extractedText).toBe(true);
+    expect(profileBankUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { userId: "user-1" },
+        data: expect.objectContaining({
+          rawSources: expect.objectContaining({
+            entries: [
+              expect.objectContaining({
+                type: "file_upload_text",
+                name: "cv.txt",
+                content: expect.stringContaining("CV text")
+              })
+            ]
+          }),
+          checklist: expect.arrayContaining([
+            expect.objectContaining({
+              id: "cv",
+              done: true
+            })
+          ])
+        })
+      })
+    );
+  });
+
+  it("stores extracted PDF text when PDF parsing succeeds", async () => {
+    profileBankUpsert.mockResolvedValueOnce({
+      masterProfile: {},
+      rawSources: { entries: [] },
+      checklist: []
+    });
+    profileBankUpdate.mockResolvedValueOnce({
+      masterProfile: {},
+      rawSources: {
+        entries: [
+          {
+            id: "source-1",
+            type: "file_upload_pdf",
+            content: "Uploaded file: cv.pdf\n\nExtracted PDF CV text.",
+            createdAt: "2026-08-13T00:00:00.000Z"
+          }
+        ]
+      },
+      checklist: []
+    });
+    const { POST } = await import("./route");
+    const response = await POST(
+      new Request("http://localhost/api/profile-sources", {
+        method: "POST",
+        body: formDataWithFile(new File(["%PDF"], "cv.pdf", { type: "application/pdf" }))
+      })
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.uploaded[0].isPdf).toBe(true);
+    expect(body.uploaded[0].extractedText).toBe(true);
+    expect(pdfGetText).toHaveBeenCalled();
+    expect(pdfDestroy).toHaveBeenCalled();
+    expect(profileBankUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          rawSources: expect.objectContaining({
+            entries: [
+              expect.objectContaining({
+                type: "file_upload_pdf",
+                content: expect.stringContaining("Extracted PDF CV text")
+              })
+            ]
+          })
+        })
+      })
+    );
   });
 
   it("deletes one saved source from the signed-in user's profile bank", async () => {
