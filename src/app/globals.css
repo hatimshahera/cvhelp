@@ -1021,12 +1021,14 @@ h3 {
   color: var(--accent-dark);
 }
 
-.profile-section-editor {
+.profile-section-editor,
+.application-detail-form {
   display: grid;
   gap: 12px;
 }
 
-.profile-section-editor label {
+.profile-section-editor label,
+.application-detail-form label {
   display: grid;
   gap: 8px;
   color: var(--text);
@@ -1034,27 +1036,50 @@ h3 {
   font-weight: 850;
 }
 
-.profile-section-editor textarea {
+.profile-section-editor textarea,
+.application-detail-form textarea,
+.application-detail-form select {
   width: 100%;
-  min-height: 360px;
-  resize: vertical;
   padding: 12px;
   border: 1px solid var(--line);
   border-radius: 10px;
   outline: none;
   background: #fbfcfb;
   color: var(--text);
+}
+
+.profile-section-editor textarea {
+  min-height: 360px;
+  resize: vertical;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
   font-size: 12px;
   line-height: 1.5;
 }
 
-.profile-section-editor textarea:focus {
+.application-detail-form textarea {
+  min-height: 96px;
+  resize: vertical;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.application-detail-form select {
+  min-height: 42px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.profile-section-editor textarea:focus,
+.application-detail-form textarea:focus,
+.application-detail-form select:focus {
   border-color: var(--accent);
   box-shadow: 0 0 0 4px #e7f5ee;
 }
 
-.profile-section-editor button {
+.profile-section-editor button,
+.application-detail-form button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1065,6 +1090,69 @@ h3 {
   background: var(--accent);
   color: white;
   font-weight: 850;
+}
+
+.memory-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.memory-stat-grid div {
+  display: grid;
+  gap: 3px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fbfcfb;
+}
+
+.memory-stat-grid strong {
+  font-size: 22px;
+}
+
+.memory-stat-grid span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.application-memory-list {
+  display: grid;
+  gap: 9px;
+}
+
+.application-memory-list h3 {
+  font-size: 14px;
+}
+
+.application-memory-list ul {
+  display: grid;
+  gap: 7px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.application-memory-list li {
+  display: flex;
+  gap: 7px;
+  align-items: flex-start;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: #fbfcfb;
+  color: #405148;
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.35;
+}
+
+.application-memory-list p,
+.empty-side-panel {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
 }
 
 .editor-error,

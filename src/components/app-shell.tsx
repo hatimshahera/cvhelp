@@ -7,6 +7,7 @@ import {
   BriefcaseBusiness,
   CheckCircle2,
   Database,
+  FileText,
   FilePlus2,
   Loader2,
   LogOut,
@@ -51,6 +52,44 @@ type ApplicationItem = {
   slug: string;
   status: string;
 };
+
+type ApplicationDetail = ApplicationItem & {
+  nextAction: string | null;
+  archivedAt: string | null;
+  memory: {
+    requirements?: string[];
+    responsibilities?: string[];
+    keywords?: string[];
+    selectedEvidence?: {
+      projects?: string[];
+      research?: string[];
+      experience?: string[];
+      skills?: string[];
+    };
+    honestyNotes?: string[];
+    risks?: string[];
+    gaps?: string[];
+    notes?: unknown[];
+  } | null;
+  artifacts: Array<{
+    id: string;
+    type: string;
+    title: string;
+    status: string;
+    version: number;
+  }>;
+};
+
+const applicationStatuses = [
+  "draft",
+  "researching",
+  "tailoring_cv",
+  "cover_note_ready",
+  "submitted",
+  "interviewing",
+  "rejected",
+  "archived"
+];
 
 type ProfileSection =
   | "identity"
@@ -107,6 +146,12 @@ export function AppShell({
   const [isAddingApplication, setIsAddingApplication] = useState(false);
   const [jobSource, setJobSource] = useState("");
   const [isCreatingApplication, setIsCreatingApplication] = useState(false);
+  const [applicationDetail, setApplicationDetail] = useState<ApplicationDetail | null>(null);
+  const [applicationStatusDraft, setApplicationStatusDraft] = useState("draft");
+  const [applicationNextActionDraft, setApplicationNextActionDraft] = useState("");
+  const [isLoadingApplicationDetail, setIsLoadingApplicationDetail] = useState(false);
+  const [isSavingApplicationDetail, setIsSavingApplicationDetail] = useState(false);
+  const [applicationEditorMessage, setApplicationEditorMessage] = useState("");
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
@@ -183,11 +228,43 @@ export function AppShell({
     }
   }
 
+  async function loadApplicationDetail(applicationId: string) {
+    setIsLoadingApplicationDetail(true);
+    setApplicationEditorMessage("");
+    try {
+      const response = await fetch(`/api/applications/${applicationId}`, { cache: "no-store" });
+      const data = await readJsonResponse(response);
+
+      if (!response.ok) {
+        throw new Error(data.error || "Could not load application details.");
+      }
+
+      setApplicationDetail(data.application);
+      setApplicationStatusDraft(data.application.status || "draft");
+      setApplicationNextActionDraft(data.application.nextAction || "");
+    } catch (applicationError) {
+      setApplicationEditorMessage(
+        applicationError instanceof Error ? applicationError.message : "Could not load application details."
+      );
+    } finally {
+      setIsLoadingApplicationDetail(false);
+    }
+  }
+
   useEffect(() => {
     loadProfileDetails();
     // The selected section is intentionally excluded so changing tabs does not refetch the whole profile.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeMode]);
+
+  useEffect(() => {
+    if (activeMode === "application" && activeApplicationId) {
+      loadApplicationDetail(activeApplicationId);
+    } else {
+      setApplicationDetail(null);
+      setApplicationEditorMessage("");
+    }
+  }, [activeMode, activeApplicationId]);
 
   useEffect(() => {
     if (!profileDetails) return;
@@ -365,6 +442,9 @@ export function AppShell({
       setIsAddingApplication(false);
       setActiveMode("application");
       setActiveApplicationId(data.application.id);
+      setApplicationDetail(data.application);
+      setApplicationStatusDraft(data.application.status || "draft");
+      setApplicationNextActionDraft(data.application.nextAction || "");
       setConversationId(null);
       setMessages([]);
       setMessage("");
@@ -450,6 +530,54 @@ export function AppShell({
       setIsSavingProfileSection(false);
     }
   }
+
+  async function saveApplicationDetail(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!activeApplicationId || isSavingApplicationDetail) return;
+
+    setIsSavingApplicationDetail(true);
+    setApplicationEditorMessage("");
+
+    try {
+      const response = await fetch(`/api/applications/${activeApplicationId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          status: applicationStatusDraft,
+          nextAction: applicationNextActionDraft || null
+        })
+      });
+      const data = await readJsonResponse(response);
+
+      if (!response.ok) {
+        throw new Error(data.error || "Could not save this application.");
+      }
+
+      setApplicationDetail(data.application);
+      setApplications((current) =>
+        current.map((item) =>
+          item.id === data.application.id
+            ? {
+                ...item,
+                company: data.application.company,
+                role: data.application.role,
+                status: data.application.status
+              }
+            : item
+        )
+      );
+      setApplicationEditorMessage("Saved.");
+    } catch (saveError) {
+      setApplicationEditorMessage(
+        saveError instanceof Error ? saveError.message : "Could not save this application."
+      );
+    } finally {
+      setIsSavingApplicationDetail(false);
+    }
+  }
+
+  const applicationMemory = applicationDetail?.memory;
+  const selectedEvidence = applicationMemory?.selectedEvidence;
 
   return (
     <main className="workspace-shell">
@@ -761,11 +889,126 @@ export function AppShell({
             </form>
           </>
         ) : (
-          <div className="side-panel-heading">
-            <p className="eyebrow">Application</p>
-            <h2>Memory</h2>
-            <p>Application memory stays scoped to this role and one chat thread.</p>
-          </div>
+          <>
+            <div className="side-panel-heading">
+              <p className="eyebrow">Application</p>
+              <h2>Workspace</h2>
+              <p>Application memory stays scoped to this role and one chat thread.</p>
+            </div>
+
+            {activeApplication ? (
+              <>
+                <form className="application-detail-form" onSubmit={saveApplicationDetail}>
+                  <label>
+                    Status
+                    <select
+                      value={applicationStatusDraft}
+                      onChange={(event) => setApplicationStatusDraft(event.target.value)}
+                      disabled={isLoadingApplicationDetail || isSavingApplicationDetail}
+                    >
+                      {applicationStatuses.map((status) => (
+                        <option key={status} value={status}>
+                          {status.replace(/_/g, " ")}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label>
+                    Next action
+                    <textarea
+                      value={applicationNextActionDraft}
+                      onChange={(event) => setApplicationNextActionDraft(event.target.value)}
+                      disabled={isLoadingApplicationDetail || isSavingApplicationDetail}
+                      placeholder="What should happen next for this application?"
+                    />
+                  </label>
+
+                  {applicationEditorMessage ? (
+                    <p
+                      className={
+                        applicationEditorMessage === "Saved." ? "editor-success" : "editor-error"
+                      }
+                    >
+                      {applicationEditorMessage}
+                    </p>
+                  ) : null}
+
+                  <button
+                    type="submit"
+                    disabled={isLoadingApplicationDetail || isSavingApplicationDetail || !applicationDetail}
+                  >
+                    {isSavingApplicationDetail ? (
+                      <Loader2 className="spin" size={16} />
+                    ) : (
+                      <Save size={16} />
+                    )}
+                    Save application
+                  </button>
+                </form>
+
+                <div className="memory-stat-grid" aria-label="Application memory summary">
+                  <div>
+                    <strong>{applicationMemory?.requirements?.length ?? 0}</strong>
+                    <span>requirements</span>
+                  </div>
+                  <div>
+                    <strong>{selectedEvidence?.projects?.length ?? 0}</strong>
+                    <span>projects</span>
+                  </div>
+                  <div>
+                    <strong>{selectedEvidence?.skills?.length ?? 0}</strong>
+                    <span>skills</span>
+                  </div>
+                  <div>
+                    <strong>{applicationMemory?.notes?.length ?? 0}</strong>
+                    <span>notes</span>
+                  </div>
+                </div>
+
+                <section className="application-memory-list" aria-label="Application evidence">
+                  <h3>Saved evidence</h3>
+                  {selectedEvidence?.projects?.length ||
+                  selectedEvidence?.research?.length ||
+                  selectedEvidence?.experience?.length ||
+                  selectedEvidence?.skills?.length ? (
+                    <ul>
+                      {[
+                        ...(selectedEvidence.projects ?? []),
+                        ...(selectedEvidence.research ?? []),
+                        ...(selectedEvidence.experience ?? []),
+                        ...(selectedEvidence.skills ?? [])
+                      ]
+                        .slice(0, 8)
+                        .map((item) => (
+                          <li key={item}>{item}</li>
+                        ))}
+                    </ul>
+                  ) : (
+                    <p>No selected evidence yet.</p>
+                  )}
+                </section>
+
+                <section className="application-memory-list" aria-label="Application artifacts">
+                  <h3>Artifacts</h3>
+                  {applicationDetail?.artifacts.length ? (
+                    <ul>
+                      {applicationDetail.artifacts.slice(0, 6).map((artifact) => (
+                        <li key={artifact.id}>
+                          <FileText size={14} />
+                          {artifact.title} v{artifact.version}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p>No generated artifacts yet.</p>
+                  )}
+                </section>
+              </>
+            ) : (
+              <p className="empty-side-panel">Choose an application to view its saved memory.</p>
+            )}
+          </>
         )}
       </aside>
     </main>

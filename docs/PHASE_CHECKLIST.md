@@ -71,7 +71,7 @@ Use this as the live tracker while implementing the plan. Mark items complete on
 - [ ] Improve application creation from pasted job descriptions.
 - [ ] Improve application creation from job URLs.
 - [x] Add application detail route or detail panel.
-- [ ] Add application overview panel.
+- [x] Add application overview panel.
 - [x] Add editable application metadata.
 - [x] Add application status controls.
 - [x] Add archive behavior.
@@ -80,7 +80,7 @@ Use this as the live tracker while implementing the plan. Mark items complete on
 - [ ] Add matched evidence storage.
 - [ ] Add gap/risk/honesty notes storage.
 - [ ] Add selected projects/research/experience storage.
-- [ ] Add per-application memory panel.
+- [x] Add per-application memory panel.
 - [x] Add separate chats per application.
 - [x] Add support for multiple task chats if selected.
 - [ ] Add tests for application creation.
