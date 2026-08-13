@@ -23,6 +23,7 @@ model User {
   messages      ChatMessage[]
   profileBank   ProfileBank?
   applications  Application[]
+  artifacts     ApplicationArtifact[]
 }
 
 model Account {
@@ -63,6 +64,7 @@ model Conversation {
   id        String        @id @default(cuid())
   title     String        @default("New chat")
   mode      String        @default("general")
+  threadKey String        @default("default")
   userId    String
   applicationId String?
   createdAt DateTime      @default(now())
@@ -71,7 +73,7 @@ model Conversation {
   application Application? @relation(fields: [applicationId], references: [id], onDelete: Cascade)
   messages  ChatMessage[]
 
-  @@unique([applicationId, mode])
+  @@unique([userId, mode, applicationId, threadKey])
   @@index([userId, mode, updatedAt])
 }
 
@@ -107,15 +109,42 @@ model Application {
   role          String
   slug          String
   status        String         @default("draft")
+  nextAction    String?
+  archivedAt    DateTime?
   jobPost       Json
   jobSummary    Json?
+  memory        Json?
+  candidateSnapshot Json?
+  selectedEvidence Json?
   notes         Json?
   drafts        Json?
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   conversations Conversation[]
+  artifacts     ApplicationArtifact[]
 
   @@unique([userId, slug])
   @@index([userId, updatedAt])
+  @@index([userId, status, updatedAt])
+}
+
+model ApplicationArtifact {
+  id            String      @id @default(cuid())
+  userId        String
+  applicationId String
+  type          String
+  title         String
+  status        String      @default("draft")
+  version       Int         @default(1)
+  content       Json
+  metadata      Json?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  application   Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@unique([applicationId, type, version])
+  @@index([userId, updatedAt])
+  @@index([applicationId, type, version])
 }

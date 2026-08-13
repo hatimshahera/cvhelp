@@ -4,6 +4,16 @@ import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { authOptions } from "@/lib/auth";
+import {
+  appendApplicationMemoryNote,
+  appendRawSource,
+  createDefaultProfileBankData,
+  createInitialApplicationMemory,
+  getRecentSourceContext,
+  markChecklistFromText,
+  parseApplicationMemory,
+  summarizeProfileBank
+} from "@/lib/memory";
 import { prisma } from "@/lib/prisma";
 
 const chatSchema = z.object({
@@ -16,28 +26,6 @@ const chatSchema = z.object({
 const modeSchema = z.enum(["build_profile", "application", "general"]).default("build_profile");
 const DEFAULT_OPENAI_MODEL = "gpt-5-mini";
 
-const defaultChecklist = [
-  { id: "cv", label: "Add current CV", done: false },
-  { id: "linkedin", label: "Add LinkedIn background", done: false },
-  { id: "github", label: "Add GitHub/projects", done: false },
-  { id: "experience", label: "Confirm work experience", done: false },
-  { id: "education", label: "Confirm education", done: false },
-  { id: "proof", label: "Collect evidence and metrics", done: false }
-];
-
-type ProfileBankShape = {
-  masterProfile: Record<string, unknown>;
-  rawSources: {
-    entries: Array<{
-      id: string;
-      type: string;
-      content: string;
-      createdAt: string;
-    }>;
-  };
-  checklist: Array<{ id: string; label: string; done: boolean }>;
-};
-
 function toTitle(message: string) {
   const compact = message.replace(/\s+/g, " ").trim();
   return compact.length > 58 ? `${compact.slice(0, 58)}...` : compact || "New chat";
@@ -49,60 +37,16 @@ function getOpenAIModel() {
   return configured;
 }
 
-function summarizeProfileBank(profileBank: {
-  masterProfile: unknown;
-  rawSources: unknown;
-  checklist: unknown;
-} | null) {
-  const rawSources = profileBank?.rawSources as ProfileBankShape["rawSources"] | null;
-  const checklist = profileBank?.checklist as ProfileBankShape["checklist"] | null;
-  const masterProfile =
-    profileBank?.masterProfile &&
-    typeof profileBank.masterProfile === "object" &&
-    !Array.isArray(profileBank.masterProfile)
-      ? (profileBank.masterProfile as Record<string, unknown>)
-      : {};
-  const entries = Array.isArray(rawSources?.entries) ? rawSources.entries : [];
-  const tasks = Array.isArray(checklist) ? checklist : defaultChecklist;
-  const sections = Object.keys(masterProfile).filter((key) => {
-    const value = masterProfile[key];
-    if (Array.isArray(value)) return value.length > 0;
-    if (value && typeof value === "object") return Object.keys(value).length > 0;
-    return Boolean(value);
-  });
-
-  return {
-    sourceCount: entries.length,
-    checklist: tasks,
-    hasMasterProfile: sections.length > 0,
-    sections
-  };
-}
-
-function getRecentSourceContext(profileBank: {
-  rawSources: unknown;
-} | null) {
-  const rawSources = profileBank?.rawSources as ProfileBankShape["rawSources"] | null;
-  const entries = Array.isArray(rawSources?.entries) ? rawSources.entries : [];
-
-  return entries
-    .slice(-6)
-    .map((entry) => {
-      const content = entry.content.length > 1800 ? `${entry.content.slice(0, 1800)}...` : entry.content;
-      return `Source ${entry.id} (${entry.type}):\n${content}`;
-    })
-    .join("\n\n");
-}
-
 async function getOrCreateProfileBank(userId: string) {
+  const defaults = createDefaultProfileBankData();
   return prisma.profileBank.upsert({
     where: { userId },
     update: {},
     create: {
       userId,
-      masterProfile: {},
-      rawSources: { entries: [] },
-      checklist: defaultChecklist
+      masterProfile: defaults.masterProfile as Prisma.InputJsonValue,
+      rawSources: defaults.rawSources as Prisma.InputJsonValue,
+      checklist: defaults.checklist as Prisma.InputJsonValue
     }
   });
 }
@@ -116,41 +60,23 @@ async function updateProfileBankFromMessage({
   message: string;
   existing: Awaited<ReturnType<typeof getOrCreateProfileBank>>;
 }) {
-  const rawSources = existing.rawSources as ProfileBankShape["rawSources"] | null;
-  const checklist = existing.checklist as ProfileBankShape["checklist"] | null;
-  const entries = Array.isArray(rawSources?.entries) ? rawSources.entries : [];
-  const nextEntries = [
-    ...entries,
+  const rawSources = appendRawSource(
+    existing.rawSources,
     {
       id: crypto.randomUUID(),
       type: "chat_note",
       content: message,
       createdAt: new Date().toISOString()
-    }
-  ].slice(-80);
-
-  const lower = message.toLowerCase();
-  const nextChecklist = (Array.isArray(checklist) ? checklist : defaultChecklist).map((item) => {
-    if (item.id === "cv" && /\bcv\b|resume|curriculum vitae/.test(lower)) return { ...item, done: true };
-    if (item.id === "linkedin" && lower.includes("linkedin")) return { ...item, done: true };
-    if (item.id === "github" && lower.includes("github")) return { ...item, done: true };
-    if (item.id === "experience" && /experience|worked|built|role|company/.test(lower)) {
-      return { ...item, done: true };
-    }
-    if (item.id === "education" && /education|degree|university|college|school/.test(lower)) {
-      return { ...item, done: true };
-    }
-    if (item.id === "proof" && /metric|impact|result|evidence|users|revenue|latency|accuracy/.test(lower)) {
-      return { ...item, done: true };
-    }
-    return item;
-  });
+    },
+    80
+  );
+  const nextChecklist = markChecklistFromText(existing.checklist, message);
 
   return prisma.profileBank.update({
     where: { userId },
     data: {
-      rawSources: { entries: nextEntries },
-      checklist: nextChecklist
+      rawSources: rawSources as Prisma.InputJsonValue,
+      checklist: nextChecklist as Prisma.InputJsonValue
     }
   });
 }
@@ -411,18 +337,20 @@ export async function POST(request: Request) {
 
   const conversation = parsed.data.conversationId
     ? await prisma.conversation.findFirst({
-        where: {
-          id: parsed.data.conversationId,
-          userId: user.id,
-          mode,
-          applicationId: application?.id ?? null
-        }
-      })
+      where: {
+        id: parsed.data.conversationId,
+        userId: user.id,
+        mode,
+        applicationId: application?.id ?? null,
+        threadKey: "default"
+      }
+    })
     : await prisma.conversation.create({
         data: {
           userId: user.id,
           mode,
           applicationId: application?.id ?? null,
+          threadKey: "default",
           title: toTitle(parsed.data.message)
         }
       });
@@ -477,17 +405,19 @@ export async function POST(request: Request) {
             summarizeProfileBank(updatedProfileBank),
             null,
           2
-          )}\n\nRecent profile-bank sources:\n${getRecentSourceContext(updatedProfileBank) || "No sources yet."}`
+          )}\n\nRecent profile-bank sources:\n${getRecentSourceContext(updatedProfileBank?.rawSources) || "No sources yet."}`
         : "";
-    const applicationContext =
+      const applicationContext =
       mode === "application" && application
         ? `\n\nSelected application:\n${JSON.stringify(
             {
               company: application.company,
               role: application.role,
               status: application.status,
+              nextAction: application.nextAction,
               jobPost: application.jobPost,
               jobSummary: application.jobSummary,
+              memory: application.memory,
               notes: application.notes,
               drafts: application.drafts
             },
@@ -533,6 +463,45 @@ export async function POST(request: Request) {
     });
 
     if (mode === "application" && application) {
+      const fallbackMemory = createInitialApplicationMemory({
+        company: application.company,
+        role: application.role,
+        jobPost:
+          application.jobPost &&
+          typeof application.jobPost === "object" &&
+          !Array.isArray(application.jobPost) &&
+          typeof application.jobPost.source === "string" &&
+          typeof application.jobPost.content === "string" &&
+          typeof application.jobPost.capturedAt === "string"
+            ? {
+                source: application.jobPost.source,
+                sourceUrl:
+                  typeof application.jobPost.sourceUrl === "string" ? application.jobPost.sourceUrl : null,
+                content: application.jobPost.content,
+                capturedAt: application.jobPost.capturedAt
+              }
+            : {
+                source: "unknown",
+                sourceUrl: null,
+                content: "",
+                capturedAt: new Date().toISOString()
+              },
+        jobSummary: application.jobSummary as {
+          requirements?: string[];
+          responsibilities?: string[];
+          keywords?: string[];
+        }
+      });
+      const memory = parseApplicationMemory(application.memory, fallbackMemory);
+      const nextMemory = appendApplicationMemoryNote(memory, {
+        id: crypto.randomUUID(),
+        type: "chat_turn",
+        content: [
+          `User: ${parsed.data.message}`,
+          `Assistant: ${assistantText.slice(0, 1200)}`
+        ].join("\n\n"),
+        createdAt: new Date().toISOString()
+      });
       const existingNotes =
         application.notes && typeof application.notes === "object" && !Array.isArray(application.notes)
           ? (application.notes as { entries?: unknown[] })
@@ -542,6 +511,10 @@ export async function POST(request: Request) {
       await prisma.application.update({
         where: { id: application.id },
         data: {
+          memory: nextMemory as Prisma.InputJsonValue,
+          selectedEvidence: nextMemory.selectedEvidence as Prisma.InputJsonValue,
+          candidateSnapshot: nextMemory.candidateSnapshot as Prisma.InputJsonValue,
+          nextAction: nextMemory.nextActions[0] ?? application.nextAction,
           notes: {
             ...existingNotes,
             entries: [

@@ -14,21 +14,21 @@ Use this as the live tracker while implementing the plan. Mark items complete on
 
 ## Phase 2: Data Model and Application Memory
 
-- [ ] Define stable TypeScript shapes for `ProfileBank` JSON.
-- [ ] Define stable TypeScript shapes for `Application` JSON.
-- [ ] Decide normalized vs JSON storage for sources, facts, artifacts, and versions.
-- [ ] Review `Conversation` uniqueness constraint for multiple chats per application.
-- [ ] Add Prisma migration for selected memory/artifact changes.
-- [ ] Add profile memory read/write helpers.
-- [ ] Add application memory read/write helpers.
+- [x] Define stable TypeScript shapes for `ProfileBank` JSON.
+- [x] Define stable TypeScript shapes for `Application` JSON.
+- [x] Decide normalized vs JSON storage for sources, facts, artifacts, and versions.
+- [x] Review `Conversation` uniqueness constraint for multiple chats per application.
+- [x] Add Prisma migration for selected memory/artifact changes.
+- [x] Add profile memory read/write helpers.
+- [x] Add application memory read/write helpers.
 - [ ] Add provenance fields for profile facts and application claims.
-- [ ] Add ProofCV-compatible application export shape.
-- [ ] Add import utility for existing `proofcv/applications/*` data.
-- [ ] Add tests for memory schema validation.
+- [x] Add ProofCV-compatible application export shape.
+- [x] Add import utility for existing `proofcv/applications/*` data.
+- [x] Add tests for memory schema validation.
 - [ ] Add tests for user/application memory isolation.
-- [ ] Run `npm run typecheck`.
-- [ ] Run `npm run build`.
-- [ ] Verify Prisma migration status.
+- [x] Run `npm run typecheck`.
+- [x] Run `npm run build`.
+- [x] Verify Prisma migration status.
 
 ## Phase 3: Auth, Sessions, and Account Safety
 
@@ -194,4 +194,3 @@ Use this as the live tracker while implementing the plan. Mark items complete on
 - [ ] Run production smoke test for application chat.
 - [ ] Run production smoke test for billing status.
 - [ ] Write beta release notes.
-

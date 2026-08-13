@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { authOptions } from "@/lib/auth";
+import { createInitialApplicationMemory } from "@/lib/memory";
 import { prisma } from "@/lib/prisma";
 
 const createApplicationSchema = z.object({
@@ -194,6 +195,26 @@ export async function POST(request: Request) {
   const company = parsed.data.company || inferred.company;
   const role = parsed.data.role || inferred.role;
   const slug = await uniqueSlug(user.id, company, role);
+  const capturedAt = new Date().toISOString();
+  const jobPost = {
+    source: resolvedJob.sourceType,
+    sourceUrl: resolvedJob.sourceUrl,
+    content: resolvedJob.content,
+    capturedAt
+  };
+  const jobSummary = {
+    inferredCompany: inferred.company,
+    inferredRole: inferred.role,
+    requirements: [],
+    responsibilities: [],
+    keywords: []
+  };
+  const memory = createInitialApplicationMemory({
+    company,
+    role,
+    jobPost,
+    jobSummary
+  });
 
   const application = await prisma.application.create({
     data: {
@@ -201,19 +222,12 @@ export async function POST(request: Request) {
       company,
       role,
       slug,
-      jobPost: {
-        source: resolvedJob.sourceType,
-        sourceUrl: resolvedJob.sourceUrl,
-        content: resolvedJob.content,
-        capturedAt: new Date().toISOString()
-      } as Prisma.InputJsonValue,
-      jobSummary: {
-        inferredCompany: inferred.company,
-        inferredRole: inferred.role,
-        requirements: [],
-        responsibilities: [],
-        keywords: []
-      } as Prisma.InputJsonValue,
+      nextAction: memory.nextActions[0],
+      jobPost: jobPost as Prisma.InputJsonValue,
+      jobSummary: jobSummary as Prisma.InputJsonValue,
+      memory: memory as Prisma.InputJsonValue,
+      candidateSnapshot: memory.candidateSnapshot as Prisma.InputJsonValue,
+      selectedEvidence: memory.selectedEvidence as Prisma.InputJsonValue,
       notes: { entries: [] } as Prisma.InputJsonValue,
       drafts: {} as Prisma.InputJsonValue
     },
@@ -233,6 +247,7 @@ export async function POST(request: Request) {
       userId: user.id,
       applicationId: application.id,
       mode: "application",
+      threadKey: "default",
       title: `${company} - ${role}`
     }
   });

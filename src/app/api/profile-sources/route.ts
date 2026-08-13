@@ -1,32 +1,20 @@
+import type { Prisma } from "@prisma/client";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { authOptions } from "@/lib/auth";
+import {
+  appendRawSource,
+  createDefaultProfileBankData,
+  markChecklistFromText,
+  parseChecklist,
+  summarizeProfileBank
+} from "@/lib/memory";
 import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
 
 const maxFiles = 6;
 const maxFileBytes = 5 * 1024 * 1024;
-
-const defaultChecklist = [
-  { id: "cv", label: "Add current CV", done: false },
-  { id: "linkedin", label: "Add LinkedIn background", done: false },
-  { id: "github", label: "Add GitHub/projects", done: false },
-  { id: "experience", label: "Confirm work experience", done: false },
-  { id: "education", label: "Confirm education", done: false },
-  { id: "proof", label: "Collect evidence and metrics", done: false }
-];
-
-type RawSources = {
-  entries: Array<{
-    id: string;
-    type: string;
-    content: string;
-    createdAt: string;
-  }>;
-};
-
-type ChecklistItem = { id: string; label: string; done: boolean };
 
 function isTextLike(file: File) {
   const name = file.name.toLowerCase();
@@ -95,41 +83,6 @@ async function extractFileText(file: File) {
   };
 }
 
-function isChecklistItem(value: unknown): value is ChecklistItem {
-  if (!value || typeof value !== "object") return false;
-
-  return (
-    "id" in value &&
-    "label" in value &&
-    "done" in value &&
-    typeof value.id === "string" &&
-    typeof value.label === "string" &&
-    typeof value.done === "boolean"
-  );
-}
-
-function summarizeProfileBank(profileBank: {
-  masterProfile: unknown;
-  rawSources: unknown;
-  checklist: unknown;
-}) {
-  const rawSources = profileBank.rawSources as RawSources | null;
-  const checklist = Array.isArray(profileBank.checklist) ? profileBank.checklist : defaultChecklist;
-  const masterProfile =
-    profileBank.masterProfile &&
-    typeof profileBank.masterProfile === "object" &&
-    !Array.isArray(profileBank.masterProfile)
-      ? (profileBank.masterProfile as Record<string, unknown>)
-      : {};
-
-  return {
-    sourceCount: Array.isArray(rawSources?.entries) ? rawSources.entries.length : 0,
-    checklist,
-    hasMasterProfile: Object.keys(masterProfile).length > 0,
-    sections: Object.keys(masterProfile)
-  };
-}
-
 async function requireUser() {
   const session = await getServerSession(authOptions);
   const userId = session?.user?.id;
@@ -139,14 +92,15 @@ async function requireUser() {
 }
 
 async function getOrCreateProfileBank(userId: string) {
+  const defaults = createDefaultProfileBankData();
   return prisma.profileBank.upsert({
     where: { userId },
     update: {},
     create: {
       userId,
-      masterProfile: {},
-      rawSources: { entries: [] },
-      checklist: defaultChecklist
+      masterProfile: defaults.masterProfile as Prisma.InputJsonValue,
+      rawSources: defaults.rawSources as Prisma.InputJsonValue,
+      checklist: defaults.checklist as Prisma.InputJsonValue
     }
   });
 }
@@ -177,8 +131,7 @@ export async function POST(request: Request) {
     }
 
     const profileBank = await getOrCreateProfileBank(user.id);
-    const rawSources = profileBank.rawSources as RawSources | null;
-    const entries = Array.isArray(rawSources?.entries) ? rawSources.entries : [];
+    let rawSources: unknown = profileBank.rawSources;
     const uploaded = [];
 
     for (const file of files) {
@@ -223,32 +176,27 @@ export async function POST(request: Request) {
         extractedText: extraction.extracted
       });
 
-      entries.push({
+      rawSources = appendRawSource(rawSources, {
         id: crypto.randomUUID(),
         type: extraction.sourceType,
         content,
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        name: file.name,
+        metadata: {
+          fileType: file.type || "unknown",
+          fileSize: file.size
+        }
       });
     }
 
     const lowerNames = uploaded.map((file) => file.name.toLowerCase()).join(" ");
-    const existingChecklist = Array.isArray(profileBank.checklist)
-      ? profileBank.checklist.filter(isChecklistItem)
-      : defaultChecklist;
-    const checklist = (existingChecklist.length ? existingChecklist : defaultChecklist).map(
-      (item) => {
-        if (item.id === "cv" && /\bcv\b|resume|curriculum/.test(lowerNames)) return { ...item, done: true };
-        if (item.id === "linkedin" && lowerNames.includes("linkedin")) return { ...item, done: true };
-        if (item.id === "github" && lowerNames.includes("github")) return { ...item, done: true };
-        return item;
-      }
-    );
+    const checklist = markChecklistFromText(parseChecklist(profileBank.checklist), lowerNames);
 
     const updatedProfileBank = await prisma.profileBank.update({
       where: { userId: user.id },
       data: {
-        rawSources: { entries: entries.slice(-100) },
-        checklist
+        rawSources: rawSources as Prisma.InputJsonValue,
+        checklist: checklist as Prisma.InputJsonValue
       }
     });
 
