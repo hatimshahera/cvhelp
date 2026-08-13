@@ -53,6 +53,15 @@ type ApplicationItem = {
   status: string;
 };
 
+type ArtifactItem = {
+  id: string;
+  type: string;
+  title: string;
+  status: string;
+  version: number;
+  content?: unknown;
+};
+
 type ApplicationDetail = ApplicationItem & {
   nextAction: string | null;
   archivedAt: string | null;
@@ -71,14 +80,7 @@ type ApplicationDetail = ApplicationItem & {
     gaps?: string[];
     notes?: unknown[];
   } | null;
-  artifacts: Array<{
-    id: string;
-    type: string;
-    title: string;
-    status: string;
-    version: number;
-    content?: unknown;
-  }>;
+  artifacts: ArtifactItem[];
 };
 
 const applicationStatuses = [
@@ -123,10 +125,124 @@ const profileSections: ProfileSection[] = [
   "openQuestions"
 ];
 
-function summarizeArtifactContent(content: unknown) {
-  if (!content || typeof content !== "object") return "";
+function formatLabel(value: string) {
+  return value
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
 
-  const record = content as Record<string, unknown>;
+function asRecord(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  return value as Record<string, unknown>;
+}
+
+function asStringArray(value: unknown) {
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+}
+
+function renderArtifactValue(value: unknown) {
+  if (typeof value === "string") return <p>{value}</p>;
+
+  const textItems = asStringArray(value);
+  if (textItems.length) {
+    return (
+      <ul className="artifact-review-list">
+        {textItems.map((item) => (
+          <li key={item}>{item}</li>
+        ))}
+      </ul>
+    );
+  }
+
+  const record = asRecord(value);
+  if (record) {
+    return (
+      <dl className="artifact-review-facts">
+        {Object.entries(record).map(([key, item]) => (
+          <div key={key}>
+            <dt>{formatLabel(key)}</dt>
+            <dd>
+              {typeof item === "string"
+                ? item
+                : asStringArray(item).join(", ") || JSON.stringify(item)}
+            </dd>
+          </div>
+        ))}
+      </dl>
+    );
+  }
+
+  return null;
+}
+
+function renderArtifactContent(artifact: ArtifactItem) {
+  const record = asRecord(artifact.content);
+  if (!record) return <p className="artifact-empty">No artifact content saved.</p>;
+
+  const primarySections = [
+    "summary",
+    "profile_summary",
+    "note",
+    "message",
+    "bullets",
+    "answers",
+    "evidenceUsed",
+    "selectedEvidence",
+    "gaps",
+    "risks",
+    "assumptions",
+    "followUp"
+  ];
+
+  return (
+    <div className="artifact-review">
+      {primarySections.map((key) => {
+        const value = record[key];
+        if (value === undefined || value === null) return null;
+
+        if (key === "answers" && Array.isArray(value)) {
+          return (
+            <section className="artifact-review-section" key={key}>
+              <h4>Answers</h4>
+              <div className="artifact-answers">
+                {value.map((item, index) => {
+                  const answer = asRecord(item);
+                  return (
+                    <article key={`${key}-${index}`}>
+                      {typeof answer?.question === "string" ? <strong>{answer.question}</strong> : null}
+                      <p>
+                        {typeof answer?.answer === "string"
+                          ? answer.answer
+                          : typeof item === "string"
+                            ? item
+                            : JSON.stringify(item)}
+                      </p>
+                    </article>
+                  );
+                })}
+              </div>
+            </section>
+          );
+        }
+
+        const renderedValue = renderArtifactValue(value);
+        if (!renderedValue) return null;
+
+        return (
+          <section className="artifact-review-section" key={key}>
+            <h4>{formatLabel(key)}</h4>
+            {renderedValue}
+          </section>
+        );
+      })}
+    </div>
+  );
+}
+
+function summarizeArtifactContent(content: unknown) {
+  const record = asRecord(content);
+  if (!record) return "";
+
   if (typeof record.summary === "string") return record.summary;
   if (typeof record.note === "string") return record.note;
   if (typeof record.message === "string") return record.message;
@@ -171,6 +287,7 @@ export function AppShell({
   const [isSavingApplicationDetail, setIsSavingApplicationDetail] = useState(false);
   const [generatingArtifactType, setGeneratingArtifactType] = useState<string | null>(null);
   const [selectedArtifactId, setSelectedArtifactId] = useState<string | null>(null);
+  const [applicationAnswersPrompt, setApplicationAnswersPrompt] = useState("");
   const [applicationEditorMessage, setApplicationEditorMessage] = useState("");
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [message, setMessage] = useState("");
@@ -603,7 +720,7 @@ export function AppShell({
     }
   }
 
-  async function generateApplicationArtifact(type: string) {
+  async function generateApplicationArtifact(type: string, prompt?: string) {
     if (!activeApplicationId || generatingArtifactType) return;
 
     setGeneratingArtifactType(type);
@@ -613,7 +730,7 @@ export function AppShell({
       const response = await fetch(`/api/applications/${activeApplicationId}/artifacts`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type })
+        body: JSON.stringify({ type, prompt })
       });
       const data = await readJsonResponse(response);
 
@@ -622,6 +739,7 @@ export function AppShell({
       }
 
       await loadApplicationDetail(activeApplicationId);
+      if (type === "application_answers") setApplicationAnswersPrompt("");
       setApplicationEditorMessage("Artifact saved.");
     } catch (generateError) {
       setApplicationEditorMessage(
@@ -731,7 +849,10 @@ export function AppShell({
                     setSelectedFiles([]);
                   }}
                 >
-                  <strong>{application.company}</strong>
+                  <div className="application-list-title">
+                    <strong>{application.company}</strong>
+                    <span className="status-pill">{formatLabel(application.status)}</span>
+                  </div>
                   <span>{application.role}</span>
                 </button>
               ))
@@ -793,6 +914,12 @@ export function AppShell({
           <div className="chat-header-main">
             <p className="eyebrow">Workspace</p>
             <h1>{activeTitle}</h1>
+            {activeMode === "application" && activeApplication ? (
+              <div className="chat-status-row">
+                <span className="status-pill">{formatLabel(activeApplication.status)}</span>
+                <span>One saved thread for this application</span>
+              </div>
+            ) : null}
             <p>{activeDescription}</p>
           </div>
           {activeMode === "build_profile" ? (
@@ -958,7 +1085,12 @@ export function AppShell({
           <>
             <div className="side-panel-heading">
               <p className="eyebrow">Application</p>
-              <h2>Workspace</h2>
+              <div className="side-panel-title-row">
+                <h2>Workspace</h2>
+                {activeApplication ? (
+                  <span className="status-pill">{formatLabel(activeApplication.status)}</span>
+                ) : null}
+              </div>
               <p>Application memory stays scoped to this role and one chat thread.</p>
             </div>
 
@@ -974,7 +1106,7 @@ export function AppShell({
                     >
                       {applicationStatuses.map((status) => (
                         <option key={status} value={status}>
-                          {status.replace(/_/g, " ")}
+                          {formatLabel(status)}
                         </option>
                       ))}
                     </select>
@@ -1079,13 +1211,49 @@ export function AppShell({
                       </button>
                     ))}
                   </div>
+                  <form
+                    className="application-answers-form"
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      generateApplicationArtifact("application_answers", applicationAnswersPrompt);
+                    }}
+                  >
+                    <label>
+                      Application questions
+                      <textarea
+                        value={applicationAnswersPrompt}
+                        onChange={(event) => setApplicationAnswersPrompt(event.target.value)}
+                        placeholder="Paste application questions here, then generate grounded draft answers."
+                        disabled={Boolean(generatingArtifactType) || isLoadingApplicationDetail}
+                      />
+                    </label>
+                    <button
+                      type="submit"
+                      disabled={
+                        Boolean(generatingArtifactType) ||
+                        isLoadingApplicationDetail ||
+                        applicationAnswersPrompt.trim().length < 5
+                      }
+                    >
+                      {generatingArtifactType === "application_answers" ? (
+                        <Loader2 className="spin" size={14} />
+                      ) : (
+                        <FileText size={14} />
+                      )}
+                      Generate answers
+                    </button>
+                  </form>
                   {applicationDetail?.artifacts.length ? (
                     <ul>
                       {applicationDetail.artifacts.slice(0, 6).map((artifact) => (
                         <li key={artifact.id}>
                           <div className="artifact-title-line">
                             <FileText size={14} />
-                            <button type="button" onClick={() => setSelectedArtifactId(artifact.id)}>
+                            <button
+                              className={selectedArtifact?.id === artifact.id ? "active" : ""}
+                              type="button"
+                              onClick={() => setSelectedArtifactId(artifact.id)}
+                            >
                               {artifact.title} v{artifact.version}
                             </button>
                           </div>
@@ -1103,7 +1271,12 @@ export function AppShell({
                 {selectedArtifact ? (
                   <section className="artifact-preview-panel" aria-label="Selected artifact preview">
                     <div>
-                      <h3>{selectedArtifact.title}</h3>
+                      <div>
+                        <h3>{selectedArtifact.title}</h3>
+                        <p>
+                          {formatLabel(selectedArtifact.type)} v{selectedArtifact.version}
+                        </p>
+                      </div>
                       {selectedArtifactDownloadHref ? (
                         <a
                           href={selectedArtifactDownloadHref}
@@ -1113,7 +1286,13 @@ export function AppShell({
                         </a>
                       ) : null}
                     </div>
-                    <pre>{selectedArtifactJson || "No artifact content saved."}</pre>
+                    {renderArtifactContent(selectedArtifact)}
+                    {selectedArtifactJson ? (
+                      <details className="raw-json-details">
+                        <summary>Raw JSON</summary>
+                        <pre>{selectedArtifactJson}</pre>
+                      </details>
+                    ) : null}
                   </section>
                 ) : null}
               </>

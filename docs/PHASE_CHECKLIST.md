@@ -134,19 +134,19 @@ Use this as the live tracker while implementing the plan. Mark items complete on
 ## Phase 8: UI Polish and Product Flow
 
 - [ ] Redesign workspace layout.
-- [ ] Add profile review screen/panel.
-- [ ] Add application overview screen/panel.
-- [ ] Add memory/output side panel.
-- [ ] Add artifact cards.
-- [ ] Add status badges.
-- [ ] Add progress indicators.
+- [x] Add profile review screen/panel.
+- [x] Add application overview screen/panel.
+- [x] Add memory/output side panel.
+- [x] Add artifact cards.
+- [x] Add status badges.
+- [x] Add progress indicators.
 - [ ] Improve chat message rendering.
-- [ ] Improve empty states.
-- [ ] Improve loading states.
-- [ ] Improve error states.
-- [ ] Make mobile layout usable.
+- [x] Improve empty states.
+- [x] Improve loading states.
+- [x] Improve error states.
+- [x] Make mobile layout usable.
 - [ ] Check keyboard accessibility.
-- [ ] Check text overflow and overlap.
+- [x] Check text overflow and overlap.
 - [ ] Add browser smoke tests for main pages.
 - [ ] Add desktop visual checks.
 - [ ] Add mobile visual checks.

@@ -849,6 +849,36 @@ h3 {
   text-align: left;
 }
 
+.application-list-title,
+.chat-status-row,
+.side-panel-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.application-list-title {
+  justify-content: space-between;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 100%;
+  min-height: 22px;
+  padding: 0 8px;
+  border: 1px solid #d2e7dc;
+  border-radius: 999px;
+  background: #edf8f2;
+  color: var(--accent-dark);
+  font-size: 11px;
+  font-weight: 850;
+  line-height: 1;
+  white-space: nowrap;
+}
+
 .applications-list button:hover {
   background: #eef3ed;
 }
@@ -867,6 +897,12 @@ h3 {
   color: var(--muted);
   font-size: 12px;
   line-height: 1.35;
+}
+
+.applications-list .status-pill {
+  color: var(--accent-dark);
+  font-size: 10px;
+  line-height: 1;
 }
 
 .profile-bank-panel {
@@ -1014,6 +1050,11 @@ h3 {
   line-height: 1.1;
 }
 
+.side-panel-title-row {
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
 .side-panel-heading p:last-child {
   color: var(--muted);
   font-size: 13px;
@@ -1044,13 +1085,15 @@ h3 {
 }
 
 .profile-section-editor,
-.application-detail-form {
+.application-detail-form,
+.application-answers-form {
   display: grid;
   gap: 12px;
 }
 
 .profile-section-editor label,
-.application-detail-form label {
+.application-detail-form label,
+.application-answers-form label {
   display: grid;
   gap: 8px;
   color: var(--text);
@@ -1060,7 +1103,8 @@ h3 {
 
 .profile-section-editor textarea,
 .application-detail-form textarea,
-.application-detail-form select {
+.application-detail-form select,
+.application-answers-form textarea {
   width: 100%;
   padding: 12px;
   border: 1px solid var(--line);
@@ -1086,6 +1130,14 @@ h3 {
   line-height: 1.45;
 }
 
+.application-answers-form textarea {
+  min-height: 110px;
+  resize: vertical;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
 .application-detail-form select {
   min-height: 42px;
   font: inherit;
@@ -1095,13 +1147,15 @@ h3 {
 
 .profile-section-editor textarea:focus,
 .application-detail-form textarea:focus,
-.application-detail-form select:focus {
+.application-detail-form select:focus,
+.application-answers-form textarea:focus {
   border-color: var(--accent);
   box-shadow: 0 0 0 4px #e7f5ee;
 }
 
 .profile-section-editor button,
-.application-detail-form button {
+.application-detail-form button,
+.application-answers-form button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1112,6 +1166,19 @@ h3 {
   background: var(--accent);
   color: white;
   font-weight: 850;
+}
+
+.application-answers-form {
+  padding: 11px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fbfcfb;
+}
+
+.application-answers-form button {
+  min-height: 36px;
+  border-radius: 9px;
+  font-size: 12px;
 }
 
 .memory-stat-grid {
@@ -1189,6 +1256,12 @@ h3 {
   color: var(--accent-dark);
 }
 
+.artifact-title-line button.active {
+  color: var(--accent-dark);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 .artifact-title-line svg {
   flex: 0 0 auto;
   margin-top: 1px;
@@ -1235,13 +1308,13 @@ h3 {
 
 .artifact-preview-panel {
   display: grid;
-  gap: 10px;
+  gap: 12px;
   padding-top: 4px;
 }
 
 .artifact-preview-panel > div {
   display: flex;
-  align-items: baseline;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 10px;
 }
@@ -1250,13 +1323,128 @@ h3 {
   font-size: 14px;
 }
 
+.artifact-preview-panel > div p {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 750;
+}
+
 .artifact-preview-panel a {
   color: var(--accent-dark);
   font-size: 12px;
   font-weight: 850;
+  white-space: nowrap;
 }
 
-.artifact-preview-panel pre {
+.artifact-review {
+  display: grid;
+  gap: 10px;
+}
+
+.artifact-review-section {
+  display: grid;
+  gap: 7px;
+  padding: 11px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fbfcfb;
+}
+
+.artifact-review-section h4 {
+  color: var(--accent-dark);
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.artifact-review-section p,
+.artifact-empty {
+  color: #314139;
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.5;
+}
+
+.artifact-review-list {
+  display: grid;
+  gap: 7px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.artifact-review-list li {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #314139;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.artifact-review-facts {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.artifact-review-facts div {
+  display: grid;
+  gap: 2px;
+}
+
+.artifact-review-facts dt {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.artifact-review-facts dd {
+  margin: 0;
+  color: #314139;
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.45;
+}
+
+.artifact-answers {
+  display: grid;
+  gap: 9px;
+}
+
+.artifact-answers article {
+  display: grid;
+  gap: 5px;
+  padding: 9px;
+  border: 1px solid #e4eee7;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.artifact-answers strong {
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.raw-json-details {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #ffffff;
+}
+
+.raw-json-details summary {
+  cursor: pointer;
+  padding: 10px 12px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.raw-json-details pre {
   max-height: 360px;
   overflow: auto;
   margin: 0;
@@ -1304,6 +1492,13 @@ h3 {
 
 .chat-header-main {
   min-width: 0;
+}
+
+.chat-status-row {
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 750;
 }
 
 .eyebrow {
