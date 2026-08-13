@@ -40,7 +40,7 @@ Use this as the live tracker while implementing the plan. Mark items complete on
 - [x] Ensure all private API routes require signin.
 - [x] Add user ownership checks for application/detail/artifact routes.
 - [x] Decide OAuth MVP scope.
-- [ ] Add auth tests for signup/signin.
+- [x] Add auth tests for signup/signin.
 - [x] Add auth tests for protected routes.
 - [x] Add auth tests for cross-user access denial.
 - [x] Run `npm run typecheck`.
