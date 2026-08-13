@@ -94,10 +94,10 @@ Use this as the live tracker while implementing the plan. Mark items complete on
 
 - [x] Define artifact data model.
 - [x] Add artifact versioning.
-- [ ] Add tailored CV generation route.
-- [ ] Add cover note/recruiter message generation route.
-- [ ] Add application Q&A generation route.
-- [ ] Add artifact review UI.
+- [x] Add tailored CV generation route.
+- [x] Add cover note/recruiter message generation route.
+- [x] Add application Q&A generation route.
+- [x] Add artifact review UI.
 - [ ] Add regenerate/refine flow.
 - [x] Add ProofCV-compatible `cv_data` export.
 - [ ] Decide PDF rendering strategy.
@@ -106,9 +106,9 @@ Use this as the live tracker while implementing the plan. Mark items complete on
 - [x] Add tests for artifact generation.
 - [x] Add tests for version history.
 - [x] Add tests for export scoping.
-- [ ] Add tests for unsupported-claim prevention.
-- [ ] Run `npm run typecheck`.
-- [ ] Run `npm run build`.
+- [x] Add tests for unsupported-claim prevention.
+- [x] Run `npm run typecheck`.
+- [x] Run `npm run build`.
 
 ## Phase 7: Payments and Subscription Routes
 

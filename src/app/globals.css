@@ -1148,6 +1148,32 @@ h3 {
   line-height: 1.35;
 }
 
+.artifact-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.artifact-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: #ffffff;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.artifact-actions button:not(:disabled):hover {
+  border-color: #cce4d6;
+  background: #f4faf6;
+}
+
 .application-memory-list p,
 .empty-side-panel {
   color: var(--muted);

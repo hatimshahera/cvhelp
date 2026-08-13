@@ -1,14 +1,16 @@
+import OpenAI from "openai";
 import type { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { createInitialApplicationMemory, parseApplicationMemory } from "@/lib/memory";
+import { createInitialApplicationMemory, type ApplicationMemory, parseApplicationMemory } from "@/lib/memory";
 import { proofCvDataFromApplicationMemory } from "@/lib/proofcv";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/session";
 
 const createArtifactSchema = z.object({
   type: z.enum(["proofcv_data", "cv_draft", "cover_note", "recruiter_message", "application_answers"]),
-  title: z.string().trim().min(1).max(160).optional()
+  title: z.string().trim().min(1).max(160).optional(),
+  prompt: z.string().trim().max(8000).optional()
 });
 
 type RouteParams = {
@@ -54,6 +56,109 @@ async function nextArtifactVersion(applicationId: string, type: string) {
   });
 
   return (latest?.version ?? 0) + 1;
+}
+
+function getOpenAIModel() {
+  const configured = process.env.OPENAI_MODEL?.trim();
+  if (!configured || configured === "gpt-5.6-luna") return "gpt-5-mini";
+  return configured;
+}
+
+function parseJsonObject(text: string) {
+  const cleaned = text
+    .trim()
+    .replace(/^```json\s*/i, "")
+    .replace(/^```\s*/i, "")
+    .replace(/\s*```$/i, "");
+  const parsed = JSON.parse(cleaned);
+  return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+    ? (parsed as Record<string, unknown>)
+    : null;
+}
+
+function artifactInstructions(type: string) {
+  const base = [
+    "You generate grounded job application artifacts from saved application memory.",
+    "Return only valid JSON. No markdown. No prose outside JSON.",
+    "Never invent credentials, employers, dates, links, metrics, project facts, or submitted status.",
+    "If evidence is weak or missing, state that as a gap instead of fabricating support.",
+    "Keep the result concise, specific to the target role, and useful for review before export."
+  ];
+
+  if (type === "cv_draft") {
+    return [
+      ...base,
+      "Return JSON with keys: summary, bullets, selectedEvidence, risks.",
+      "bullets must be an array of tailored CV bullet strings grounded in selected evidence."
+    ].join(" ");
+  }
+
+  if (type === "cover_note") {
+    return [
+      ...base,
+      "Return JSON with keys: subject, note, evidenceUsed, gaps.",
+      "note should be a concise cover note."
+    ].join(" ");
+  }
+
+  if (type === "recruiter_message") {
+    return [
+      ...base,
+      "Return JSON with keys: subject, message, evidenceUsed, followUp.",
+      "message should be a short recruiter or hiring-manager outreach message."
+    ].join(" ");
+  }
+
+  return [
+    ...base,
+    "Return JSON with keys: answers, assumptions, gaps.",
+    "answers must be an array of objects with question and answer keys."
+  ].join(" ");
+}
+
+function defaultArtifactTitle(type: string, company: string, role: string) {
+  const label =
+    type === "proofcv_data"
+      ? "ProofCV data"
+      : type === "cv_draft"
+        ? "CV draft"
+        : type === "cover_note"
+          ? "Cover note"
+          : type === "recruiter_message"
+            ? "Recruiter message"
+            : "Application answers";
+
+  return `${company} ${role} ${label}`;
+}
+
+async function generateAiArtifact(input: {
+  type: string;
+  memory: ApplicationMemory;
+  prompt?: string;
+}) {
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error("OPENAI_API_KEY is not configured on the server.");
+  }
+
+  const openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY
+  });
+  const response = await openai.responses.create({
+    model: getOpenAIModel(),
+    instructions: artifactInstructions(input.type),
+    input: JSON.stringify({
+      artifactType: input.type,
+      applicationMemory: input.memory,
+      userPrompt: input.prompt || null
+    })
+  });
+  const parsed = parseJsonObject(response.output_text ?? "");
+
+  if (!parsed) {
+    throw new Error("The model did not return a valid artifact.");
+  }
+
+  return parsed;
 }
 
 export async function GET(_request: Request, context: RouteParams) {
@@ -119,19 +224,28 @@ export async function POST(request: Request, context: RouteParams) {
   });
   const memory = parseApplicationMemory(application.memory, fallbackMemory);
 
-  if (parsed.data.type !== "proofcv_data") {
+  const version = await nextArtifactVersion(application.id, parsed.data.type);
+  const title = parsed.data.title || defaultArtifactTitle(parsed.data.type, application.company, application.role);
+  let content: Record<string, unknown>;
+
+  try {
+    content =
+      parsed.data.type === "proofcv_data"
+        ? proofCvDataFromApplicationMemory({
+            candidate: memory.candidateSnapshot,
+            application: memory
+          })
+        : await generateAiArtifact({
+            type: parsed.data.type,
+            memory,
+            prompt: parsed.data.prompt
+          });
+  } catch (error) {
     return NextResponse.json(
-      { error: "Only ProofCV data artifacts are supported in this phase." },
-      { status: 400 }
+      { error: error instanceof Error ? error.message : "Artifact generation failed." },
+      { status: 502 }
     );
   }
-
-  const version = await nextArtifactVersion(application.id, parsed.data.type);
-  const title = parsed.data.title || `${application.company} ${application.role} ProofCV data`;
-  const content = proofCvDataFromApplicationMemory({
-    candidate: memory.candidateSnapshot,
-    application: memory
-  });
 
   const artifact = await prisma.applicationArtifact.create({
     data: {
@@ -142,7 +256,8 @@ export async function POST(request: Request, context: RouteParams) {
       version,
       content: content as Prisma.InputJsonValue,
       metadata: {
-        source: "application_memory",
+        source: parsed.data.type === "proofcv_data" ? "application_memory" : "openai",
+        model: parsed.data.type === "proofcv_data" ? null : getOpenAIModel(),
         generatedAt: new Date().toISOString()
       } as Prisma.InputJsonValue
     }

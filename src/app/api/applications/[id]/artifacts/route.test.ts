@@ -4,6 +4,7 @@ const applicationFindFirst = vi.fn();
 const artifactFindMany = vi.fn();
 const artifactFindFirst = vi.fn();
 const artifactCreate = vi.fn();
+const responsesCreate = vi.fn();
 
 vi.mock("next-auth", () => ({
   getServerSession: vi.fn()
@@ -26,9 +27,61 @@ vi.mock("@/lib/prisma", () => ({
   }
 }));
 
+vi.mock("openai", () => ({
+  default: vi.fn(function MockOpenAI() {
+    return {
+    responses: {
+      create: responsesCreate
+    }
+    };
+  })
+}));
+
+const applicationWithMemory = {
+  id: "app-1",
+  userId: "user-1",
+  company: "Example AI",
+  role: "AI Engineer",
+  jobPost: {
+    source: "pasted_job_description",
+    sourceUrl: null,
+    content: "Build AI agents.",
+    capturedAt: "2026-08-13T00:00:00.000Z"
+  },
+  jobSummary: null,
+  candidateSnapshot: { name: "Hatim Shaherawala" },
+  memory: {
+    candidateSnapshot: { name: "Hatim Shaherawala" },
+    target: { company: "Example AI", role: "AI Engineer", fit: ["Python"] },
+    jobPost: {
+      source: "pasted_job_description",
+      sourceUrl: null,
+      content: "Build AI agents.",
+      capturedAt: "2026-08-13T00:00:00.000Z"
+    },
+    requirements: [],
+    responsibilities: [],
+    keywords: [],
+    selectedEvidence: {
+      projects: ["AI API Gateway"],
+      research: [],
+      experience: [],
+      skills: ["Python"]
+    },
+    profileSummary: "AI engineer with agent evidence.",
+    honestyNotes: ["Do not overstate production scale."],
+    risks: [],
+    gaps: [],
+    notes: [],
+    drafts: {},
+    nextActions: []
+  }
+};
+
 describe("application artifacts API", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
+    delete process.env.OPENAI_API_KEY;
     const { getServerSession } = await import("next-auth");
     vi.mocked(getServerSession).mockResolvedValue({
       user: {
@@ -59,46 +112,7 @@ describe("application artifacts API", () => {
   });
 
   it("creates a versioned ProofCV data artifact from application memory", async () => {
-    applicationFindFirst.mockResolvedValueOnce({
-      id: "app-1",
-      userId: "user-1",
-      company: "Example AI",
-      role: "AI Engineer",
-      jobPost: {
-        source: "pasted_job_description",
-        sourceUrl: null,
-        content: "Build AI agents.",
-        capturedAt: "2026-08-13T00:00:00.000Z"
-      },
-      jobSummary: null,
-      candidateSnapshot: { name: "Hatim Shaherawala" },
-      memory: {
-        candidateSnapshot: { name: "Hatim Shaherawala" },
-        target: { company: "Example AI", role: "AI Engineer", fit: ["Python"] },
-        jobPost: {
-          source: "pasted_job_description",
-          sourceUrl: null,
-          content: "Build AI agents.",
-          capturedAt: "2026-08-13T00:00:00.000Z"
-        },
-        requirements: [],
-        responsibilities: [],
-        keywords: [],
-        selectedEvidence: {
-          projects: ["AI API Gateway"],
-          research: [],
-          experience: [],
-          skills: ["Python"]
-        },
-        profileSummary: "AI engineer with agent evidence.",
-        honestyNotes: ["Do not overstate production scale."],
-        risks: [],
-        gaps: [],
-        notes: [],
-        drafts: {},
-        nextActions: []
-      }
-    });
+    applicationFindFirst.mockResolvedValueOnce(applicationWithMemory);
     artifactFindFirst.mockResolvedValueOnce({ version: 2 });
     artifactCreate.mockResolvedValueOnce({
       id: "artifact-3",
@@ -125,6 +139,74 @@ describe("application artifacts API", () => {
           content: expect.objectContaining({
             selected_projects: ["AI API Gateway"],
             selected_skills: ["Python"]
+          })
+        })
+      })
+    );
+  });
+
+  it("returns a clear error when AI generation is requested without an API key", async () => {
+    applicationFindFirst.mockResolvedValueOnce(applicationWithMemory);
+    artifactFindFirst.mockResolvedValueOnce(null);
+    const { POST } = await import("./route");
+    const response = await POST(
+      new Request("http://localhost/api/applications/app-1/artifacts", {
+        method: "POST",
+        body: JSON.stringify({ type: "cv_draft" })
+      }),
+      { params: Promise.resolve({ id: "app-1" }) }
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(502);
+    expect(body.error).toBe("OPENAI_API_KEY is not configured on the server.");
+    expect(artifactCreate).not.toHaveBeenCalled();
+  });
+
+  it("creates a versioned AI-generated CV draft artifact", async () => {
+    process.env.OPENAI_API_KEY = "test-key";
+    applicationFindFirst.mockResolvedValueOnce(applicationWithMemory);
+    artifactFindFirst.mockResolvedValueOnce({ version: 1 });
+    responsesCreate.mockResolvedValueOnce({
+      output_text: JSON.stringify({
+        summary: "AI engineer with backend agent evidence.",
+        bullets: ["Built AI API Gateway for LLM routing and request tracking."],
+        selectedEvidence: ["AI API Gateway"],
+        risks: []
+      })
+    });
+    artifactCreate.mockResolvedValueOnce({
+      id: "artifact-2",
+      type: "cv_draft",
+      version: 2
+    });
+    const { POST } = await import("./route");
+    const response = await POST(
+      new Request("http://localhost/api/applications/app-1/artifacts", {
+        method: "POST",
+        body: JSON.stringify({ type: "cv_draft" })
+      }),
+      { params: Promise.resolve({ id: "app-1" }) }
+    );
+
+    expect(response.status).toBe(201);
+    expect(responsesCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        instructions: expect.stringContaining("Return JSON with keys: summary, bullets"),
+        input: expect.stringContaining("AI API Gateway")
+      })
+    );
+    expect(artifactCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          type: "cv_draft",
+          version: 2,
+          content: expect.objectContaining({
+            bullets: ["Built AI API Gateway for LLM routing and request tracking."]
+          }),
+          metadata: expect.objectContaining({
+            source: "openai",
+            model: "gpt-5-mini"
           })
         })
       })

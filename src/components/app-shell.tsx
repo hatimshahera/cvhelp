@@ -151,6 +151,7 @@ export function AppShell({
   const [applicationNextActionDraft, setApplicationNextActionDraft] = useState("");
   const [isLoadingApplicationDetail, setIsLoadingApplicationDetail] = useState(false);
   const [isSavingApplicationDetail, setIsSavingApplicationDetail] = useState(false);
+  const [generatingArtifactType, setGeneratingArtifactType] = useState<string | null>(null);
   const [applicationEditorMessage, setApplicationEditorMessage] = useState("");
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [message, setMessage] = useState("");
@@ -576,6 +577,35 @@ export function AppShell({
     }
   }
 
+  async function generateApplicationArtifact(type: string) {
+    if (!activeApplicationId || generatingArtifactType) return;
+
+    setGeneratingArtifactType(type);
+    setApplicationEditorMessage("");
+
+    try {
+      const response = await fetch(`/api/applications/${activeApplicationId}/artifacts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type })
+      });
+      const data = await readJsonResponse(response);
+
+      if (!response.ok) {
+        throw new Error(data.error || "Could not generate this artifact.");
+      }
+
+      await loadApplicationDetail(activeApplicationId);
+      setApplicationEditorMessage("Artifact saved.");
+    } catch (generateError) {
+      setApplicationEditorMessage(
+        generateError instanceof Error ? generateError.message : "Could not generate this artifact."
+      );
+    } finally {
+      setGeneratingArtifactType(null);
+    }
+  }
+
   const applicationMemory = applicationDetail?.memory;
   const selectedEvidence = applicationMemory?.selectedEvidence;
 
@@ -991,6 +1021,28 @@ export function AppShell({
 
                 <section className="application-memory-list" aria-label="Application artifacts">
                   <h3>Artifacts</h3>
+                  <div className="artifact-actions" aria-label="Generate artifacts">
+                    {[
+                      ["proofcv_data", "ProofCV data"],
+                      ["cv_draft", "CV draft"],
+                      ["cover_note", "Cover note"],
+                      ["recruiter_message", "Recruiter message"]
+                    ].map(([type, label]) => (
+                      <button
+                        key={type}
+                        type="button"
+                        onClick={() => generateApplicationArtifact(type)}
+                        disabled={Boolean(generatingArtifactType) || isLoadingApplicationDetail}
+                      >
+                        {generatingArtifactType === type ? (
+                          <Loader2 className="spin" size={14} />
+                        ) : (
+                          <FileText size={14} />
+                        )}
+                        {label}
+                      </button>
+                    ))}
+                  </div>
                   {applicationDetail?.artifacts.length ? (
                     <ul>
                       {applicationDetail.artifacts.slice(0, 6).map((artifact) => (
