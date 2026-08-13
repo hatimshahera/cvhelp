@@ -68,8 +68,8 @@ Use this as the live tracker while implementing the plan. Mark items complete on
 
 ## Phase 5: Application Workspace System
 
-- [ ] Improve application creation from pasted job descriptions.
-- [ ] Improve application creation from job URLs.
+- [x] Improve application creation from pasted job descriptions.
+- [x] Improve application creation from job URLs.
 - [x] Add application detail route or detail panel.
 - [x] Add application overview panel.
 - [x] Add editable application metadata.
