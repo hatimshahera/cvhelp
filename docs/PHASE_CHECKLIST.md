@@ -102,7 +102,7 @@ Use this as the live tracker while implementing the plan. Mark items complete on
 - [x] Add ProofCV-compatible `cv_data` export.
 - [ ] Decide PDF rendering strategy.
 - [ ] Add PDF or TeX export route.
-- [ ] Add artifact download flow.
+- [x] Add artifact download flow.
 - [x] Add tests for artifact generation.
 - [x] Add tests for version history.
 - [x] Add tests for export scoping.

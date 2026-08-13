@@ -77,6 +77,7 @@ type ApplicationDetail = ApplicationItem & {
     title: string;
     status: string;
     version: number;
+    content?: unknown;
   }>;
 };
 
@@ -121,6 +122,23 @@ const profileSections: ProfileSection[] = [
   "evidence",
   "openQuestions"
 ];
+
+function summarizeArtifactContent(content: unknown) {
+  if (!content || typeof content !== "object") return "";
+
+  const record = content as Record<string, unknown>;
+  if (typeof record.summary === "string") return record.summary;
+  if (typeof record.note === "string") return record.note;
+  if (typeof record.message === "string") return record.message;
+  if (Array.isArray(record.bullets) && typeof record.bullets[0] === "string") return record.bullets[0];
+  if (Array.isArray(record.answers) && record.answers[0] && typeof record.answers[0] === "object") {
+    const firstAnswer = record.answers[0] as Record<string, unknown>;
+    if (typeof firstAnswer.answer === "string") return firstAnswer.answer;
+  }
+  if (typeof record.profile_summary === "string") return record.profile_summary;
+
+  return JSON.stringify(record).slice(0, 180);
+}
 
 async function readJsonResponse(response: Response) {
   const text = await response.text().catch(() => "");
@@ -1047,8 +1065,15 @@ export function AppShell({
                     <ul>
                       {applicationDetail.artifacts.slice(0, 6).map((artifact) => (
                         <li key={artifact.id}>
-                          <FileText size={14} />
-                          {artifact.title} v{artifact.version}
+                          <div className="artifact-title-line">
+                            <FileText size={14} />
+                            <span>
+                              {artifact.title} v{artifact.version}
+                            </span>
+                          </div>
+                          {summarizeArtifactContent(artifact.content) ? (
+                            <p>{summarizeArtifactContent(artifact.content)}</p>
+                          ) : null}
                         </li>
                       ))}
                     </ul>

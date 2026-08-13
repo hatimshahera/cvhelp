@@ -39,6 +39,7 @@ async function getApplicationForUser(id: string, userId: string) {
           title: true,
           status: true,
           version: true,
+          content: true,
           createdAt: true,
           updatedAt: true
         }
@@ -113,6 +114,7 @@ export async function PATCH(request: Request, context: RouteParams) {
           title: true,
           status: true,
           version: true,
+          content: true,
           createdAt: true,
           updatedAt: true
         }

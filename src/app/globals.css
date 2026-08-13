@@ -1135,9 +1135,8 @@ h3 {
 }
 
 .application-memory-list li {
-  display: flex;
-  gap: 7px;
-  align-items: flex-start;
+  display: grid;
+  gap: 6px;
   padding: 9px 10px;
   border: 1px solid var(--line);
   border-radius: 9px;
@@ -1146,6 +1145,23 @@ h3 {
   font-size: 12px;
   font-weight: 750;
   line-height: 1.35;
+}
+
+.artifact-title-line {
+  display: flex;
+  gap: 7px;
+  align-items: flex-start;
+}
+
+.artifact-title-line svg {
+  flex: 0 0 auto;
+  margin-top: 1px;
+}
+
+.application-memory-list li p {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .artifact-actions {
