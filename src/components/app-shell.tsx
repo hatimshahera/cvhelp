@@ -892,6 +892,10 @@ export function AppShell({
   const selectedArtifactDownloadHref = selectedArtifactJson
     ? `data:application/json;charset=utf-8,${encodeURIComponent(selectedArtifactJson)}`
     : "";
+  const selectedArtifactTexHref =
+    activeApplicationId && selectedArtifact
+      ? `/api/applications/${activeApplicationId}/artifacts/${selectedArtifact.id}/export`
+      : "";
   const commandSuggestions =
     activeMode === "build_profile" ? profileCommandSuggestions : applicationCommandSuggestions;
 
@@ -1490,14 +1494,21 @@ export function AppShell({
                           {formatLabel(selectedArtifact.type)} v{selectedArtifact.version}
                         </p>
                       </div>
-                      {selectedArtifactDownloadHref ? (
-                        <a
-                          href={selectedArtifactDownloadHref}
-                          download={`${selectedArtifact.type}-v${selectedArtifact.version}.json`}
-                        >
-                          Download JSON
-                        </a>
-                      ) : null}
+                      <div className="artifact-download-links">
+                        {selectedArtifactTexHref ? (
+                          <a href={selectedArtifactTexHref}>
+                            Download TeX
+                          </a>
+                        ) : null}
+                        {selectedArtifactDownloadHref ? (
+                          <a
+                            href={selectedArtifactDownloadHref}
+                            download={`${selectedArtifact.type}-v${selectedArtifact.version}.json`}
+                          >
+                            Download JSON
+                          </a>
+                        ) : null}
+                      </div>
                     </div>
                     {renderArtifactContent(selectedArtifact)}
                     {selectedArtifact.type !== "proofcv_data" ? (

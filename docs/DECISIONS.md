@@ -160,16 +160,13 @@ Google, GitHub, and LinkedIn can be added later. Keeping the MVP to email/passwo
 
 ### PDF Rendering Strategy
 
-Open:
+Decision:
 
-- Reuse `proofcv/services/pdf-renderer`.
-- Build a Vercel-compatible rendering route.
-- Use a background job or separate service for rendering.
-- Keep TeX export first and PDF later.
+Use TeX export first. Keep PDF rendering out of the request path for MVP.
 
-Default for now:
+Reasoning:
 
-Design artifacts and export data first. Decide renderer after CV draft generation is working.
+Generated artifacts need a portable export format immediately, but PDF rendering can be fragile in serverless runtimes and may require a worker or separate renderer. The app now exports `.tex` from saved artifacts; PDF generation can later reuse `proofcv/services/pdf-renderer`, a background job, or a dedicated rendering service once deployment constraints are clear.
 
 ### Memory Storage Shape
 

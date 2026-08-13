@@ -100,8 +100,8 @@ Use this as the live tracker while implementing the plan. Mark items complete on
 - [x] Add artifact review UI.
 - [x] Add regenerate/refine flow.
 - [x] Add ProofCV-compatible `cv_data` export.
-- [ ] Decide PDF rendering strategy.
-- [ ] Add PDF or TeX export route.
+- [x] Decide PDF rendering strategy.
+- [x] Add PDF or TeX export route.
 - [x] Add artifact download flow.
 - [x] Add tests for artifact generation.
 - [x] Add tests for version history.
