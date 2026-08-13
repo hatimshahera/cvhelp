@@ -5,6 +5,7 @@ import {
   createDefaultProfileBankData,
   createInitialApplicationMemory,
   markChecklistFromText,
+  parseCanonicalProfile,
   parseApplicationMemory,
   summarizeProfileBank,
   toProofCvData
@@ -65,6 +66,21 @@ describe("profile memory helpers", () => {
     expect(summary.sourceCount).toBe(1);
     expect(summary.hasMasterProfile).toBe(true);
     expect(summary.sections).toEqual(["projects"]);
+    expect(summary.completeness).toBeGreaterThan(0);
+    expect(summary.missingSections).toContain("education");
+    expect(summary.evidenceCounts.projects).toBe(1);
+  });
+
+  it("normalizes missing canonical profile sections", () => {
+    const profile = parseCanonicalProfile({
+      identity: { name: "Hatim Shaherawala" },
+      projects: [{ name: "AI API Gateway" }]
+    });
+
+    expect(profile.identity).toEqual({ name: "Hatim Shaherawala" });
+    expect(profile.projects).toEqual([{ name: "AI API Gateway" }]);
+    expect(profile.education).toEqual([]);
+    expect(profile.openQuestions).toEqual([]);
   });
 });
 

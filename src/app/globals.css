@@ -867,6 +867,52 @@ h3 {
   font-size: 13px;
 }
 
+.profile-completeness {
+  display: grid;
+  gap: 8px;
+}
+
+.profile-completeness div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.profile-completeness strong {
+  font-size: 22px;
+}
+
+.profile-completeness span,
+.profile-missing {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.profile-completeness progress {
+  width: 100%;
+  height: 8px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 999px;
+  background: #e7eee9;
+}
+
+.profile-completeness progress::-webkit-progress-bar {
+  background: #e7eee9;
+}
+
+.profile-completeness progress::-webkit-progress-value {
+  border-radius: 999px;
+  background: var(--accent);
+}
+
+.profile-completeness progress::-moz-progress-bar {
+  border-radius: 999px;
+  background: var(--accent);
+}
+
 .profile-sections {
   display: flex;
   flex-wrap: wrap;

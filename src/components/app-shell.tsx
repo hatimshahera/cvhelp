@@ -31,6 +31,16 @@ type ProfileBankSummary = {
   checklist: Array<{ id: string; label: string; done: boolean }>;
   hasMasterProfile: boolean;
   sections: string[];
+  completeness: number;
+  missingSections: string[];
+  evidenceCounts: {
+    education: number;
+    experience: number;
+    projects: number;
+    research: number;
+    skills: number;
+    evidence: number;
+  };
 };
 
 type ApplicationItem = {
@@ -424,6 +434,13 @@ export function AppShell({
               <strong>Profile bank</strong>
             </div>
             <p>{profileBank.sourceCount} saved source notes</p>
+            <div className="profile-completeness" aria-label="Profile completeness">
+              <div>
+                <strong>{profileBank.completeness}%</strong>
+                <span>complete</span>
+              </div>
+              <progress value={profileBank.completeness} max={100} />
+            </div>
             {profileBank.sections.length ? (
               <div className="profile-sections">
                 {profileBank.sections.slice(0, 5).map((section) => (
@@ -439,6 +456,11 @@ export function AppShell({
                 </li>
               ))}
             </ul>
+            {profileBank.missingSections.length ? (
+              <p className="profile-missing">
+                Missing: {profileBank.missingSections.slice(0, 3).join(", ")}
+              </p>
+            ) : null}
           </section>
         ) : null}
 

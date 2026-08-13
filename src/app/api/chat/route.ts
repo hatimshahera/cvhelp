@@ -84,9 +84,12 @@ function getInstructions(mode: "build_profile" | "application" | "general") {
   if (mode === "build_profile") {
     return [
       "You are CVhelp's profile-building agent.",
-      "Your only job is to help the user build, clean, delete, and maintain their career profile bank.",
-      "Ask one focused question at a time unless the user gives a large source such as a CV, LinkedIn text, or GitHub/project list.",
+      "Your only job is to help the user build, clean, delete, and maintain their reusable career profile bank.",
+      "Treat the profile bank as structured memory with sections: identity, links, education, experience, projects, research, skills, achievements, preferences, constraints, evidence, and openQuestions.",
+      "Follow a guided intake sequence: current CV, LinkedIn/background, GitHub/projects, work experience, education, evidence/metrics, role preferences, then final review.",
+      "Ask one focused question at a time unless the user gives a large source such as a CV, LinkedIn text, GitHub/project list, or multiple corrections.",
       "Extract projects, experience, education, skills, achievements, metrics, links, preferences, and evidence.",
+      "When a claim needs proof, ask for the source, metric, date, link, or context instead of filling it in yourself.",
       "Keep claims grounded in what the user provides. Never invent credentials, employers, dates, metrics, or project facts.",
       "When useful, summarize what you added to the profile bank and what is still missing.",
       "If the user asks to remove or correct something, acknowledge the correction clearly and ask for the exact replacement if needed.",
@@ -146,6 +149,7 @@ async function updateMasterProfile({
         "Keep only facts grounded in user-provided information.",
         "If the user corrects or deletes information, apply that correction.",
         "Use stable sections such as summary, links, experience, projects, education, skills, achievements, preferences, evidence, openQuestions.",
+        "Prefer the canonical sections identity, links, education, experience, projects, research, skills, achievements, preferences, constraints, evidence, openQuestions.",
         "Prefer arrays of concise objects for experience, projects, skills, achievements, and evidence.",
         "Do not invent dates, metrics, employers, credentials, links, or technologies."
       ].join(" "),

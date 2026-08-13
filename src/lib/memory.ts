@@ -21,6 +21,21 @@ export const rawSourcesSchema = z.object({
 
 export const profileMasterSchema = z.record(z.string(), z.unknown());
 
+export const canonicalProfileSchema = z.object({
+  identity: z.record(z.string(), z.unknown()).default({}),
+  links: z.record(z.string(), z.unknown()).default({}),
+  education: z.array(z.record(z.string(), z.unknown())).default([]),
+  experience: z.array(z.record(z.string(), z.unknown())).default([]),
+  projects: z.array(z.record(z.string(), z.unknown())).default([]),
+  research: z.array(z.record(z.string(), z.unknown())).default([]),
+  skills: z.array(z.union([z.string(), z.record(z.string(), z.unknown())])).default([]),
+  achievements: z.array(z.record(z.string(), z.unknown())).default([]),
+  preferences: z.record(z.string(), z.unknown()).default({}),
+  constraints: z.record(z.string(), z.unknown()).default({}),
+  evidence: z.array(z.record(z.string(), z.unknown())).default([]),
+  openQuestions: z.array(z.string()).default([])
+});
+
 export const profileBankMemorySchema = z.object({
   masterProfile: profileMasterSchema,
   rawSources: rawSourcesSchema,
@@ -78,6 +93,7 @@ export type ChecklistItem = z.infer<typeof checklistItemSchema>;
 export type RawSourceEntry = z.infer<typeof rawSourceEntrySchema>;
 export type RawSources = z.infer<typeof rawSourcesSchema>;
 export type ProfileBankMemory = z.infer<typeof profileBankMemorySchema>;
+export type CanonicalProfile = z.infer<typeof canonicalProfileSchema>;
 export type ApplicationMemory = z.infer<typeof applicationMemorySchema>;
 export type SelectedEvidence = z.infer<typeof selectedEvidenceSchema>;
 
@@ -109,6 +125,10 @@ export function parseMasterProfile(value: unknown): Record<string, unknown> {
   return parsed.success ? parsed.data : {};
 }
 
+export function parseCanonicalProfile(value: unknown): CanonicalProfile {
+  return canonicalProfileSchema.parse(parseMasterProfile(value));
+}
+
 export function createDefaultProfileBankData(): ProfileBankMemory {
   return {
     masterProfile: {},
@@ -123,6 +143,7 @@ export function summarizeProfileBank(input: {
   checklist: unknown;
 } | null) {
   const masterProfile = parseMasterProfile(input?.masterProfile);
+  const canonicalProfile = parseCanonicalProfile(masterProfile);
   const rawSources = parseRawSources(input?.rawSources);
   const checklist = parseChecklist(input?.checklist);
   const sections = Object.keys(masterProfile).filter((key) => {
@@ -131,12 +152,44 @@ export function summarizeProfileBank(input: {
     if (isObject(value)) return Object.keys(value).length > 0;
     return Boolean(value);
   });
+  const requiredSections: Array<keyof CanonicalProfile> = [
+    "identity",
+    "links",
+    "education",
+    "experience",
+    "projects",
+    "skills",
+    "evidence"
+  ];
+  const completedSections = requiredSections.filter((section) => {
+    const value = canonicalProfile[section];
+    if (Array.isArray(value)) return value.length > 0;
+    if (isObject(value)) return Object.keys(value).length > 0;
+    return Boolean(value);
+  });
+  const checklistDoneCount = checklist.filter((item) => item.done).length;
+  const sectionScore = completedSections.length / requiredSections.length;
+  const checklistScore = checklist.length ? checklistDoneCount / checklist.length : 0;
+  const completeness = Math.round((sectionScore * 0.65 + checklistScore * 0.35) * 100);
+  const missingSections = requiredSections
+    .filter((section) => !completedSections.includes(section))
+    .map((section) => String(section));
 
   return {
     sourceCount: rawSources.entries.length,
     checklist,
     hasMasterProfile: sections.length > 0,
-    sections
+    sections,
+    completeness,
+    missingSections,
+    evidenceCounts: {
+      education: canonicalProfile.education.length,
+      experience: canonicalProfile.experience.length,
+      projects: canonicalProfile.projects.length,
+      research: canonicalProfile.research.length,
+      skills: canonicalProfile.skills.length,
+      evidence: canonicalProfile.evidence.length
+    }
   };
 }
 
