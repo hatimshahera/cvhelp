@@ -84,7 +84,7 @@ Use this as the live tracker while implementing the plan. Mark items complete on
 - [x] Add separate chats per application.
 - [x] Add support for multiple task chats if selected.
 - [x] Add tests for application creation.
-- [ ] Add tests for switching application chats.
+- [x] Add tests for switching application chats.
 - [x] Add tests for application memory isolation.
 - [x] Add tests for status/archive persistence.
 - [x] Run `npm run typecheck`.
@@ -164,10 +164,10 @@ Use this as the live tracker while implementing the plan. Mark items complete on
 - [ ] Add signup/signin E2E test.
 - [ ] Add profile builder E2E test.
 - [ ] Add application creation E2E test.
-- [ ] Add separate application chats E2E test.
+- [x] Add separate application chats E2E test.
 - [ ] Add generation/artifact E2E test.
 - [ ] Add billing route E2E or integration test.
-- [ ] Add cross-user access denial tests.
+- [x] Add cross-user access denial tests.
 - [ ] Add local quality script.
 - [ ] Run full quality gate.
 
