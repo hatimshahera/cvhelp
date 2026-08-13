@@ -24,6 +24,7 @@ model User {
   profileBank   ProfileBank?
   applications  Application[]
   artifacts     ApplicationArtifact[]
+  subscription  Subscription?
 }
 
 model Account {
@@ -147,4 +148,23 @@ model ApplicationArtifact {
   @@unique([applicationId, type, version])
   @@index([userId, updatedAt])
   @@index([applicationId, type, version])
+}
+
+model Subscription {
+  id                     String    @id @default(cuid())
+  userId                 String    @unique
+  provider               String    @default("stripe")
+  providerCustomerId     String?
+  providerSubscriptionId String?
+  plan                   String    @default("free")
+  status                 String    @default("free")
+  currentPeriodEnd       DateTime?
+  trialEndsAt            DateTime?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+  user                   User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([providerCustomerId])
+  @@index([providerSubscriptionId])
+  @@index([status, updatedAt])
 }

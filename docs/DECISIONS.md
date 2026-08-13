@@ -114,6 +114,14 @@ Reasoning:
 
 Stripe integration and pricing can be decided later, but route structure and feature gates should be planned now so the app can evolve cleanly.
 
+Current Stripe environment placeholders:
+
+- `STRIPE_SECRET_KEY`
+- `STRIPE_PRICE_ID`
+- `STRIPE_WEBHOOK_SECRET`
+
+These are intentionally not required for local MVP use yet. Billing routes return clear setup errors until Stripe products, prices, webhook handling, and pricing strategy are finalized.
+
 ### Testing
 
 Decision:

@@ -112,21 +112,21 @@ Use this as the live tracker while implementing the plan. Mark items complete on
 
 ## Phase 7: Payments and Subscription Routes
 
-- [ ] Add billing/subscription schema.
-- [ ] Add `GET /api/billing/status`.
-- [ ] Add `POST /api/billing/checkout`.
-- [ ] Add `POST /api/billing/portal`.
-- [ ] Add `POST /api/billing/webhook`.
-- [ ] Add Stripe env var docs.
-- [ ] Add free/default billing state.
-- [ ] Add feature gate helper.
-- [ ] Add application count limit gate.
-- [ ] Add generation/export limit gate.
-- [ ] Add upload limit gate.
+- [x] Add billing/subscription schema.
+- [x] Add `GET /api/billing/status`.
+- [x] Add `POST /api/billing/checkout`.
+- [x] Add `POST /api/billing/portal`.
+- [x] Add `POST /api/billing/webhook`.
+- [x] Add Stripe env var docs.
+- [x] Add free/default billing state.
+- [x] Add feature gate helper.
+- [x] Add application count limit gate.
+- [x] Add generation/export limit gate.
+- [x] Add upload limit gate.
 - [ ] Add billing status UI placeholder.
-- [ ] Add tests for auth on billing routes.
-- [ ] Add tests for free/default billing status.
-- [ ] Add tests for feature gates.
+- [x] Add tests for auth on billing routes.
+- [x] Add tests for free/default billing status.
+- [x] Add tests for feature gates.
 - [ ] Add Stripe webhook signature test after Stripe is connected.
 - [ ] Run `npm run typecheck`.
 - [ ] Run `npm run build`.

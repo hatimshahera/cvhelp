@@ -69,4 +69,13 @@ describe("protected API routes", () => {
     expect(response.status).toBe(401);
     expect(body.error).toBe("Sign in to view your profile.");
   });
+
+  it("rejects signed-out billing status requests", async () => {
+    const { GET } = await import("./billing/status/route");
+    const response = await GET();
+    const body = await response.json();
+
+    expect(response.status).toBe(401);
+    expect(body.error).toBe("Sign in to view billing status.");
+  });
 });
