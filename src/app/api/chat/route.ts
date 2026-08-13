@@ -1,9 +1,7 @@
 import OpenAI from "openai";
 import type { Prisma } from "@prisma/client";
-import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { authOptions } from "@/lib/auth";
 import {
   appendApplicationMemoryNote,
   appendRawSource,
@@ -15,6 +13,7 @@ import {
   summarizeProfileBank
 } from "@/lib/memory";
 import { prisma } from "@/lib/prisma";
+import { getCurrentUser } from "@/lib/session";
 
 const chatSchema = z.object({
   message: z.string().trim().min(1, "Enter a message.").max(8000),
@@ -171,20 +170,8 @@ async function updateMasterProfile({
   }
 }
 
-async function requireUser() {
-  const session = await getServerSession(authOptions);
-  const userId = session?.user?.id;
-
-  if (!userId) return null;
-
-  return {
-    id: userId,
-    name: session.user.name ?? "there"
-  };
-}
-
 export async function GET(request: Request) {
-  const user = await requireUser();
+  const user = await getCurrentUser();
 
   if (!user) {
     return NextResponse.json({ error: "Sign in to use chat." }, { status: 401 });
@@ -243,7 +230,7 @@ export async function GET(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-  const user = await requireUser();
+  const user = await getCurrentUser();
 
   if (!user) {
     return NextResponse.json({ error: "Sign in to use chat." }, { status: 401 });
@@ -299,7 +286,7 @@ export async function DELETE(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const user = await requireUser();
+  const user = await getCurrentUser();
 
   if (!user) {
     return NextResponse.json({ error: "Sign in to use chat." }, { status: 401 });

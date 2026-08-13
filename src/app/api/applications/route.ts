@@ -1,10 +1,9 @@
 import type { Prisma } from "@prisma/client";
-import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { authOptions } from "@/lib/auth";
 import { createInitialApplicationMemory } from "@/lib/memory";
 import { prisma } from "@/lib/prisma";
+import { getCurrentUser } from "@/lib/session";
 
 const createApplicationSchema = z.object({
   jobSource: z.string().trim().min(10, "Paste a job link or description.").max(50000),
@@ -114,14 +113,6 @@ function inferJobMetadata(jobDescription: string) {
   };
 }
 
-async function requireUser() {
-  const session = await getServerSession(authOptions);
-  const userId = session?.user?.id;
-
-  if (!userId) return null;
-  return { id: userId };
-}
-
 async function uniqueSlug(userId: string, company: string, role: string) {
   const base = slugify(`${company}-${role}`) || `application-${Date.now()}`;
   let candidate = base;
@@ -141,7 +132,7 @@ async function uniqueSlug(userId: string, company: string, role: string) {
 }
 
 export async function GET() {
-  const user = await requireUser();
+  const user = await getCurrentUser();
 
   if (!user) {
     return NextResponse.json({ error: "Sign in to view applications." }, { status: 401 });
@@ -165,7 +156,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  const user = await requireUser();
+  const user = await getCurrentUser();
 
   if (!user) {
     return NextResponse.json({ error: "Sign in to add applications." }, { status: 401 });

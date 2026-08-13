@@ -1,7 +1,5 @@
 import type { Prisma } from "@prisma/client";
-import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
-import { authOptions } from "@/lib/auth";
 import {
   appendRawSource,
   createDefaultProfileBankData,
@@ -10,6 +8,7 @@ import {
   summarizeProfileBank
 } from "@/lib/memory";
 import { prisma } from "@/lib/prisma";
+import { getCurrentUser } from "@/lib/session";
 
 export const runtime = "nodejs";
 
@@ -83,14 +82,6 @@ async function extractFileText(file: File) {
   };
 }
 
-async function requireUser() {
-  const session = await getServerSession(authOptions);
-  const userId = session?.user?.id;
-
-  if (!userId) return null;
-  return { id: userId };
-}
-
 async function getOrCreateProfileBank(userId: string) {
   const defaults = createDefaultProfileBankData();
   return prisma.profileBank.upsert({
@@ -107,7 +98,7 @@ async function getOrCreateProfileBank(userId: string) {
 
 export async function POST(request: Request) {
   try {
-    const user = await requireUser();
+    const user = await getCurrentUser();
 
     if (!user) {
       return NextResponse.json({ error: "Sign in to upload files." }, { status: 401 });

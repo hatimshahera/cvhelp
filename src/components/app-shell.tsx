@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { signOut } from "next-auth/react";
 import {
@@ -11,6 +12,7 @@ import {
   LogOut,
   Paperclip,
   Send,
+  Settings,
   Trash2,
   X,
   UserRound
@@ -331,6 +333,10 @@ export function AppShell({
               <span>{userEmail}</span>
             </div>
           </div>
+          <Link className="account-link" href="/app/account">
+            <Settings size={16} />
+            Account settings
+          </Link>
         </div>
 
         <nav className="rail-nav" aria-label="Workspace navigation">

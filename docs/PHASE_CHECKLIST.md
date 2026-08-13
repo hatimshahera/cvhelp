@@ -33,18 +33,18 @@ Use this as the live tracker while implementing the plan. Mark items complete on
 ## Phase 3: Auth, Sessions, and Account Safety
 
 - [ ] Confirm production auth env requirements.
-- [ ] Improve signup error and loading states.
-- [ ] Improve signin error and loading states.
-- [ ] Add account settings shell.
-- [ ] Ensure all private app routes require signin.
-- [ ] Ensure all private API routes require signin.
+- [x] Improve signup error and loading states.
+- [x] Improve signin error and loading states.
+- [x] Add account settings shell.
+- [x] Ensure all private app routes require signin.
+- [x] Ensure all private API routes require signin.
 - [ ] Add user ownership checks for application/detail/artifact routes.
-- [ ] Decide OAuth MVP scope.
+- [x] Decide OAuth MVP scope.
 - [ ] Add auth tests for signup/signin.
-- [ ] Add auth tests for protected routes.
+- [x] Add auth tests for protected routes.
 - [ ] Add auth tests for cross-user access denial.
-- [ ] Run `npm run typecheck`.
-- [ ] Run `npm run build`.
+- [x] Run `npm run typecheck`.
+- [x] Run `npm run build`.
 
 ## Phase 4: Profile Builder Chat System
 

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { useState } from "react";
-import { ArrowRight, CheckCircle2, LockKeyhole, Mail } from "lucide-react";
+import { ArrowRight, CheckCircle2, Loader2, LockKeyhole, Mail } from "lucide-react";
 
 type EnabledProviders = {
   google: boolean;
@@ -101,7 +101,7 @@ export function AuthForm({
         <span />
       </div>
 
-      <form className="auth-form" onSubmit={handleSubmit}>
+      <form className="auth-form" onSubmit={handleSubmit} aria-busy={isSubmitting}>
         {isSignup ? (
           <label>
             Name
@@ -111,6 +111,7 @@ export function AuthForm({
               minLength={2}
               placeholder="Jane Applicant"
               required
+              disabled={isSubmitting}
             />
           </label>
         ) : null}
@@ -124,6 +125,7 @@ export function AuthForm({
               autoComplete="email"
               placeholder="you@example.com"
               required
+              disabled={isSubmitting}
             />
           </span>
         </label>
@@ -138,6 +140,7 @@ export function AuthForm({
               minLength={isSignup ? 10 : undefined}
               placeholder={isSignup ? "At least 10 characters" : "Your password"}
               required
+              disabled={isSubmitting}
             />
           </span>
         </label>
@@ -154,7 +157,7 @@ export function AuthForm({
                 ? "Create account"
                 : "Sign in"}
           </span>
-          <ArrowRight size={18} />
+          {isSubmitting ? <Loader2 className="spin" size={18} /> : <ArrowRight size={18} />}
         </button>
       </form>
 
