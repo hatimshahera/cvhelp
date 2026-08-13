@@ -98,7 +98,7 @@ Use this as the live tracker while implementing the plan. Mark items complete on
 - [x] Add cover note/recruiter message generation route.
 - [x] Add application Q&A generation route.
 - [x] Add artifact review UI.
-- [ ] Add regenerate/refine flow.
+- [x] Add regenerate/refine flow.
 - [x] Add ProofCV-compatible `cv_data` export.
 - [ ] Decide PDF rendering strategy.
 - [ ] Add PDF or TeX export route.

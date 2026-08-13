@@ -257,4 +257,86 @@ describe("application artifacts API", () => {
       })
     );
   });
+
+  it("creates a refined artifact version from a selected previous artifact", async () => {
+    process.env.OPENAI_API_KEY = "test-key";
+    applicationFindFirst.mockResolvedValueOnce(applicationWithMemory);
+    artifactCount.mockResolvedValueOnce(2);
+    artifactFindFirst
+      .mockResolvedValueOnce({ version: 2 })
+      .mockResolvedValueOnce({
+        id: "artifact-previous",
+        version: 2,
+        content: {
+          summary: "Previous summary.",
+          bullets: ["Previous bullet."]
+        }
+      });
+    responsesCreate.mockResolvedValueOnce({
+      output_text: JSON.stringify({
+        summary: "Sharper summary.",
+        bullets: ["Sharper bullet grounded in AI API Gateway."],
+        selectedEvidence: ["AI API Gateway"],
+        risks: []
+      })
+    });
+    artifactCreate.mockResolvedValueOnce({
+      id: "artifact-3",
+      type: "cv_draft",
+      version: 3
+    });
+    const { POST } = await import("./route");
+    const response = await POST(
+      new Request("http://localhost/api/applications/app-1/artifacts", {
+        method: "POST",
+        body: JSON.stringify({
+          type: "cv_draft",
+          prompt: "Make the bullets more concise.",
+          refineFromArtifactId: "artifact-previous"
+        })
+      }),
+      { params: Promise.resolve({ id: "app-1" }) }
+    );
+
+    expect(response.status).toBe(201);
+    expect(responsesCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        input: expect.stringContaining("Previous bullet.")
+      })
+    );
+    expect(artifactCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          version: 3,
+          metadata: expect.objectContaining({
+            prompt: "Make the bullets more concise.",
+            refineFromArtifactId: "artifact-previous",
+            refineFromVersion: 2
+          })
+        })
+      })
+    );
+  });
+
+  it("returns 404 when the artifact selected for refinement is outside scope", async () => {
+    process.env.OPENAI_API_KEY = "test-key";
+    applicationFindFirst.mockResolvedValueOnce(applicationWithMemory);
+    artifactFindFirst.mockResolvedValueOnce({ version: 1 }).mockResolvedValueOnce(null);
+    const { POST } = await import("./route");
+    const response = await POST(
+      new Request("http://localhost/api/applications/app-1/artifacts", {
+        method: "POST",
+        body: JSON.stringify({
+          type: "cv_draft",
+          prompt: "Refine this.",
+          refineFromArtifactId: "artifact-other-user"
+        })
+      }),
+      { params: Promise.resolve({ id: "app-1" }) }
+    );
+
+    expect(response.status).toBe(404);
+    expect(responsesCreate).not.toHaveBeenCalled();
+    expect(artifactCreate).not.toHaveBeenCalled();
+  });
 });

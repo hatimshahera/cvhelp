@@ -11,7 +11,8 @@ import { getCurrentUser } from "@/lib/session";
 const createArtifactSchema = z.object({
   type: z.enum(["proofcv_data", "cv_draft", "cover_note", "recruiter_message", "application_answers"]),
   title: z.string().trim().min(1).max(160).optional(),
-  prompt: z.string().trim().max(8000).optional()
+  prompt: z.string().trim().max(8000).optional(),
+  refineFromArtifactId: z.string().trim().min(1).optional()
 });
 
 type RouteParams = {
@@ -257,6 +258,26 @@ export async function POST(request: Request, context: RouteParams) {
 
   const version = await nextArtifactVersion(application.id, parsed.data.type);
   const title = parsed.data.title || defaultArtifactTitle(parsed.data.type, application.company, application.role);
+  const refineFromArtifact = parsed.data.refineFromArtifactId
+    ? await prisma.applicationArtifact.findFirst({
+        where: {
+          id: parsed.data.refineFromArtifactId,
+          applicationId: application.id,
+          userId: user.id,
+          type: parsed.data.type
+        },
+        select: {
+          id: true,
+          version: true,
+          content: true
+        }
+      })
+    : null;
+
+  if (parsed.data.refineFromArtifactId && !refineFromArtifact) {
+    return NextResponse.json({ error: "Artifact to refine was not found." }, { status: 404 });
+  }
+
   let content: Record<string, unknown>;
 
   try {
@@ -269,7 +290,17 @@ export async function POST(request: Request, context: RouteParams) {
         : await generateAiArtifact({
             type: parsed.data.type,
             memory,
-            prompt: parsed.data.prompt
+            prompt: refineFromArtifact
+              ? [
+                  parsed.data.prompt,
+                  "Refine from this previous artifact version:",
+                  JSON.stringify({
+                    id: refineFromArtifact.id,
+                    version: refineFromArtifact.version,
+                    content: refineFromArtifact.content
+                  })
+                ].filter(Boolean).join("\n\n")
+              : parsed.data.prompt
           });
   } catch (error) {
     return NextResponse.json(
@@ -289,7 +320,10 @@ export async function POST(request: Request, context: RouteParams) {
       metadata: {
         source: parsed.data.type === "proofcv_data" ? "application_memory" : "openai",
         model: parsed.data.type === "proofcv_data" ? null : getOpenAIModel(),
-        generatedAt: new Date().toISOString()
+        generatedAt: new Date().toISOString(),
+        prompt: parsed.data.prompt || null,
+        refineFromArtifactId: refineFromArtifact?.id ?? null,
+        refineFromVersion: refineFromArtifact?.version ?? null
       } as Prisma.InputJsonValue
     }
   });

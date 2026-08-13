@@ -358,6 +358,7 @@ export function AppShell({
   const [generatingArtifactType, setGeneratingArtifactType] = useState<string | null>(null);
   const [selectedArtifactId, setSelectedArtifactId] = useState<string | null>(null);
   const [applicationAnswersPrompt, setApplicationAnswersPrompt] = useState("");
+  const [artifactRefinePrompt, setArtifactRefinePrompt] = useState("");
   const [applicationEditorMessage, setApplicationEditorMessage] = useState("");
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [message, setMessage] = useState("");
@@ -844,7 +845,11 @@ export function AppShell({
     }
   }
 
-  async function generateApplicationArtifact(type: string, prompt?: string) {
+  async function generateApplicationArtifact(
+    type: string,
+    prompt?: string,
+    refineFromArtifactId?: string
+  ) {
     if (!activeApplicationId || generatingArtifactType) return;
 
     setGeneratingArtifactType(type);
@@ -854,7 +859,7 @@ export function AppShell({
       const response = await fetch(`/api/applications/${activeApplicationId}/artifacts`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type, prompt })
+        body: JSON.stringify({ type, prompt, refineFromArtifactId })
       });
       const data = await readJsonResponse(response);
 
@@ -864,6 +869,7 @@ export function AppShell({
 
       await loadApplicationDetail(activeApplicationId);
       if (type === "application_answers") setApplicationAnswersPrompt("");
+      if (refineFromArtifactId) setArtifactRefinePrompt("");
       setApplicationEditorMessage("Artifact saved.");
     } catch (generateError) {
       setApplicationEditorMessage(
@@ -1494,6 +1500,44 @@ export function AppShell({
                       ) : null}
                     </div>
                     {renderArtifactContent(selectedArtifact)}
+                    {selectedArtifact.type !== "proofcv_data" ? (
+                      <form
+                        className="artifact-refine-form"
+                        onSubmit={(event) => {
+                          event.preventDefault();
+                          generateApplicationArtifact(
+                            selectedArtifact.type,
+                            artifactRefinePrompt,
+                            selectedArtifact.id
+                          );
+                        }}
+                      >
+                        <label>
+                          Refine this version
+                          <textarea
+                            value={artifactRefinePrompt}
+                            onChange={(event) => setArtifactRefinePrompt(event.target.value)}
+                            placeholder="Example: make it shorter, add more Python evidence, reduce hype, or answer in STAR format."
+                            disabled={Boolean(generatingArtifactType) || isLoadingApplicationDetail}
+                          />
+                        </label>
+                        <button
+                          type="submit"
+                          disabled={
+                            Boolean(generatingArtifactType) ||
+                            isLoadingApplicationDetail ||
+                            artifactRefinePrompt.trim().length < 5
+                          }
+                        >
+                          {generatingArtifactType === selectedArtifact.type ? (
+                            <Loader2 className="spin" size={14} />
+                          ) : (
+                            <FileText size={14} />
+                          )}
+                          Save new version
+                        </button>
+                      </form>
+                    ) : null}
                     {selectedArtifactJson ? (
                       <details className="raw-json-details">
                         <summary>Raw JSON</summary>
