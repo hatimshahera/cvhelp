@@ -128,8 +128,8 @@ Use this as the live tracker while implementing the plan. Mark items complete on
 - [x] Add tests for free/default billing status.
 - [x] Add tests for feature gates.
 - [ ] Add Stripe webhook signature test after Stripe is connected.
-- [ ] Run `npm run typecheck`.
-- [ ] Run `npm run build`.
+- [x] Run `npm run typecheck`.
+- [x] Run `npm run build`.
 
 ## Phase 8: UI Polish and Product Flow
 
@@ -186,11 +186,11 @@ Use this as the live tracker while implementing the plan. Mark items complete on
 - [x] Add basic logging/error handling.
 - [x] Add AI route rate limits or usage controls.
 - [x] Add upload route protections.
-- [ ] Add privacy/data deletion plan.
-- [ ] Run production build.
+- [x] Add privacy/data deletion plan.
+- [x] Run production build.
 - [ ] Deploy to Vercel.
 - [ ] Run production smoke test for auth.
 - [ ] Run production smoke test for profile chat.
 - [ ] Run production smoke test for application chat.
 - [ ] Run production smoke test for billing status.
-- [ ] Write beta release notes.
+- [x] Write beta release notes.
