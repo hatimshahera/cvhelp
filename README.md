@@ -1,6 +1,6 @@
 # CVhelp
 
-Fresh CVhelp app shell with owned, database-backed authentication through Auth.js and Prisma. The app supports email/password accounts locally and can enable Google, GitHub, and LinkedIn as provider integrations through environment variables.
+CVhelp is a private, database-backed AI workspace for building a reusable career profile, managing job applications, and generating application artifacts. It supports email/password accounts through Auth.js and Prisma. OAuth provider wiring exists for later, but email/password is the MVP auth path.
 
 ## Local setup
 
@@ -14,9 +14,12 @@ npm run dev
 Set the required local values:
 
 ```env
-DATABASE_URL="file:./dev.db"
+DATABASE_URL="postgresql://..."
+DATABASE_URL_UNPOOLED="postgresql://..."
 NEXTAUTH_URL="http://localhost:3000"
 NEXTAUTH_SECRET="generate-a-long-random-secret"
+OPENAI_API_KEY=""
+OPENAI_MODEL="gpt-5-mini"
 ```
 
 Generate a secret with:
@@ -24,6 +27,24 @@ Generate a secret with:
 ```bash
 openssl rand -base64 32
 ```
+
+## Production auth requirements
+
+For production, set these before enabling real users:
+
+```env
+DATABASE_URL="pooled Postgres connection string"
+DATABASE_URL_UNPOOLED="direct Postgres connection string for migrations"
+NEXTAUTH_URL="https://your-production-domain.com"
+NEXTAUTH_SECRET="long random secret generated for production only"
+```
+
+Rules:
+
+- `NEXTAUTH_URL` must be the final production origin, not localhost and not a preview URL.
+- `NEXTAUTH_SECRET` must be a production-only random value, not reused from local development.
+- Email/password signin only needs the database and Auth.js variables above.
+- Google, GitHub, and LinkedIn stay disabled unless their full provider env var pairs are present.
 
 ## OAuth providers
 
@@ -66,11 +87,16 @@ LINKEDIN_CLIENT_SECRET=""
 ## Current scope
 
 - Public landing page with login/signup.
-- Custom sign-in/sign-up pages.
 - Email/password account creation with hashed passwords.
-- Optional Google sign-in provider.
-- Protected `/app` route.
-- Chat interface after login.
-- Left settings rail with logout.
+- Protected `/app` workspace.
+- Profile-builder chat with structured profile memory, uploads, corrections, source cards, and source deletion.
+- Per-application workspaces with one chat thread per application.
+- Application memory, status, next action, selected evidence, risks, gaps, and notes.
+- Artifact generation, review, refinement, JSON download, ProofCV-compatible data, and TeX export.
+- Billing route scaffolding and free-plan feature gates.
 
-The chat is intentionally local UI state for now. Profile setup, CV upload, payments, and real generation should be added in later commits.
+Run the local quality gate before commits:
+
+```bash
+npm run quality
+```

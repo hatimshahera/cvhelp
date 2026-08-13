@@ -94,6 +94,16 @@ Reasoning:
 
 Chat is the easiest input path for most users, but users still need a manual way to correct and maintain their own profile facts without negotiating every change through the agent.
 
+### Production Auth Environment
+
+Decision:
+
+Email/password auth requires `DATABASE_URL`, `DATABASE_URL_UNPOOLED`, `NEXTAUTH_URL`, and `NEXTAUTH_SECRET` in production. OAuth providers stay disabled unless their complete provider env var pairs are configured.
+
+Reasoning:
+
+Email/password is the MVP auth path. Keeping OAuth optional reduces production auth risk while the core product is still moving. `NEXTAUTH_URL` must be the production origin and `NEXTAUTH_SECRET` must be a production-only random secret.
+
 ### AI Grounding
 
 Decision:

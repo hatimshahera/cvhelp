@@ -32,7 +32,7 @@ Use this as the live tracker while implementing the plan. Mark items complete on
 
 ## Phase 3: Auth, Sessions, and Account Safety
 
-- [ ] Confirm production auth env requirements.
+- [x] Confirm production auth env requirements.
 - [x] Improve signup error and loading states.
 - [x] Improve signin error and loading states.
 - [x] Add account settings shell.
