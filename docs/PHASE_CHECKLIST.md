@@ -70,12 +70,12 @@ Use this as the live tracker while implementing the plan. Mark items complete on
 
 - [ ] Improve application creation from pasted job descriptions.
 - [ ] Improve application creation from job URLs.
-- [ ] Add application detail route or detail panel.
+- [x] Add application detail route or detail panel.
 - [ ] Add application overview panel.
-- [ ] Add editable application metadata.
-- [ ] Add application status controls.
-- [ ] Add archive behavior.
-- [ ] Add application next-action field.
+- [x] Add editable application metadata.
+- [x] Add application status controls.
+- [x] Add archive behavior.
+- [x] Add application next-action field.
 - [ ] Add job requirement extraction.
 - [ ] Add matched evidence storage.
 - [ ] Add gap/risk/honesty notes storage.
@@ -85,8 +85,8 @@ Use this as the live tracker while implementing the plan. Mark items complete on
 - [ ] Add support for multiple task chats if selected.
 - [ ] Add tests for application creation.
 - [ ] Add tests for switching application chats.
-- [ ] Add tests for application memory isolation.
-- [ ] Add tests for status/archive persistence.
+- [x] Add tests for application memory isolation.
+- [x] Add tests for status/archive persistence.
 - [ ] Run `npm run typecheck`.
 - [ ] Run `npm run build`.
 
