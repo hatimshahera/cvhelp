@@ -1,5 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import {
   appendRawSource,
   createDefaultProfileBankData,
@@ -16,6 +17,9 @@ export const runtime = "nodejs";
 
 const maxFiles = 6;
 const maxFileBytes = 5 * 1024 * 1024;
+const deleteSourceSchema = z.object({
+  sourceId: z.string().min(1)
+});
 
 function isTextLike(file: File) {
   const name = file.name.toLowerCase();
@@ -232,5 +236,47 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("Profile source upload failed", error);
     return NextResponse.json({ error: "The file upload failed on the server." }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const user = await getCurrentUser();
+
+    if (!user) {
+      return NextResponse.json({ error: "Sign in to delete sources." }, { status: 401 });
+    }
+
+    const parsed = deleteSourceSchema.safeParse(await request.json().catch(() => null));
+
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: parsed.error.issues[0]?.message ?? "Choose a source to delete." },
+        { status: 400 }
+      );
+    }
+
+    const profileBank = await getOrCreateProfileBank(user.id);
+    const rawSources = parseRawSources(profileBank.rawSources);
+    const nextEntries = rawSources.entries.filter((entry) => entry.id !== parsed.data.sourceId);
+
+    if (nextEntries.length === rawSources.entries.length) {
+      return NextResponse.json({ error: "Source not found." }, { status: 404 });
+    }
+
+    const updatedProfileBank = await prisma.profileBank.update({
+      where: { userId: user.id },
+      data: {
+        rawSources: { entries: nextEntries } as Prisma.InputJsonValue
+      }
+    });
+
+    return NextResponse.json({
+      deletedSourceId: parsed.data.sourceId,
+      profileBank: summarizeProfileBank(updatedProfileBank)
+    });
+  } catch (error) {
+    console.error("Profile source deletion failed", error);
+    return NextResponse.json({ error: "The source delete failed on the server." }, { status: 500 });
   }
 }

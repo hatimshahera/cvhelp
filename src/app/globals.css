@@ -1240,10 +1240,10 @@ h3 {
 }
 
 .profile-source-list li div {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: baseline;
-  justify-content: space-between;
-  gap: 10px;
+  gap: 8px;
 }
 
 .profile-source-list strong {
@@ -1258,6 +1258,25 @@ h3 {
   color: var(--muted);
   font-size: 11px;
   font-weight: 800;
+}
+
+.profile-source-list li button {
+  display: inline-grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--muted);
+}
+
+.profile-source-list li button:not(:disabled):hover,
+.profile-source-list li button:not(:disabled):focus-visible {
+  border-color: #f2b7b7;
+  background: #fff3f3;
+  color: #8f2424;
 }
 
 .profile-source-list p {

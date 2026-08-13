@@ -359,6 +359,7 @@ export function AppShell({
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [profileBank, setProfileBank] = useState<ProfileBankSummary | null>(null);
   const [profileSources, setProfileSources] = useState<ProfileSourceSummary[]>([]);
+  const [deletingProfileSourceId, setDeletingProfileSourceId] = useState<string | null>(null);
   const [profileDetails, setProfileDetails] = useState<CanonicalProfile | null>(null);
   const [selectedProfileSection, setSelectedProfileSection] = useState<ProfileSection>("identity");
   const [profileSectionDraft, setProfileSectionDraft] = useState("");
@@ -738,6 +739,36 @@ export function AppShell({
       );
     } finally {
       setIsSavingProfileSection(false);
+    }
+  }
+
+  async function deleteProfileSource(sourceId: string) {
+    if (deletingProfileSourceId) return;
+
+    setDeletingProfileSourceId(sourceId);
+    setProfileEditorMessage("");
+
+    try {
+      const response = await fetch("/api/profile-sources", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sourceId })
+      });
+      const data = await readJsonResponse(response);
+
+      if (!response.ok) {
+        throw new Error(data.error || "Could not delete this source.");
+      }
+
+      setProfileSources((current) => current.filter((source) => source.id !== sourceId));
+      setProfileBank(data.profileBank ?? profileBank);
+      setProfileEditorMessage("Source deleted.");
+    } catch (deleteError) {
+      setProfileEditorMessage(
+        deleteError instanceof Error ? deleteError.message : "Could not delete this source."
+      );
+    } finally {
+      setDeletingProfileSourceId(null);
     }
   }
 
@@ -1188,6 +1219,18 @@ export function AppShell({
                       <div>
                         <strong>{source.name || formatLabel(source.type)}</strong>
                         <span>{formatShortDate(source.createdAt)}</span>
+                        <button
+                          type="button"
+                          onClick={() => deleteProfileSource(source.id)}
+                          disabled={Boolean(deletingProfileSourceId)}
+                          aria-label={`Delete ${source.name || source.type}`}
+                        >
+                          {deletingProfileSourceId === source.id ? (
+                            <Loader2 className="spin" size={13} />
+                          ) : (
+                            <Trash2 size={13} />
+                          )}
+                        </button>
                       </div>
                       <p>{source.preview || "No source preview saved."}</p>
                     </li>

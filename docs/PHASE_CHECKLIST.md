@@ -55,7 +55,7 @@ Use this as the live tracker while implementing the plan. Mark items complete on
 - [x] Add source cards UI.
 - [x] Add editable profile facts UI.
 - [ ] Add correction flow for saved facts.
-- [ ] Add delete/exclude flow for saved facts.
+- [x] Add delete/exclude flow for saved facts.
 - [x] Add profile completeness scoring.
 - [x] Add profile checklist based on actual evidence.
 - [ ] Add tests for CV/text upload.

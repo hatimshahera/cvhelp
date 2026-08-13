@@ -105,4 +105,91 @@ describe("profile source uploads", () => {
     expect(body.uploaded[0].name).toBe("cv.txt");
     expect(profileBankUpdate).toHaveBeenCalled();
   });
+
+  it("deletes one saved source from the signed-in user's profile bank", async () => {
+    profileBankUpsert.mockResolvedValueOnce({
+      masterProfile: {},
+      rawSources: {
+        entries: [
+          {
+            id: "source-1",
+            type: "file_upload_text",
+            content: "Uploaded file: cv.txt",
+            createdAt: "2026-08-13T00:00:00.000Z"
+          },
+          {
+            id: "source-2",
+            type: "chat_note",
+            content: "Keep this note.",
+            createdAt: "2026-08-13T00:01:00.000Z"
+          }
+        ]
+      },
+      checklist: []
+    });
+    profileBankUpdate.mockResolvedValueOnce({
+      masterProfile: {},
+      rawSources: {
+        entries: [
+          {
+            id: "source-2",
+            type: "chat_note",
+            content: "Keep this note.",
+            createdAt: "2026-08-13T00:01:00.000Z"
+          }
+        ]
+      },
+      checklist: []
+    });
+    const { DELETE } = await import("./route");
+    const response = await DELETE(
+      new Request("http://localhost/api/profile-sources", {
+        method: "DELETE",
+        body: JSON.stringify({ sourceId: "source-1" })
+      })
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.deletedSourceId).toBe("source-1");
+    expect(profileBankUpdate).toHaveBeenCalledWith({
+      where: { userId: "user-1" },
+      data: {
+        rawSources: {
+          entries: [
+            expect.objectContaining({
+              id: "source-2"
+            })
+          ]
+        }
+      }
+    });
+  });
+
+  it("returns 404 when deleting a source that is not in the user's profile bank", async () => {
+    profileBankUpsert.mockResolvedValueOnce({
+      masterProfile: {},
+      rawSources: {
+        entries: [
+          {
+            id: "source-1",
+            type: "file_upload_text",
+            content: "Uploaded file: cv.txt",
+            createdAt: "2026-08-13T00:00:00.000Z"
+          }
+        ]
+      },
+      checklist: []
+    });
+    const { DELETE } = await import("./route");
+    const response = await DELETE(
+      new Request("http://localhost/api/profile-sources", {
+        method: "DELETE",
+        body: JSON.stringify({ sourceId: "source-2" })
+      })
+    );
+
+    expect(response.status).toBe(404);
+    expect(profileBankUpdate).not.toHaveBeenCalled();
+  });
 });
