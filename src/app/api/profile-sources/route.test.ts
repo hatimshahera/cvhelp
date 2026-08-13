@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { resetRequestLimits } from "@/lib/rate-limit";
 
 const profileBankUpsert = vi.fn();
 const profileBankUpdate = vi.fn();
@@ -44,6 +45,9 @@ function formDataWithFile(file: File) {
 describe("profile source uploads", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
+    resetRequestLimits();
+    delete process.env.CVHELP_UPLOAD_RATE_LIMIT;
+    delete process.env.CVHELP_UPLOAD_RATE_WINDOW_MS;
     pdfGetText.mockResolvedValue({ text: "Extracted PDF CV text with education and experience." });
     pdfDestroy.mockResolvedValue(undefined);
     const { getServerSession } = await import("next-auth");
@@ -82,6 +86,39 @@ describe("profile source uploads", () => {
 
     expect(response.status).toBe(402);
     expect(body.error).toBe("You have 0 uploads remaining on the free plan.");
+    expect(profileBankUpdate).not.toHaveBeenCalled();
+  });
+
+  it("blocks upload bursts before reading profile memory", async () => {
+    process.env.CVHELP_UPLOAD_RATE_LIMIT = "0";
+    const { POST } = await import("./route");
+    const response = await POST(
+      new Request("http://localhost/api/profile-sources", {
+        method: "POST",
+        body: formDataWithFile(new File(["CV text"], "cv.txt", { type: "text/plain" }))
+      })
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(429);
+    expect(body.error).toBe("Too many upload requests. Wait a moment and try again.");
+    expect(profileBankUpsert).not.toHaveBeenCalled();
+    expect(profileBankUpdate).not.toHaveBeenCalled();
+  });
+
+  it("rejects unsupported upload types", async () => {
+    const { POST } = await import("./route");
+    const response = await POST(
+      new Request("http://localhost/api/profile-sources", {
+        method: "POST",
+        body: formDataWithFile(new File(["binary"], "archive.zip", { type: "application/zip" }))
+      })
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body.error).toBe("archive.zip is not a supported upload type. Use PDF or text-based files.");
+    expect(profileBankUpsert).not.toHaveBeenCalled();
     expect(profileBankUpdate).not.toHaveBeenCalled();
   });
 

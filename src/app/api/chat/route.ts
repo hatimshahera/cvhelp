@@ -14,6 +14,8 @@ import {
   summarizeProfileBank
 } from "@/lib/memory";
 import { prisma } from "@/lib/prisma";
+import { checkRequestLimit, getIntegerEnv } from "@/lib/rate-limit";
+import { logError } from "@/lib/server-log";
 import { getCurrentUser } from "@/lib/session";
 
 const chatSchema = z.object({
@@ -171,7 +173,7 @@ async function updateMasterProfile({
       data: { masterProfile: nextMasterProfile as Prisma.InputJsonValue }
     });
   } catch (error) {
-    console.error("Profile bank update failed", error);
+    logError("Profile bank update failed", error, { userId });
     return profileBank;
   }
 }
@@ -216,7 +218,7 @@ async function updateApplicationMemory({
 
     return parseApplicationMemory(parsed, memory);
   } catch (error) {
-    console.error("Application memory update failed", error);
+    logError("Application memory update failed", error);
     return memory;
   }
 }
@@ -371,6 +373,23 @@ export async function POST(request: Request) {
 
   if (mode === "application" && !application) {
     return NextResponse.json({ error: "Choose an application first." }, { status: 400 });
+  }
+
+  const chatLimit = checkRequestLimit({
+    key: `chat:${user.id}`,
+    limit: getIntegerEnv("CVHELP_CHAT_RATE_LIMIT", 60),
+    windowMs: getIntegerEnv("CVHELP_CHAT_RATE_WINDOW_MS", 60_000)
+  });
+
+  if (!chatLimit.allowed) {
+    return NextResponse.json(
+      {
+        error: "Too many chat requests. Wait a moment and try again.",
+        limit: chatLimit.limit,
+        resetAt: new Date(chatLimit.resetAt).toISOString()
+      },
+      { status: 429 }
+    );
   }
 
   const conversation = parsed.data.conversationId
@@ -602,7 +621,7 @@ export async function POST(request: Request) {
       where: { id: userMessage.id }
     });
 
-    console.error("OpenAI chat request failed", error);
+    logError("OpenAI chat request failed", error, { userId: user.id, mode });
     return NextResponse.json(
       { error: "The OpenAI request failed. Check the API key and model configuration." },
       { status: 502 }

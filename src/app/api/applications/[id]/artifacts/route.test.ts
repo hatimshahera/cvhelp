@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { resetRequestLimits } from "@/lib/rate-limit";
 
 const applicationFindFirst = vi.fn();
 const artifactFindMany = vi.fn();
@@ -87,7 +88,10 @@ const applicationWithMemory = {
 describe("application artifacts API", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
+    resetRequestLimits();
     delete process.env.OPENAI_API_KEY;
+    delete process.env.CVHELP_ARTIFACT_RATE_LIMIT;
+    delete process.env.CVHELP_ARTIFACT_RATE_WINDOW_MS;
     subscriptionFindUnique.mockResolvedValue(null);
     artifactCount.mockResolvedValue(0);
     const { getServerSession } = await import("next-auth");
@@ -204,6 +208,27 @@ describe("application artifacts API", () => {
 
     expect(response.status).toBe(402);
     expect(body.error).toContain("10 generations limit");
+    expect(responsesCreate).not.toHaveBeenCalled();
+    expect(artifactCreate).not.toHaveBeenCalled();
+  });
+
+  it("blocks AI artifact bursts before billing checks or model calls", async () => {
+    process.env.CVHELP_ARTIFACT_RATE_LIMIT = "0";
+    applicationFindFirst.mockResolvedValueOnce(applicationWithMemory);
+    const { POST } = await import("./route");
+    const response = await POST(
+      new Request("http://localhost/api/applications/app-1/artifacts", {
+        method: "POST",
+        body: JSON.stringify({ type: "cv_draft" })
+      }),
+      { params: Promise.resolve({ id: "app-1" }) }
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(429);
+    expect(body.error).toBe("Too many artifact generation requests. Wait a moment and try again.");
+    expect(subscriptionFindUnique).not.toHaveBeenCalled();
+    expect(artifactCount).not.toHaveBeenCalled();
     expect(responsesCreate).not.toHaveBeenCalled();
     expect(artifactCreate).not.toHaveBeenCalled();
   });

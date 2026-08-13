@@ -183,9 +183,9 @@ Use this as the live tracker while implementing the plan. Mark items complete on
 - [ ] Confirm OAuth env vars if enabled.
 - [ ] Confirm Stripe env vars if billing enabled.
 - [ ] Apply production migrations.
-- [ ] Add basic logging/error handling.
-- [ ] Add AI route rate limits or usage controls.
-- [ ] Add upload route protections.
+- [x] Add basic logging/error handling.
+- [x] Add AI route rate limits or usage controls.
+- [x] Add upload route protections.
 - [ ] Add privacy/data deletion plan.
 - [ ] Run production build.
 - [ ] Deploy to Vercel.

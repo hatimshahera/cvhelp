@@ -11,12 +11,15 @@ import {
 } from "@/lib/memory";
 import { checkFeatureLimit, getBillingStatus } from "@/lib/billing";
 import { prisma } from "@/lib/prisma";
+import { checkRequestLimit, getIntegerEnv } from "@/lib/rate-limit";
+import { logError } from "@/lib/server-log";
 import { getCurrentUser } from "@/lib/session";
 
 export const runtime = "nodejs";
 
 const maxFiles = 6;
 const maxFileBytes = 5 * 1024 * 1024;
+const maxBatchBytes = 12 * 1024 * 1024;
 const deleteSourceSchema = z.object({
   sourceId: z.string().min(1)
 });
@@ -54,6 +57,10 @@ function isTextLike(file: File) {
 
 function isPdf(file: File) {
   return file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+}
+
+function isAllowedUpload(file: File) {
+  return isTextLike(file) || isPdf(file);
 }
 
 async function extractFileText(file: File) {
@@ -110,6 +117,23 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Sign in to upload files." }, { status: 401 });
     }
 
+    const requestLimit = checkRequestLimit({
+      key: `upload:${user.id}`,
+      limit: getIntegerEnv("CVHELP_UPLOAD_RATE_LIMIT", 20),
+      windowMs: getIntegerEnv("CVHELP_UPLOAD_RATE_WINDOW_MS", 60_000)
+    });
+
+    if (!requestLimit.allowed) {
+      return NextResponse.json(
+        {
+          error: "Too many upload requests. Wait a moment and try again.",
+          limit: requestLimit.limit,
+          resetAt: new Date(requestLimit.resetAt).toISOString()
+        },
+        { status: 429 }
+      );
+    }
+
     const formData = await request.formData().catch(() => null);
     if (!formData) {
       return NextResponse.json({ error: "Upload one or more files." }, { status: 400 });
@@ -125,6 +149,19 @@ export async function POST(request: Request) {
 
     if (files.length > maxFiles) {
       return NextResponse.json({ error: `Upload ${maxFiles} files or fewer at a time.` }, { status: 400 });
+    }
+
+    const blockedFile = files.find((file) => !isAllowedUpload(file));
+    if (blockedFile) {
+      return NextResponse.json(
+        { error: `${blockedFile.name} is not a supported upload type. Use PDF or text-based files.` },
+        { status: 400 }
+      );
+    }
+
+    const batchBytes = files.reduce((total, file) => total + file.size, 0);
+    if (batchBytes > maxBatchBytes) {
+      return NextResponse.json({ error: "Keep each upload batch under 12MB for now." }, { status: 400 });
     }
 
     const profileBank = await getOrCreateProfileBank(user.id);
@@ -163,7 +200,12 @@ export async function POST(request: Request) {
       }
 
       const extraction = await extractFileText(file).catch((error) => {
-        console.error("File extraction failed", error);
+        logError("File extraction failed", error, {
+          userId: user.id,
+          fileName: file.name,
+          fileType: file.type || "unknown",
+          fileSize: file.size
+        });
         return {
           extractedText: "",
           extracted: false,
@@ -234,7 +276,7 @@ export async function POST(request: Request) {
         .join("\n")
     });
   } catch (error) {
-    console.error("Profile source upload failed", error);
+    logError("Profile source upload failed", error);
     return NextResponse.json({ error: "The file upload failed on the server." }, { status: 500 });
   }
 }

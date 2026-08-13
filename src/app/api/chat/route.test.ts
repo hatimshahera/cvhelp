@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { resetRequestLimits } from "@/lib/rate-limit";
 
 const profileBankUpsert = vi.fn();
 const profileBankUpdate = vi.fn();
@@ -89,7 +90,10 @@ const application = {
 describe("chat API application scoping", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
+    resetRequestLimits();
     process.env.OPENAI_API_KEY = "test-key";
+    delete process.env.CVHELP_CHAT_RATE_LIMIT;
+    delete process.env.CVHELP_CHAT_RATE_WINDOW_MS;
     profileBankUpsert.mockResolvedValue(profileBank);
     profileBankUpdate.mockResolvedValue(profileBank);
     const { getServerSession } = await import("next-auth");
@@ -168,6 +172,29 @@ describe("chat API application scoping", () => {
     });
     expect(chatMessageCreate).not.toHaveBeenCalled();
     expect(applicationUpdate).not.toHaveBeenCalled();
+    expect(responsesCreate).not.toHaveBeenCalled();
+  });
+
+  it("blocks chat requests when the request limiter is reached", async () => {
+    process.env.CVHELP_CHAT_RATE_LIMIT = "0";
+    applicationFindFirst.mockResolvedValueOnce(application);
+    const { POST } = await import("./route");
+    const response = await POST(
+      new Request("http://localhost/api/chat", {
+        method: "POST",
+        body: JSON.stringify({
+          mode: "application",
+          applicationId: "app-1",
+          message: "Tailor this CV for the role."
+        })
+      })
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(429);
+    expect(body.error).toBe("Too many chat requests. Wait a moment and try again.");
+    expect(conversationCreate).not.toHaveBeenCalled();
+    expect(chatMessageCreate).not.toHaveBeenCalled();
     expect(responsesCreate).not.toHaveBeenCalled();
   });
 

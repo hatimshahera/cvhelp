@@ -6,6 +6,8 @@ import { checkFeatureLimit, getBillingStatus } from "@/lib/billing";
 import { createInitialApplicationMemory, type ApplicationMemory, parseApplicationMemory } from "@/lib/memory";
 import { proofCvDataFromApplicationMemory } from "@/lib/proofcv";
 import { prisma } from "@/lib/prisma";
+import { checkRequestLimit, getIntegerEnv } from "@/lib/rate-limit";
+import { logError } from "@/lib/server-log";
 import { getCurrentUser } from "@/lib/session";
 
 const createArtifactSchema = z.object({
@@ -210,6 +212,26 @@ export async function POST(request: Request, context: RouteParams) {
 
   const isExport = parsed.data.type === "proofcv_data";
   const feature = isExport ? "exports" : "generations";
+
+  if (!isExport) {
+    const aiLimit = checkRequestLimit({
+      key: `artifact:${user.id}`,
+      limit: getIntegerEnv("CVHELP_ARTIFACT_RATE_LIMIT", 30),
+      windowMs: getIntegerEnv("CVHELP_ARTIFACT_RATE_WINDOW_MS", 60_000)
+    });
+
+    if (!aiLimit.allowed) {
+      return NextResponse.json(
+        {
+          error: "Too many artifact generation requests. Wait a moment and try again.",
+          limit: aiLimit.limit,
+          resetAt: new Date(aiLimit.resetAt).toISOString()
+        },
+        { status: 429 }
+      );
+    }
+  }
+
   const [subscription, usedCount] = await Promise.all([
     prisma.subscription.findUnique({
       where: { userId: user.id }
@@ -303,6 +325,11 @@ export async function POST(request: Request, context: RouteParams) {
               : parsed.data.prompt
           });
   } catch (error) {
+    logError("Artifact generation failed", error, {
+      userId: user.id,
+      applicationId: application.id,
+      artifactType: parsed.data.type
+    });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Artifact generation failed." },
       { status: 502 }
