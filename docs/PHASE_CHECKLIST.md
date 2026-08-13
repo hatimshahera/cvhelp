@@ -76,10 +76,10 @@ Use this as the live tracker while implementing the plan. Mark items complete on
 - [x] Add application status controls.
 - [x] Add archive behavior.
 - [x] Add application next-action field.
-- [ ] Add job requirement extraction.
-- [ ] Add matched evidence storage.
-- [ ] Add gap/risk/honesty notes storage.
-- [ ] Add selected projects/research/experience storage.
+- [x] Add job requirement extraction.
+- [x] Add matched evidence storage.
+- [x] Add gap/risk/honesty notes storage.
+- [x] Add selected projects/research/experience storage.
 - [x] Add per-application memory panel.
 - [x] Add separate chats per application.
 - [x] Add support for multiple task chats if selected.

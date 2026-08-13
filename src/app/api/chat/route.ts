@@ -4,6 +4,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import {
   appendApplicationMemoryNote,
+  type ApplicationMemory,
   appendRawSource,
   createDefaultProfileBankData,
   createInitialApplicationMemory,
@@ -171,6 +172,50 @@ async function updateMasterProfile({
   } catch (error) {
     console.error("Profile bank update failed", error);
     return profileBank;
+  }
+}
+
+async function updateApplicationMemory({
+  openai,
+  memory,
+  profileSummary,
+  userMessage,
+  assistantText
+}: {
+  openai: OpenAI;
+  memory: ApplicationMemory;
+  profileSummary: unknown;
+  userMessage: string;
+  assistantText: string;
+}) {
+  try {
+    const response = await openai.responses.create({
+      model: getOpenAIModel(),
+      instructions: [
+        "Update application-specific memory JSON for one job application.",
+        "Return only valid JSON. No markdown. No prose.",
+        "Keep information scoped to this application unless the user explicitly asks to update reusable profile facts.",
+        "Do not invent dates, employers, metrics, credentials, links, project facts, or submitted status.",
+        "Preserve existing useful memory unless the latest turn corrects or removes it.",
+        "Use this exact JSON shape: candidateSnapshot, target, jobPost, requirements, responsibilities, keywords, selectedEvidence, profileSummary, honestyNotes, risks, gaps, notes, drafts, nextActions.",
+        "selectedEvidence must contain arrays for projects, research, experience, and skills.",
+        "Use short strings in requirements, responsibilities, keywords, honestyNotes, risks, gaps, and nextActions."
+      ].join(" "),
+      input: JSON.stringify({
+        currentApplicationMemory: memory,
+        profileBankSummary: profileSummary,
+        latestUserMessage: userMessage,
+        latestAssistantResponse: assistantText
+      })
+    });
+
+    const parsed = parseJsonObject(response.output_text ?? "");
+    if (!parsed) return memory;
+
+    return parseApplicationMemory(parsed, memory);
+  } catch (error) {
+    console.error("Application memory update failed", error);
+    return memory;
   }
 }
 
@@ -484,7 +529,7 @@ export async function POST(request: Request) {
         }
       });
       const memory = parseApplicationMemory(application.memory, fallbackMemory);
-      const nextMemory = appendApplicationMemoryNote(memory, {
+      const noteUpdatedMemory = appendApplicationMemoryNote(memory, {
         id: crypto.randomUUID(),
         type: "chat_turn",
         content: [
@@ -492,6 +537,13 @@ export async function POST(request: Request) {
           `Assistant: ${assistantText.slice(0, 1200)}`
         ].join("\n\n"),
         createdAt: new Date().toISOString()
+      });
+      const nextMemory = await updateApplicationMemory({
+        openai,
+        memory: noteUpdatedMemory,
+        profileSummary: summarizeProfileBank(finalProfileBank),
+        userMessage: parsed.data.message,
+        assistantText
       });
       const existingNotes =
         application.notes && typeof application.notes === "object" && !Array.isArray(application.notes)
