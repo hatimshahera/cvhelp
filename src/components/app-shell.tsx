@@ -117,11 +117,8 @@ type ApplicationDetail = ApplicationItem & {
 };
 
 type WorkspaceFile =
-  | { kind: "overview"; label: string }
+  | { kind: "empty"; label: string }
   | { kind: "job_post"; label: string }
-  | { kind: "requirements"; label: string }
-  | { kind: "evidence"; label: string }
-  | { kind: "risks"; label: string }
   | { kind: "cv_preview"; label: string; artifactId: string }
   | { kind: "artifact"; label: string; artifactId: string };
 
@@ -239,6 +236,43 @@ function summarizeArtifactContent(content: unknown) {
   return JSON.stringify(record).slice(0, 180);
 }
 
+function getCvPreviewArtifact(artifacts: ArtifactItem[] = []) {
+  return (
+    artifacts.find((artifact) => artifact.type === "cv_draft") ??
+    artifacts.find((artifact) => artifact.type === "proofcv_data") ??
+    null
+  );
+}
+
+function artifactFileLabel(artifact: ArtifactItem) {
+  const baseTitle = artifact.title?.trim() || `${formatLabel(artifact.type)} v${artifact.version}`;
+  return `${baseTitle}.json`;
+}
+
+function buildWorkspaceFiles(application: ApplicationDetail | null): WorkspaceFile[] {
+  if (!application) return [];
+
+  const cvPreviewArtifact = getCvPreviewArtifact(application.artifacts);
+
+  return [
+    ...(cvPreviewArtifact
+      ? [
+          {
+            kind: "cv_preview" as const,
+            label: "CV preview.pdf",
+            artifactId: cvPreviewArtifact.id
+          }
+        ]
+      : []),
+    ...(application.jobPost?.content ? [{ kind: "job_post" as const, label: "Job post.txt" }] : []),
+    ...application.artifacts.map((artifact) => ({
+      kind: "artifact" as const,
+      label: artifactFileLabel(artifact),
+      artifactId: artifact.id
+    }))
+  ];
+}
+
 async function readJsonResponse(response: Response) {
   const text = await response.text().catch(() => "");
   if (!text) return {};
@@ -269,7 +303,7 @@ export function AppShell({
   const [isCreatingApplication, setIsCreatingApplication] = useState(false);
   const [applicationDetail, setApplicationDetail] = useState<ApplicationDetail | null>(null);
   const [isLoadingApplicationDetail, setIsLoadingApplicationDetail] = useState(false);
-  const [selectedWorkspaceFile, setSelectedWorkspaceFile] = useState<WorkspaceFile>({ kind: "overview", label: "Overview" });
+  const [selectedWorkspaceFile, setSelectedWorkspaceFile] = useState<WorkspaceFile>({ kind: "empty", label: "Workspace" });
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
@@ -375,10 +409,18 @@ export function AppShell({
 
       setApplicationDetail(data.application);
       setSelectedWorkspaceFile((current) => {
-        if (current.kind !== "artifact" && current.kind !== "cv_preview") return current;
-        return data.application.artifacts?.some((artifact: { id: string }) => artifact.id === current.artifactId)
+        const files = buildWorkspaceFiles(data.application);
+        const firstFile = files[0] ?? { kind: "empty" as const, label: "Workspace" };
+        if (current.kind === "empty") return firstFile;
+        if (current.kind === "job_post") return files.some((file) => file.kind === "job_post") ? current : firstFile;
+        return files.some(
+          (file) =>
+            file.kind === current.kind &&
+            (file.kind === "artifact" || file.kind === "cv_preview") &&
+            file.artifactId === current.artifactId
+        )
           ? current
-          : { kind: "overview", label: "Overview" };
+          : firstFile;
       });
     } catch (applicationError) {
       setError(applicationError instanceof Error ? applicationError.message : "Could not load application details.");
@@ -581,7 +623,7 @@ export function AppShell({
       setActiveApplicationId(data.application.id);
       setExpandedApplicationId(data.application.id);
       setApplicationDetail(data.application);
-      setSelectedWorkspaceFile({ kind: "overview", label: "Overview" });
+      setSelectedWorkspaceFile(buildWorkspaceFiles(data.application)[0] ?? { kind: "empty", label: "Workspace" });
       setConversationId(null);
       setMessages([]);
       setMessage("");
@@ -718,39 +760,11 @@ export function AppShell({
     setProfileEditorMessage("Correction queued in chat. Press Send when ready.");
   }
 
-  const applicationMemory = applicationDetail?.memory;
-  const selectedEvidence = applicationMemory?.selectedEvidence;
-  const cvPreviewArtifact =
-    applicationDetail?.artifacts.find((artifact) => artifact.type === "cv_draft") ??
-    applicationDetail?.artifacts.find((artifact) => artifact.type === "proofcv_data") ??
-    null;
   const selectedArtifact =
     selectedWorkspaceFile.kind === "artifact" || selectedWorkspaceFile.kind === "cv_preview"
       ? applicationDetail?.artifacts.find((artifact) => artifact.id === selectedWorkspaceFile.artifactId) ?? null
       : null;
-  const workspaceFiles: WorkspaceFile[] = activeApplication
-    ? [
-        { kind: "overview", label: "Overview" },
-        ...(cvPreviewArtifact
-          ? [
-              {
-                kind: "cv_preview" as const,
-                label: "CV preview",
-                artifactId: cvPreviewArtifact.id
-              }
-            ]
-          : []),
-        { kind: "job_post", label: "Job post" },
-        { kind: "requirements", label: "Requirements" },
-        { kind: "evidence", label: "Evidence" },
-        { kind: "risks", label: "Gaps and risks" },
-        ...(applicationDetail?.artifacts ?? []).map((artifact) => ({
-          kind: "artifact" as const,
-          label: `${formatLabel(artifact.type)} v${artifact.version}`,
-          artifactId: artifact.id
-        }))
-      ]
-    : [];
+  const workspaceFiles = activeApplication ? buildWorkspaceFiles(applicationDetail) : [];
   const commandSuggestions =
     activeMode === "build_profile" ? profileCommandSuggestions : applicationCommandSuggestions;
   const showCommandSuggestions = !isLoadingHistory && messages.length === 0;
@@ -878,7 +892,8 @@ export function AppShell({
                         setActiveMode("application");
                         setActiveApplicationId(application.id);
                         setExpandedApplicationId(application.id);
-                        setSelectedWorkspaceFile({ kind: "overview", label: "Overview" });
+                        setSelectedWorkspaceFile({ kind: "empty", label: "Workspace" });
+                        setIsSidePanelOpen(true);
                         setConversationId(null);
                         setMessages([]);
                         setMessage("");
@@ -906,7 +921,10 @@ export function AppShell({
                               className={isSelected ? "active" : ""}
                               key={key}
                               type="button"
-                              onClick={() => setSelectedWorkspaceFile(file)}
+                              onClick={() => {
+                                setSelectedWorkspaceFile(file);
+                                setIsSidePanelOpen(true);
+                              }}
                             >
                               <FileText size={13} />
                               <span>{file.label}</span>
@@ -1264,47 +1282,10 @@ export function AppShell({
                   </div>
                 ) : null}
 
-                {selectedWorkspaceFile.kind === "overview" ? (
-                  <section className="application-workspace-summary" aria-label="Application overview">
-                    <div>
-                      <span>Company</span>
-                      <strong>{activeApplication.company}</strong>
-                    </div>
-                    <div>
-                      <span>Role</span>
-                      <strong>{activeApplication.role}</strong>
-                    </div>
-                    {applicationDetail?.nextAction ? (
-                      <div>
-                        <span>Next action</span>
-                        <strong>{applicationDetail.nextAction}</strong>
-                      </div>
-                    ) : null}
-                    {applicationDetail?.updatedAt ? (
-                      <div>
-                        <span>Updated</span>
-                        <strong>{formatShortDate(applicationDetail.updatedAt)}</strong>
-                      </div>
-                    ) : null}
-                    <div className="memory-stat-grid compact" aria-label="Application memory summary">
-                      <div>
-                        <strong>{applicationMemory?.requirements?.length ?? 0}</strong>
-                        <span>requirements</span>
-                      </div>
-                      <div>
-                        <strong>{selectedEvidence?.projects?.length ?? 0}</strong>
-                        <span>projects</span>
-                      </div>
-                      <div>
-                        <strong>{selectedEvidence?.skills?.length ?? 0}</strong>
-                        <span>skills</span>
-                      </div>
-                      <div>
-                        <strong>{applicationDetail?.artifacts.length ?? 0}</strong>
-                        <span>files</span>
-                      </div>
-                    </div>
-                  </section>
+                {selectedWorkspaceFile.kind === "empty" ? (
+                  <p className="empty-side-panel">
+                    {workspaceFiles.length ? "Choose a file from this application." : "No saved files yet."}
+                  </p>
                 ) : null}
 
                 {selectedWorkspaceFile.kind === "job_post" ? (
@@ -1322,62 +1303,6 @@ export function AppShell({
                       />
                     ) : (
                       <p>No CV artifact is saved for this application yet.</p>
-                    )}
-                  </section>
-                ) : null}
-
-                {selectedWorkspaceFile.kind === "requirements" ? (
-                  <section className="application-memory-list" aria-label="Application requirements">
-                    {applicationMemory?.requirements?.length ? (
-                      <ul>
-                        {applicationMemory.requirements.map((item) => (
-                          <li key={item}>{item}</li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p>No requirements saved yet.</p>
-                    )}
-                  </section>
-                ) : null}
-
-                {selectedWorkspaceFile.kind === "evidence" ? (
-                  <section className="application-memory-list" aria-label="Application evidence">
-                    {selectedEvidence?.projects?.length ||
-                    selectedEvidence?.research?.length ||
-                    selectedEvidence?.experience?.length ||
-                    selectedEvidence?.skills?.length ? (
-                      <ul>
-                        {[
-                          ...(selectedEvidence.projects ?? []),
-                          ...(selectedEvidence.research ?? []),
-                          ...(selectedEvidence.experience ?? []),
-                          ...(selectedEvidence.skills ?? [])
-                        ].map((item) => (
-                          <li key={item}>{item}</li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p>No selected evidence yet.</p>
-                    )}
-                  </section>
-                ) : null}
-
-                {selectedWorkspaceFile.kind === "risks" ? (
-                  <section className="application-memory-list" aria-label="Application risks">
-                    {applicationMemory?.gaps?.length ||
-                    applicationMemory?.risks?.length ||
-                    applicationMemory?.honestyNotes?.length ? (
-                      <ul>
-                        {[
-                          ...(applicationMemory?.gaps ?? []),
-                          ...(applicationMemory?.risks ?? []),
-                          ...(applicationMemory?.honestyNotes ?? [])
-                        ].map((item) => (
-                          <li key={item}>{item}</li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <p>No saved gaps or honesty notes yet.</p>
                     )}
                   </section>
                 ) : null}
