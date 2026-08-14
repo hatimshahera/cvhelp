@@ -7,6 +7,7 @@ import {
   BriefcaseBusiness,
   CheckCircle2,
   ChevronDown,
+  ChevronLeft,
   ChevronRight,
   Database,
   FileText,
@@ -121,6 +122,7 @@ type WorkspaceFile =
   | { kind: "requirements"; label: string }
   | { kind: "evidence"; label: string }
   | { kind: "risks"; label: string }
+  | { kind: "cv_preview"; label: string; artifactId: string }
   | { kind: "artifact"; label: string; artifactId: string };
 
 type ProfileSection =
@@ -257,6 +259,8 @@ export function AppShell({
 }) {
   const [activeMode, setActiveMode] = useState<ChatMode>("build_profile");
   const [activeApplicationId, setActiveApplicationId] = useState<string | null>(null);
+  const [expandedApplicationId, setExpandedApplicationId] = useState<string | null>(null);
+  const [isSidePanelOpen, setIsSidePanelOpen] = useState(true);
   const [applications, setApplications] = useState<ApplicationItem[]>([]);
   const [applicationSearch, setApplicationSearch] = useState("");
   const [applicationListFilter, setApplicationListFilter] = useState<"active" | "archived" | "all">("active");
@@ -371,7 +375,7 @@ export function AppShell({
 
       setApplicationDetail(data.application);
       setSelectedWorkspaceFile((current) => {
-        if (current.kind !== "artifact") return current;
+        if (current.kind !== "artifact" && current.kind !== "cv_preview") return current;
         return data.application.artifacts?.some((artifact: { id: string }) => artifact.id === current.artifactId)
           ? current
           : { kind: "overview", label: "Overview" };
@@ -537,6 +541,8 @@ export function AppShell({
       setMessages(data.messages ?? []);
       if (activeMode === "build_profile") {
         await loadProfileDetails();
+      } else if (activeMode === "application" && activeApplicationId) {
+        await loadApplicationDetail(activeApplicationId);
       }
     } catch (sendError) {
       setMessages((current) => current.filter((item) => item.id !== optimisticMessage.id));
@@ -573,6 +579,7 @@ export function AppShell({
       setIsAddingApplication(false);
       setActiveMode("application");
       setActiveApplicationId(data.application.id);
+      setExpandedApplicationId(data.application.id);
       setApplicationDetail(data.application);
       setSelectedWorkspaceFile({ kind: "overview", label: "Overview" });
       setConversationId(null);
@@ -713,13 +720,26 @@ export function AppShell({
 
   const applicationMemory = applicationDetail?.memory;
   const selectedEvidence = applicationMemory?.selectedEvidence;
+  const cvPreviewArtifact =
+    applicationDetail?.artifacts.find((artifact) => artifact.type === "cv_draft") ??
+    applicationDetail?.artifacts.find((artifact) => artifact.type === "proofcv_data") ??
+    null;
   const selectedArtifact =
-    selectedWorkspaceFile.kind === "artifact"
+    selectedWorkspaceFile.kind === "artifact" || selectedWorkspaceFile.kind === "cv_preview"
       ? applicationDetail?.artifacts.find((artifact) => artifact.id === selectedWorkspaceFile.artifactId) ?? null
       : null;
   const workspaceFiles: WorkspaceFile[] = activeApplication
     ? [
         { kind: "overview", label: "Overview" },
+        ...(cvPreviewArtifact
+          ? [
+              {
+                kind: "cv_preview" as const,
+                label: "CV preview",
+                artifactId: cvPreviewArtifact.id
+              }
+            ]
+          : []),
         { kind: "job_post", label: "Job post" },
         { kind: "requirements", label: "Requirements" },
         { kind: "evidence", label: "Evidence" },
@@ -740,7 +760,7 @@ export function AppShell({
   }
 
   return (
-    <main className="workspace-shell">
+    <main className={`workspace-shell ${isSidePanelOpen ? "" : "side-panel-collapsed"}`}>
       <aside className="settings-rail">
         <div>
           <p className="brand">CVhelp</p>
@@ -764,6 +784,7 @@ export function AppShell({
             onClick={() => {
               setActiveMode("build_profile");
               setActiveApplicationId(null);
+              setExpandedApplicationId(null);
               setConversationId(null);
               setMessages([]);
               setMessage("");
@@ -841,16 +862,22 @@ export function AppShell({
             {filteredApplications.length ? (
               filteredApplications.map((application) => {
                 const isActive = activeMode === "application" && activeApplicationId === application.id;
-                const visibleFiles = isActive ? workspaceFiles : [];
+                const isExpanded = expandedApplicationId === application.id;
+                const visibleFiles = isActive && isExpanded ? workspaceFiles : [];
 
                 return (
-                  <div className={`application-tree-item ${isActive ? "active" : ""}`} key={application.id}>
+                  <div className={`application-tree-item ${isActive ? "active" : ""} ${isExpanded ? "expanded" : ""}`} key={application.id}>
                     <button
                       className="application-folder-button"
                       type="button"
                       onClick={() => {
+                        if (isActive) {
+                          setExpandedApplicationId(isExpanded ? null : application.id);
+                          return;
+                        }
                         setActiveMode("application");
                         setActiveApplicationId(application.id);
+                        setExpandedApplicationId(application.id);
                         setSelectedWorkspaceFile({ kind: "overview", label: "Overview" });
                         setConversationId(null);
                         setMessages([]);
@@ -858,18 +885,20 @@ export function AppShell({
                         setSelectedFiles([]);
                       }}
                     >
-                      {isActive ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
+                      {isExpanded ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
                       <strong>{application.company}</strong>
                     </button>
-                    {isActive ? <span className="application-tree-role">{application.role}</span> : null}
+                    {isExpanded ? <span className="application-tree-role">{application.role}</span> : null}
                     {visibleFiles.length ? (
                       <div className="application-file-list" aria-label={`${application.company} files`}>
                         {visibleFiles.map((file) => {
-                          const key = file.kind === "artifact" ? file.artifactId : file.kind;
+                          const key =
+                            file.kind === "artifact" || file.kind === "cv_preview" ? file.artifactId : file.kind;
                           const isSelected =
                             selectedWorkspaceFile.kind === file.kind &&
-                            (file.kind !== "artifact" ||
-                              (selectedWorkspaceFile.kind === "artifact" &&
+                            ((file.kind !== "artifact" && file.kind !== "cv_preview") ||
+                              ((selectedWorkspaceFile.kind === "artifact" ||
+                                selectedWorkspaceFile.kind === "cv_preview") &&
                                 selectedWorkspaceFile.artifactId === file.artifactId));
 
                           return (
@@ -958,22 +987,32 @@ export function AppShell({
             <h1>{activeTitle}</h1>
             {activeMode === "build_profile" ? <p>{activeDescription}</p> : null}
           </div>
-          {activeMode === "build_profile" ? (
+          <div className="chat-header-actions">
+            {activeMode === "build_profile" ? (
+              <button
+                className="clear-conversation-button"
+                type="button"
+                onClick={clearConversation}
+                disabled={
+                  isClearingConversation ||
+                  isSending ||
+                  isLoadingHistory ||
+                  (!conversationId && !messages.length)
+                }
+              >
+                {isClearingConversation ? <Loader2 className="spin" size={16} /> : <Trash2 size={16} />}
+                Clear conversation
+              </button>
+            ) : null}
             <button
-              className="clear-conversation-button"
+              className="panel-toggle-button"
               type="button"
-              onClick={clearConversation}
-              disabled={
-                isClearingConversation ||
-                isSending ||
-                isLoadingHistory ||
-                (!conversationId && !messages.length)
-              }
+              onClick={() => setIsSidePanelOpen((current) => !current)}
+              aria-label={isSidePanelOpen ? "Hide side panel" : "Show side panel"}
             >
-              {isClearingConversation ? <Loader2 className="spin" size={16} /> : <Trash2 size={16} />}
-              Clear conversation
+              {isSidePanelOpen ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
             </button>
-          ) : null}
+          </div>
         </header>
 
         <div className="message-list" ref={listRef}>
@@ -1092,8 +1131,18 @@ export function AppShell({
         {activeMode === "build_profile" ? (
           <>
             <div className="side-panel-heading">
-              <p className="eyebrow">Profile</p>
-              <h2>Structured editor</h2>
+              <div>
+                <p className="eyebrow">Profile</p>
+                <h2>Structured editor</h2>
+              </div>
+              <button
+                className="panel-toggle-button"
+                type="button"
+                onClick={() => setIsSidePanelOpen(false)}
+                aria-label="Hide side panel"
+              >
+                <ChevronRight size={18} />
+              </button>
             </div>
 
             <div className="section-tabs" role="tablist" aria-label="Profile sections">
@@ -1190,10 +1239,20 @@ export function AppShell({
         ) : (
           <>
             <div className="side-panel-heading">
-              <p className="eyebrow">Application</p>
-              <div className="side-panel-title-row">
-                <h2>{selectedWorkspaceFile.label}</h2>
+              <div>
+                <p className="eyebrow">Application</p>
+                <div className="side-panel-title-row">
+                  <h2>{selectedWorkspaceFile.label}</h2>
+                </div>
               </div>
+              <button
+                className="panel-toggle-button"
+                type="button"
+                onClick={() => setIsSidePanelOpen(false)}
+                aria-label="Hide side panel"
+              >
+                <ChevronRight size={18} />
+              </button>
             </div>
 
             {activeApplication ? (
@@ -1251,6 +1310,19 @@ export function AppShell({
                 {selectedWorkspaceFile.kind === "job_post" ? (
                   <section className="workspace-file-viewer" aria-label="Job post">
                     <pre>{applicationDetail?.jobPost?.content || "No job post saved."}</pre>
+                  </section>
+                ) : null}
+
+                {selectedWorkspaceFile.kind === "cv_preview" ? (
+                  <section className="pdf-preview-workspace" aria-label="CV PDF preview">
+                    {activeApplication && selectedArtifact ? (
+                      <iframe
+                        title={`${activeApplication.company} ${activeApplication.role} CV preview`}
+                        src={`/api/applications/${activeApplication.id}/artifacts/${selectedArtifact.id}/pdf#toolbar=1&navpanes=0`}
+                      />
+                    ) : (
+                      <p>No CV artifact is saved for this application yet.</p>
+                    )}
                   </section>
                 ) : null}
 
