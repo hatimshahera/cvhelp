@@ -161,8 +161,8 @@ const profileCommandSuggestions = [
 ];
 
 const applicationCommandSuggestions = [
+  "Generate a CV draft PDF for this application.",
   "Compare this job against my profile and list the best evidence.",
-  "Draft tailored CV bullets for this application.",
   "Write a concise recruiter message for this application.",
   "What gaps, risks, and next actions should I handle?"
 ];
@@ -237,11 +237,7 @@ function summarizeArtifactContent(content: unknown) {
 }
 
 function getCvPreviewArtifact(artifacts: ArtifactItem[] = []) {
-  return (
-    artifacts.find((artifact) => artifact.type === "cv_draft") ??
-    artifacts.find((artifact) => artifact.type === "proofcv_data") ??
-    null
-  );
+  return artifacts.find((artifact) => artifact.type === "cv_draft") ?? null;
 }
 
 function artifactFileLabel(artifact: ArtifactItem) {
@@ -282,6 +278,11 @@ async function readJsonResponse(response: Response) {
   } catch {
     return { error: `${response.status} ${response.statusText || "Request failed"}`.trim() };
   }
+}
+
+function shouldGenerateCvDraftArtifact(message: string) {
+  const normalized = message.toLowerCase();
+  return /\b(generate|create|make|draft|build)\b/.test(normalized) && /\bcv\b/.test(normalized);
 }
 
 export function AppShell({
@@ -585,6 +586,30 @@ export function AppShell({
         await loadProfileDetails();
       } else if (activeMode === "application" && activeApplicationId) {
         await loadApplicationDetail(activeApplicationId);
+        if (shouldGenerateCvDraftArtifact(finalMessage)) {
+          const artifactResponse = await fetch(`/api/applications/${activeApplicationId}/artifacts`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              type: "cv_draft",
+              prompt: finalMessage
+            })
+          });
+          const artifactData = await readJsonResponse(artifactResponse);
+
+          if (!artifactResponse.ok) {
+            throw new Error(artifactData.error || "Could not generate the CV draft.");
+          }
+
+          await loadApplicationDetail(activeApplicationId);
+          setSelectedWorkspaceFile({
+            kind: "cv_preview",
+            label: "CV preview.pdf",
+            artifactId: artifactData.artifact.id
+          });
+          setIsSidePanelOpen(true);
+          setExpandedApplicationId(activeApplicationId);
+        }
       }
     } catch (sendError) {
       setMessages((current) => current.filter((item) => item.id !== optimisticMessage.id));

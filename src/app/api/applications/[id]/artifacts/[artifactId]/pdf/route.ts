@@ -30,6 +30,10 @@ export async function GET(_request: Request, context: RouteParams) {
     return NextResponse.json({ error: "Artifact not found." }, { status: 404 });
   }
 
+  if (artifact.type !== "cv_draft") {
+    return NextResponse.json({ error: "Only CV draft artifacts can be previewed as PDF." }, { status: 400 });
+  }
+
   try {
     const pdf = await renderArtifactToPdf({
       title: artifact.title,

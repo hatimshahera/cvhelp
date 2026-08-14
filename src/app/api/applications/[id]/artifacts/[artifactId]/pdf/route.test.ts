@@ -98,6 +98,29 @@ describe("application artifact PDF preview API", () => {
     expect(renderArtifactToPdf).not.toHaveBeenCalled();
   });
 
+  it("does not render non-CV artifacts as PDF previews", async () => {
+    artifactFindFirst.mockResolvedValueOnce({
+      id: "artifact-1",
+      applicationId: "app-1",
+      userId: "user-1",
+      type: "proofcv_data",
+      title: "Imported ProofCV data",
+      version: 1,
+      content: { candidate: { name: "Hatim" } }
+    });
+
+    const { GET } = await import("./route");
+    const response = await GET(
+      new Request("http://localhost/api/applications/app-1/artifacts/artifact-1/pdf"),
+      { params: Promise.resolve({ id: "app-1", artifactId: "artifact-1" }) }
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body.error).toBe("Only CV draft artifacts can be previewed as PDF.");
+    expect(renderArtifactToPdf).not.toHaveBeenCalled();
+  });
+
   it("returns 500 when PDF rendering fails", async () => {
     artifactFindFirst.mockResolvedValueOnce({
       id: "artifact-1",
