@@ -55,6 +55,20 @@ async function readText(filePath) {
   }
 }
 
+async function findCvPdf(dir) {
+  const entries = await readdir(dir, { withFileTypes: true }).catch(() => []);
+  const pdfNames = entries
+    .filter((entry) => entry.isFile() && entry.name.toLowerCase().endsWith(".pdf"))
+    .map((entry) => entry.name)
+    .filter((name) => !name.toLowerCase().includes("cover"));
+  const preferred =
+    pdfNames.find((name) => /^hatim/i.test(name)) ??
+    pdfNames.find((name) => /cv|resume|résumé/i.test(name)) ??
+    pdfNames[0];
+
+  return preferred ? path.join(dir, preferred) : null;
+}
+
 function jobPostContent(jobPost) {
   if (!jobPost) return "";
   if (typeof jobPost === "string") return jobPost;
@@ -440,6 +454,55 @@ async function main() {
         }
       }
     });
+
+    const cvPdfPath = await findCvPdf(item.dir);
+
+    if (cvPdfPath) {
+      const pdfBytes = await readFile(cvPdfPath);
+      const pdfFilename = path.basename(cvPdfPath);
+
+      await prisma.applicationArtifact.upsert({
+        where: {
+          applicationId_type_version: {
+            applicationId: application.id,
+            type: "cv_pdf",
+            version: 1
+          }
+        },
+        update: {
+          title: `${company} ${role} CV PDF`,
+          status: "ready",
+          content: {
+            filename: pdfFilename,
+            mimeType: "application/pdf",
+            base64: pdfBytes.toString("base64")
+          },
+          metadata: {
+            source: "proofcv_import",
+            importedFrom: path.relative(root, cvPdfPath),
+            importedAt: new Date().toISOString()
+          }
+        },
+        create: {
+          userId: user.id,
+          applicationId: application.id,
+          type: "cv_pdf",
+          title: `${company} ${role} CV PDF`,
+          status: "ready",
+          version: 1,
+          content: {
+            filename: pdfFilename,
+            mimeType: "application/pdf",
+            base64: pdfBytes.toString("base64")
+          },
+          metadata: {
+            source: "proofcv_import",
+            importedFrom: path.relative(root, cvPdfPath),
+            importedAt: new Date().toISOString()
+          }
+        }
+      });
+    }
 
     imported.push({
       slug,

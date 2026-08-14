@@ -85,6 +85,35 @@ describe("application artifact PDF preview API", () => {
     });
   });
 
+  it("serves an imported stored PDF artifact directly", async () => {
+    artifactFindFirst.mockResolvedValueOnce({
+      id: "artifact-1",
+      applicationId: "app-1",
+      userId: "user-1",
+      type: "cv_pdf",
+      title: "Imported CV PDF",
+      version: 1,
+      content: {
+        filename: "HatimShaherawala.pdf",
+        mimeType: "application/pdf",
+        base64: Buffer.from("%PDF imported").toString("base64")
+      }
+    });
+
+    const { GET } = await import("./route");
+    const response = await GET(
+      new Request("http://localhost/api/applications/app-1/artifacts/artifact-1/pdf"),
+      { params: Promise.resolve({ id: "app-1", artifactId: "artifact-1" }) }
+    );
+    const body = Buffer.from(await response.arrayBuffer()).toString();
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toContain("application/pdf");
+    expect(response.headers.get("content-disposition")).toContain("HatimShaherawala.pdf");
+    expect(body).toBe("%PDF imported");
+    expect(renderArtifactToPdf).not.toHaveBeenCalled();
+  });
+
   it("returns 404 for artifacts outside the signed-in user's scope", async () => {
     artifactFindFirst.mockResolvedValueOnce(null);
 
@@ -118,6 +147,29 @@ describe("application artifact PDF preview API", () => {
 
     expect(response.status).toBe(400);
     expect(body.error).toBe("Only CV draft artifacts can be previewed as PDF.");
+    expect(renderArtifactToPdf).not.toHaveBeenCalled();
+  });
+
+  it("returns 422 for invalid stored PDF artifacts", async () => {
+    artifactFindFirst.mockResolvedValueOnce({
+      id: "artifact-1",
+      applicationId: "app-1",
+      userId: "user-1",
+      type: "cv_pdf",
+      title: "Imported CV PDF",
+      version: 1,
+      content: { filename: "broken.pdf" }
+    });
+
+    const { GET } = await import("./route");
+    const response = await GET(
+      new Request("http://localhost/api/applications/app-1/artifacts/artifact-1/pdf"),
+      { params: Promise.resolve({ id: "app-1", artifactId: "artifact-1" }) }
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(422);
+    expect(body.error).toBe("Saved PDF artifact is invalid.");
     expect(renderArtifactToPdf).not.toHaveBeenCalled();
   });
 

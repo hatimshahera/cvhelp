@@ -237,7 +237,11 @@ function summarizeArtifactContent(content: unknown) {
 }
 
 function getCvPreviewArtifact(artifacts: ArtifactItem[] = []) {
-  return artifacts.find((artifact) => artifact.type === "cv_draft") ?? null;
+  return (
+    artifacts.find((artifact) => artifact.type === "cv_pdf") ??
+    artifacts.find((artifact) => artifact.type === "cv_draft") ??
+    null
+  );
 }
 
 function artifactFileLabel(artifact: ArtifactItem) {
@@ -261,11 +265,13 @@ function buildWorkspaceFiles(application: ApplicationDetail | null): WorkspaceFi
         ]
       : []),
     ...(application.jobPost?.content ? [{ kind: "job_post" as const, label: "Job post.txt" }] : []),
-    ...application.artifacts.map((artifact) => ({
-      kind: "artifact" as const,
-      label: artifactFileLabel(artifact),
-      artifactId: artifact.id
-    }))
+    ...application.artifacts
+      .filter((artifact) => artifact.type !== "cv_pdf")
+      .map((artifact) => ({
+        kind: "artifact" as const,
+        label: artifactFileLabel(artifact),
+        artifactId: artifact.id
+      }))
   ];
 }
 

@@ -10,6 +10,23 @@ type RouteParams = {
   params: Promise<{ id: string; artifactId: string }>;
 };
 
+function getStoredPdf(content: unknown) {
+  if (!content || typeof content !== "object" || Array.isArray(content)) return null;
+  const record = content as Record<string, unknown>;
+
+  if (
+    typeof record.base64 !== "string" ||
+    (record.mimeType !== undefined && record.mimeType !== "application/pdf")
+  ) {
+    return null;
+  }
+
+  return {
+    filename: typeof record.filename === "string" ? record.filename : "cv-preview.pdf",
+    bytes: Buffer.from(record.base64, "base64")
+  };
+}
+
 export async function GET(_request: Request, context: RouteParams) {
   const user = await getCurrentUser();
 
@@ -28,6 +45,22 @@ export async function GET(_request: Request, context: RouteParams) {
 
   if (!artifact) {
     return NextResponse.json({ error: "Artifact not found." }, { status: 404 });
+  }
+
+  if (artifact.type === "cv_pdf") {
+    const storedPdf = getStoredPdf(artifact.content);
+
+    if (!storedPdf) {
+      return NextResponse.json({ error: "Saved PDF artifact is invalid." }, { status: 422 });
+    }
+
+    return new NextResponse(new Uint8Array(storedPdf.bytes), {
+      status: 200,
+      headers: {
+        "Content-Type": "application/pdf",
+        "Content-Disposition": `inline; filename="${storedPdf.filename.replace(/"/g, "")}"`
+      }
+    });
   }
 
   if (artifact.type !== "cv_draft") {
