@@ -6,8 +6,20 @@ function formatLabel(value: string) {
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
+function normalizePdfText(value: string) {
+  return value
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[“”]/g, '"')
+    .replace(/[‘’]/g, "'")
+    .replace(/[–—]/g, "-")
+    .replace(/…/g, "...")
+    .replace(/•/g, "-")
+    .replace(/[^\x09\x0a\x0d\x20-\x7e£€]/g, "");
+}
+
 function stringifyValue(value: unknown): string {
-  if (typeof value === "string") return value;
+  if (typeof value === "string") return normalizePdfText(value);
   if (typeof value === "number" || typeof value === "boolean") return String(value);
   if (Array.isArray(value)) {
     return value.map((item) => stringifyValue(item)).filter(Boolean).join("\n");
@@ -68,7 +80,7 @@ function writeSection(document: PDFKit.PDFDocument, key: string, value: unknown)
   if (Array.isArray(value)) {
     document.font("Helvetica").fontSize(10.5).fillColor("#17201b");
     value.map((item) => stringifyValue(item)).filter(Boolean).forEach((item) => {
-      document.text(`• ${item}`, {
+      document.text(`- ${item}`, {
         indent: 12,
         lineGap: 3
       });
@@ -99,7 +111,7 @@ export function renderArtifactToPdf(input: {
         left: 48
       },
       info: {
-        Title: input.title,
+        Title: normalizePdfText(input.title),
         Subject: formatLabel(input.type)
       }
     });
@@ -109,7 +121,7 @@ export function renderArtifactToPdf(input: {
     document.on("error", reject);
     document.on("end", () => resolve(Buffer.concat(chunks)));
 
-    document.font("Helvetica-Bold").fontSize(19).fillColor("#17201b").text(input.title, {
+    document.font("Helvetica-Bold").fontSize(19).fillColor("#17201b").text(normalizePdfText(input.title), {
       lineGap: 2
     });
     document.moveDown(0.35);

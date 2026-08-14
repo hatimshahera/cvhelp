@@ -49,6 +49,13 @@ export async function GET(_request: Request, context: RouteParams) {
       }
     });
   } catch (error) {
+    console.error("Artifact PDF preview render failed", {
+      artifactId: artifact.id,
+      applicationId: id,
+      artifactType: artifact.type,
+      error
+    });
+
     return NextResponse.json({ error: "Could not render this PDF preview." }, { status: 500 });
   }
 }
