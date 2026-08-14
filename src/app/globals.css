@@ -586,15 +586,22 @@ h3 {
 
 .workspace-shell {
   display: grid;
-  grid-template-columns: 300px minmax(0, 1fr) 340px;
-  min-height: 100vh;
+  grid-template-columns: minmax(240px, 280px) minmax(360px, 1fr) minmax(300px, 360px);
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .settings-rail {
   display: flex;
   flex-direction: column;
-  gap: 24px;
-  padding: 24px;
+  min-width: 0;
+  min-height: 0;
+  gap: 16px;
+  overflow: hidden;
+  padding: 18px;
   border-right: 1px solid var(--line);
   background: #fbfcfb;
 }
@@ -770,16 +777,33 @@ h3 {
 }
 
 .applications-panel {
-  display: grid;
+  display: flex;
+  min-height: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
   gap: 10px;
 }
 
 .applications-heading {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 8px;
   color: var(--text);
   font-size: 14px;
+}
+
+.applications-heading div {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 8px;
+}
+
+.applications-heading span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 850;
 }
 
 .add-application-button {
@@ -834,13 +858,18 @@ h3 {
 
 .applications-list {
   display: grid;
+  min-height: 0;
+  align-content: start;
   gap: 6px;
+  overflow-y: auto;
+  padding-right: 3px;
 }
 
 .applications-list button {
   display: grid;
   gap: 3px;
   width: 100%;
+  min-width: 0;
   padding: 10px 11px;
   border: 1px solid transparent;
   border-radius: 10px;
@@ -860,6 +889,15 @@ h3 {
 
 .application-list-title {
   justify-content: space-between;
+}
+
+.application-list-title strong,
+.applications-list button > span,
+.applications-list button > small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .status-pill {
@@ -893,10 +931,65 @@ h3 {
 }
 
 .applications-list button span,
-.applications-list p {
+.applications-list p,
+.applications-list button small {
   color: var(--muted);
   font-size: 12px;
   line-height: 1.35;
+}
+
+.application-list-controls {
+  display: grid;
+  gap: 8px;
+}
+
+.application-search {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #ffffff;
+  color: var(--muted);
+}
+
+.application-search input {
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--text);
+  font-size: 13px;
+}
+
+.application-filter-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.application-filter-tabs button {
+  min-width: 0;
+  min-height: 30px;
+  padding: 0 6px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: white;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 850;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.application-filter-tabs button.active {
+  border-color: #cce4d6;
+  background: #e5f4ed;
+  color: var(--accent-dark);
 }
 
 .applications-list .status-pill {
@@ -907,7 +1000,10 @@ h3 {
 
 .profile-bank-panel {
   display: grid;
+  flex: 0 0 auto;
   gap: 12px;
+  max-height: 260px;
+  overflow: hidden;
   padding: 14px;
   border: 1px solid var(--line);
   border-radius: 12px;
@@ -1059,15 +1155,24 @@ h3 {
 .chat-area {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
-  min-height: 100vh;
+  min-width: 0;
+  min-height: 0;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
 }
 
 .memory-side-panel {
   display: grid;
   align-content: start;
-  gap: 18px;
-  min-height: 100vh;
-  padding: 22px;
+  min-width: 0;
+  min-height: 0;
+  height: 100vh;
+  height: 100dvh;
+  gap: 14px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 18px;
   border-left: 1px solid var(--line);
   background: #ffffff;
 }
@@ -1123,6 +1228,21 @@ h3 {
   gap: 12px;
 }
 
+.application-detail-form.compact {
+  gap: 9px;
+  padding: 11px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fbfcfb;
+}
+
+.application-status-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 8px;
+}
+
 .profile-section-editor label,
 .application-detail-form label,
 .application-answers-form label {
@@ -1135,6 +1255,7 @@ h3 {
 
 .profile-section-editor textarea,
 .application-detail-form textarea,
+.application-detail-form input,
 .application-detail-form select,
 .application-answers-form textarea {
   width: 100%;
@@ -1162,6 +1283,12 @@ h3 {
   line-height: 1.45;
 }
 
+.application-detail-form input {
+  min-height: 40px;
+  font: inherit;
+  font-size: 13px;
+}
+
 .application-answers-form textarea {
   min-height: 110px;
   resize: vertical;
@@ -1179,6 +1306,7 @@ h3 {
 
 .profile-section-editor textarea:focus,
 .application-detail-form textarea:focus,
+.application-detail-form input:focus,
 .application-detail-form select:focus,
 .application-answers-form textarea:focus {
   border-color: var(--accent);
@@ -1198,6 +1326,37 @@ h3 {
   background: var(--accent);
   color: white;
   font-weight: 850;
+}
+
+.application-workspace-summary {
+  display: grid;
+  gap: 8px;
+  padding: 11px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fbfcfb;
+}
+
+.application-workspace-summary div {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.application-workspace-summary span,
+.workspace-section-heading span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.application-workspace-summary strong {
+  min-width: 0;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
 .profile-source-list {
@@ -1387,6 +1546,13 @@ h3 {
   gap: 9px;
 }
 
+.workspace-section-heading {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
 .application-memory-list h3 {
   font-size: 14px;
 }
@@ -1410,6 +1576,7 @@ h3 {
   font-size: 12px;
   font-weight: 750;
   line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
 .artifact-title-line {
@@ -1468,6 +1635,7 @@ h3 {
   color: var(--text);
   font-size: 12px;
   font-weight: 800;
+  min-width: 0;
 }
 
 .artifact-actions button:not(:disabled):hover {
@@ -1493,6 +1661,22 @@ h3 {
   align-items: flex-start;
   justify-content: space-between;
   gap: 10px;
+}
+
+.artifact-preview-summary {
+  display: block;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fbfcfb;
+}
+
+.artifact-preview-summary p {
+  color: #314139;
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
 }
 
 .artifact-preview-panel h3 {
@@ -1718,7 +1902,8 @@ h3 {
   align-items: flex-start;
   justify-content: space-between;
   gap: 18px;
-  padding: 28px 32px;
+  min-width: 0;
+  padding: 22px 28px;
   border-bottom: 1px solid var(--line);
   background: rgba(255, 255, 255, 0.7);
 }
@@ -1743,7 +1928,9 @@ h3 {
 
 .chat-header h1 {
   margin-top: 6px;
-  font-size: 34px;
+  font-size: 28px;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
 }
 
 .chat-header p:not(.eyebrow) {
@@ -1784,11 +1971,13 @@ h3 {
   flex-direction: column;
   gap: 12px;
   overflow-y: auto;
-  padding: 28px 32px;
+  min-width: 0;
+  padding: 22px 28px;
 }
 
 .message {
-  max-width: 720px;
+  max-width: min(720px, 88%);
+  min-width: 0;
   padding: 14px 16px;
   border-radius: 16px;
   line-height: 1.5;
@@ -1818,6 +2007,7 @@ h3 {
 
 .message-body p {
   white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 .message-body ul {
@@ -1872,7 +2062,8 @@ h3 {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 12px;
-  padding: 20px 32px 28px;
+  min-width: 0;
+  padding: 16px 28px 20px;
   border-top: 1px solid var(--line);
   background: #fbfcfb;
 }
@@ -1882,9 +2073,12 @@ h3 {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+  max-height: 76px;
+  overflow-y: auto;
 }
 
 .command-suggestions button {
+  max-width: 100%;
   min-height: 34px;
   padding: 0 10px;
   border: 1px solid var(--line);
@@ -1893,6 +2087,9 @@ h3 {
   color: #33433a;
   font-size: 12px;
   font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .command-suggestions button:not(:disabled):hover,
@@ -1998,6 +2195,27 @@ h3 {
   }
 }
 
+@media (max-width: 1080px) {
+  .workspace-shell {
+    grid-template-columns: minmax(220px, 260px) minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) 360px;
+  }
+
+  .memory-side-panel {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    height: 360px;
+    min-height: 0;
+    border-top: 1px solid var(--line);
+    border-left: 0;
+  }
+
+  .chat-area {
+    grid-column: 2;
+    min-width: 0;
+  }
+}
+
 @media (max-width: 760px) {
   .landing-nav {
     padding: 18px 16px 8px;
@@ -2042,9 +2260,16 @@ h3 {
 
   .workspace-shell {
     grid-template-columns: 1fr;
+    grid-template-rows: auto minmax(520px, 1fr) auto;
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
   }
 
   .settings-rail {
+    max-height: 46vh;
+    min-height: 360px;
+    overflow: hidden;
     border-right: 0;
     border-bottom: 1px solid var(--line);
   }
@@ -2054,17 +2279,46 @@ h3 {
   }
 
   .memory-side-panel {
+    grid-column: auto;
+    grid-row: auto;
+    height: auto;
+    max-height: none;
     min-height: auto;
     border-left: 0;
     border-top: 1px solid var(--line);
   }
 
+  .chat-area {
+    grid-column: auto;
+    height: min(72vh, 720px);
+    min-height: 520px;
+  }
+
   .chat-header {
     flex-direction: column;
+    padding: 18px;
+  }
+
+  .message-list {
+    padding: 18px;
   }
 
   .composer {
     grid-template-columns: 1fr;
+    padding: 14px 18px 18px;
+  }
+
+  .command-suggestions {
+    max-height: 98px;
+  }
+
+  .application-status-row,
+  .composer-row {
+    grid-template-columns: 1fr;
+  }
+
+  .attach-button {
+    width: 100%;
   }
 
   .auth-panel {

@@ -14,6 +14,7 @@ import {
   Paperclip,
   PencilLine,
   Save,
+  Search,
   Send,
   Settings,
   Trash2,
@@ -67,6 +68,8 @@ type ApplicationItem = {
   role: string;
   slug: string;
   status: string;
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 type ArtifactItem = {
@@ -151,7 +154,15 @@ const profileCommandSuggestions = [
 const applicationCommandSuggestions = [
   "Compare this job against my profile and list the best evidence.",
   "Draft tailored CV bullets for this application.",
+  "Write a concise recruiter message for this application.",
   "What gaps, risks, and next actions should I handle?"
+];
+
+const applicationArtifactCommands = [
+  { type: "proofcv_data", label: "ProofCV data" },
+  { type: "cv_draft", label: "CV draft" },
+  { type: "cover_note", label: "Cover note" },
+  { type: "recruiter_message", label: "Recruiter message" }
 ];
 
 function formatLabel(value: string) {
@@ -174,10 +185,6 @@ function formatShortDate(value: string) {
 function asRecord(value: unknown): Record<string, unknown> | null {
   if (!value || typeof value !== "object" || Array.isArray(value)) return null;
   return value as Record<string, unknown>;
-}
-
-function asStringArray(value: unknown) {
-  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
 }
 
 function isEditorSuccessMessage(message: string) {
@@ -208,105 +215,6 @@ function renderMessageContent(content: string) {
 
     return <p key={`${blockIndex}-${block.slice(0, 16)}`}>{block}</p>;
   });
-}
-
-function renderArtifactValue(value: unknown) {
-  if (typeof value === "string") return <p>{value}</p>;
-
-  const textItems = asStringArray(value);
-  if (textItems.length) {
-    return (
-      <ul className="artifact-review-list">
-        {textItems.map((item) => (
-          <li key={item}>{item}</li>
-        ))}
-      </ul>
-    );
-  }
-
-  const record = asRecord(value);
-  if (record) {
-    return (
-      <dl className="artifact-review-facts">
-        {Object.entries(record).map(([key, item]) => (
-          <div key={key}>
-            <dt>{formatLabel(key)}</dt>
-            <dd>
-              {typeof item === "string"
-                ? item
-                : asStringArray(item).join(", ") || JSON.stringify(item)}
-            </dd>
-          </div>
-        ))}
-      </dl>
-    );
-  }
-
-  return null;
-}
-
-function renderArtifactContent(artifact: ArtifactItem) {
-  const record = asRecord(artifact.content);
-  if (!record) return <p className="artifact-empty">No artifact content saved.</p>;
-
-  const primarySections = [
-    "summary",
-    "profile_summary",
-    "note",
-    "message",
-    "bullets",
-    "answers",
-    "evidenceUsed",
-    "selectedEvidence",
-    "gaps",
-    "risks",
-    "assumptions",
-    "followUp"
-  ];
-
-  return (
-    <div className="artifact-review">
-      {primarySections.map((key) => {
-        const value = record[key];
-        if (value === undefined || value === null) return null;
-
-        if (key === "answers" && Array.isArray(value)) {
-          return (
-            <section className="artifact-review-section" key={key}>
-              <h4>Answers</h4>
-              <div className="artifact-answers">
-                {value.map((item, index) => {
-                  const answer = asRecord(item);
-                  return (
-                    <article key={`${key}-${index}`}>
-                      {typeof answer?.question === "string" ? <strong>{answer.question}</strong> : null}
-                      <p>
-                        {typeof answer?.answer === "string"
-                          ? answer.answer
-                          : typeof item === "string"
-                            ? item
-                            : JSON.stringify(item)}
-                      </p>
-                    </article>
-                  );
-                })}
-              </div>
-            </section>
-          );
-        }
-
-        const renderedValue = renderArtifactValue(value);
-        if (!renderedValue) return null;
-
-        return (
-          <section className="artifact-review-section" key={key}>
-            <h4>{formatLabel(key)}</h4>
-            {renderedValue}
-          </section>
-        );
-      })}
-    </div>
-  );
 }
 
 function summarizeArtifactContent(content: unknown) {
@@ -347,6 +255,8 @@ export function AppShell({
   const [activeMode, setActiveMode] = useState<ChatMode>("build_profile");
   const [activeApplicationId, setActiveApplicationId] = useState<string | null>(null);
   const [applications, setApplications] = useState<ApplicationItem[]>([]);
+  const [applicationSearch, setApplicationSearch] = useState("");
+  const [applicationListFilter, setApplicationListFilter] = useState<"active" | "archived" | "all">("active");
   const [isAddingApplication, setIsAddingApplication] = useState(false);
   const [jobSource, setJobSource] = useState("");
   const [isCreatingApplication, setIsCreatingApplication] = useState(false);
@@ -357,7 +267,6 @@ export function AppShell({
   const [isSavingApplicationDetail, setIsSavingApplicationDetail] = useState(false);
   const [generatingArtifactType, setGeneratingArtifactType] = useState<string | null>(null);
   const [selectedArtifactId, setSelectedArtifactId] = useState<string | null>(null);
-  const [applicationAnswersPrompt, setApplicationAnswersPrompt] = useState("");
   const [artifactRefinePrompt, setArtifactRefinePrompt] = useState("");
   const [applicationEditorMessage, setApplicationEditorMessage] = useState("");
   const [conversationId, setConversationId] = useState<string | null>(null);
@@ -382,6 +291,19 @@ export function AppShell({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const loadRequestRef = useRef(0);
   const activeApplication = applications.find((item) => item.id === activeApplicationId) ?? null;
+  const activeApplications = applications.filter((item) => item.status !== "archived");
+  const archivedApplications = applications.filter((item) => item.status === "archived");
+  const filteredApplications = applications.filter((item) => {
+    const matchesFilter =
+      applicationListFilter === "all" ||
+      (applicationListFilter === "archived" ? item.status === "archived" : item.status !== "archived");
+    const search = applicationSearch.trim().toLowerCase();
+    const matchesSearch =
+      !search ||
+      [item.company, item.role, item.status].some((value) => value.toLowerCase().includes(search));
+
+    return matchesFilter && matchesSearch;
+  });
   const activeTitle =
     activeMode === "build_profile"
       ? "Build profile"
@@ -868,7 +790,6 @@ export function AppShell({
       }
 
       await loadApplicationDetail(activeApplicationId);
-      if (type === "application_answers") setApplicationAnswersPrompt("");
       if (refineFromArtifactId) setArtifactRefinePrompt("");
       setApplicationEditorMessage("Artifact saved.");
     } catch (generateError) {
@@ -944,8 +865,11 @@ export function AppShell({
 
         <section className="applications-panel" aria-label="Applications">
           <div className="applications-heading">
-            <BriefcaseBusiness size={17} />
-            <strong>Applications</strong>
+            <div>
+              <BriefcaseBusiness size={17} />
+              <strong>Applications</strong>
+            </div>
+            <span>{applications.length}</span>
           </div>
           <button
             className="add-application-button"
@@ -971,9 +895,36 @@ export function AppShell({
             </form>
           ) : null}
 
+          <div className="application-list-controls">
+            <div className="application-search">
+              <Search size={14} />
+              <input
+                value={applicationSearch}
+                onChange={(event) => setApplicationSearch(event.target.value)}
+                placeholder="Search applications"
+              />
+            </div>
+            <div className="application-filter-tabs" aria-label="Application filters">
+              {[
+                ["active", `Active ${activeApplications.length}`],
+                ["archived", `Archived ${archivedApplications.length}`],
+                ["all", `All ${applications.length}`]
+              ].map(([filter, label]) => (
+                <button
+                  key={filter}
+                  className={applicationListFilter === filter ? "active" : ""}
+                  type="button"
+                  onClick={() => setApplicationListFilter(filter as "active" | "archived" | "all")}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="applications-list">
-            {applications.length ? (
-              applications.map((application) => (
+            {filteredApplications.length ? (
+              filteredApplications.map((application) => (
                 <button
                   className={
                     activeMode === "application" && activeApplicationId === application.id ? "active" : ""
@@ -994,10 +945,13 @@ export function AppShell({
                     <span className="status-pill">{formatLabel(application.status)}</span>
                   </div>
                   <span>{application.role}</span>
+                  {application.updatedAt ? (
+                    <small>{formatShortDate(application.updatedAt)}</small>
+                  ) : null}
                 </button>
               ))
             ) : (
-              <p>No applications yet.</p>
+              <p>No matching applications.</p>
             )}
           </div>
         </section>
@@ -1308,58 +1262,79 @@ export function AppShell({
                   <span className="status-pill">{formatLabel(activeApplication.status)}</span>
                 ) : null}
               </div>
-              <p>Application memory stays scoped to this role and one chat thread.</p>
+              <p>Scoped memory and outputs for the selected role.</p>
             </div>
 
             {activeApplication ? (
               <>
-                <form className="application-detail-form" onSubmit={saveApplicationDetail}>
-                  <label>
-                    Status
-                    <select
-                      value={applicationStatusDraft}
-                      onChange={(event) => setApplicationStatusDraft(event.target.value)}
-                      disabled={isLoadingApplicationDetail || isSavingApplicationDetail}
+                <section className="application-workspace-summary" aria-label="Application summary">
+                  <div>
+                    <span>Company</span>
+                    <strong>{activeApplication.company}</strong>
+                  </div>
+                  <div>
+                    <span>Role</span>
+                    <strong>{activeApplication.role}</strong>
+                  </div>
+                  {applicationDetail?.updatedAt ? (
+                    <div>
+                      <span>Updated</span>
+                      <strong>{formatShortDate(applicationDetail.updatedAt)}</strong>
+                    </div>
+                  ) : null}
+                </section>
+
+                <form className="application-detail-form compact" onSubmit={saveApplicationDetail}>
+                  <div className="application-status-row">
+                    <label>
+                      Status
+                      <select
+                        value={applicationStatusDraft}
+                        onChange={(event) => setApplicationStatusDraft(event.target.value)}
+                        disabled={isLoadingApplicationDetail || isSavingApplicationDetail}
+                      >
+                        {applicationStatuses.map((status) => (
+                          <option key={status} value={status}>
+                            {formatLabel(status)}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <button
+                      type="submit"
+                      disabled={isLoadingApplicationDetail || isSavingApplicationDetail || !applicationDetail}
+                      aria-label="Save application status and next action"
                     >
-                      {applicationStatuses.map((status) => (
-                        <option key={status} value={status}>
-                          {formatLabel(status)}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                      {isSavingApplicationDetail ? (
+                        <Loader2 className="spin" size={16} />
+                      ) : (
+                        <Save size={16} />
+                      )}
+                      Save
+                    </button>
+                  </div>
 
                   <label>
                     Next action
-                    <textarea
+                    <input
                       value={applicationNextActionDraft}
                       onChange={(event) => setApplicationNextActionDraft(event.target.value)}
                       disabled={isLoadingApplicationDetail || isSavingApplicationDetail}
-                      placeholder="What should happen next for this application?"
+                      placeholder="What should happen next?"
                     />
                   </label>
 
                   {applicationEditorMessage ? (
                     <p
                       className={
-                        applicationEditorMessage === "Saved." ? "editor-success" : "editor-error"
+                        applicationEditorMessage === "Saved." || applicationEditorMessage === "Artifact saved."
+                          ? "editor-success"
+                          : "editor-error"
                       }
                     >
                       {applicationEditorMessage}
                     </p>
                   ) : null}
-
-                  <button
-                    type="submit"
-                    disabled={isLoadingApplicationDetail || isSavingApplicationDetail || !applicationDetail}
-                  >
-                    {isSavingApplicationDetail ? (
-                      <Loader2 className="spin" size={16} />
-                    ) : (
-                      <Save size={16} />
-                    )}
-                    Save application
-                  </button>
                 </form>
 
                 <div className="memory-stat-grid" aria-label="Application memory summary">
@@ -1381,8 +1356,21 @@ export function AppShell({
                   </div>
                 </div>
 
+                <section className="application-memory-list" aria-label="Application requirements">
+                  <h3>Requirements</h3>
+                  {applicationMemory?.requirements?.length ? (
+                    <ul>
+                      {applicationMemory.requirements.slice(0, 6).map((item) => (
+                        <li key={item}>{item}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p>No requirements saved yet.</p>
+                  )}
+                </section>
+
                 <section className="application-memory-list" aria-label="Application evidence">
-                  <h3>Saved evidence</h3>
+                  <h3>Evidence</h3>
                   {selectedEvidence?.projects?.length ||
                   selectedEvidence?.research?.length ||
                   selectedEvidence?.experience?.length ||
@@ -1404,15 +1392,32 @@ export function AppShell({
                   )}
                 </section>
 
-                <section className="application-memory-list" aria-label="Application artifacts">
-                  <h3>Artifacts</h3>
+                <section className="application-memory-list" aria-label="Application risks">
+                  <h3>Gaps and risks</h3>
+                  {applicationMemory?.gaps?.length || applicationMemory?.risks?.length || applicationMemory?.honestyNotes?.length ? (
+                    <ul>
+                      {[
+                        ...(applicationMemory?.gaps ?? []),
+                        ...(applicationMemory?.risks ?? []),
+                        ...(applicationMemory?.honestyNotes ?? [])
+                      ]
+                        .slice(0, 6)
+                        .map((item) => (
+                          <li key={item}>{item}</li>
+                        ))}
+                    </ul>
+                  ) : (
+                    <p>No saved gaps or honesty notes yet.</p>
+                  )}
+                </section>
+
+                <section className="application-memory-list artifacts-compact" aria-label="Application artifacts">
+                  <div className="workspace-section-heading">
+                    <h3>Artifacts</h3>
+                    <span>{applicationDetail?.artifacts.length ?? 0}</span>
+                  </div>
                   <div className="artifact-actions" aria-label="Generate artifacts">
-                    {[
-                      ["proofcv_data", "ProofCV data"],
-                      ["cv_draft", "CV draft"],
-                      ["cover_note", "Cover note"],
-                      ["recruiter_message", "Recruiter message"]
-                    ].map(([type, label]) => (
+                    {applicationArtifactCommands.map(({ type, label }) => (
                       <button
                         key={type}
                         type="button"
@@ -1428,41 +1433,9 @@ export function AppShell({
                       </button>
                     ))}
                   </div>
-                  <form
-                    className="application-answers-form"
-                    onSubmit={(event) => {
-                      event.preventDefault();
-                      generateApplicationArtifact("application_answers", applicationAnswersPrompt);
-                    }}
-                  >
-                    <label>
-                      Application questions
-                      <textarea
-                        value={applicationAnswersPrompt}
-                        onChange={(event) => setApplicationAnswersPrompt(event.target.value)}
-                        placeholder="Paste application questions here, then generate grounded draft answers."
-                        disabled={Boolean(generatingArtifactType) || isLoadingApplicationDetail}
-                      />
-                    </label>
-                    <button
-                      type="submit"
-                      disabled={
-                        Boolean(generatingArtifactType) ||
-                        isLoadingApplicationDetail ||
-                        applicationAnswersPrompt.trim().length < 5
-                      }
-                    >
-                      {generatingArtifactType === "application_answers" ? (
-                        <Loader2 className="spin" size={14} />
-                      ) : (
-                        <FileText size={14} />
-                      )}
-                      Generate answers
-                    </button>
-                  </form>
                   {applicationDetail?.artifacts.length ? (
                     <ul>
-                      {applicationDetail.artifacts.slice(0, 6).map((artifact) => (
+                      {applicationDetail.artifacts.slice(0, 5).map((artifact) => (
                         <li key={artifact.id}>
                           <div className="artifact-title-line">
                             <FileText size={14} />
@@ -1510,7 +1483,9 @@ export function AppShell({
                         ) : null}
                       </div>
                     </div>
-                    {renderArtifactContent(selectedArtifact)}
+                    <div className="artifact-preview-summary">
+                      <p>{summarizeArtifactContent(selectedArtifact.content) || "Saved artifact data."}</p>
+                    </div>
                     {selectedArtifact.type !== "proofcv_data" ? (
                       <form
                         className="artifact-refine-form"
@@ -1548,12 +1523,6 @@ export function AppShell({
                           Save new version
                         </button>
                       </form>
-                    ) : null}
-                    {selectedArtifactJson ? (
-                      <details className="raw-json-details">
-                        <summary>Raw JSON</summary>
-                        <pre>{selectedArtifactJson}</pre>
-                      </details>
                     ) : null}
                   </section>
                 ) : null}
