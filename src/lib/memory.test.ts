@@ -127,6 +127,25 @@ describe("profile memory helpers", () => {
     expect(profile.openQuestions).toEqual(["Which metric should be verified?"]);
   });
 
+  it("falls back per section when imported profile sections have unsupported shapes", () => {
+    const profile = parseCanonicalProfile({
+      identity: ["bad identity shape"],
+      education: ["MSc Artificial Intelligence"],
+      experience: {
+        freelance: ["Built CV tooling"]
+      },
+      skills: [123, "Python"],
+      openQuestions: 42
+    });
+
+    expect(profile.identity).toEqual({});
+    expect(profile.education).toEqual([{ value: "MSc Artificial Intelligence" }]);
+    expect(profile.experience).toEqual([{ value: "Built CV tooling" }]);
+    expect(profile.skills).toEqual(["123", "Python"]);
+    expect(profile.openQuestions).toEqual(["42"]);
+    expect(profile.projects).toEqual([]);
+  });
+
   it("attaches normalized provenance to profile facts", () => {
     const fact = attachProvenanceToProfileFact(
       { name: "AI API Gateway" },

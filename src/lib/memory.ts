@@ -177,6 +177,12 @@ function normalizeCanonicalProfileInput(value: Record<string, unknown>) {
     if (isObject(sectionValue)) {
       next[section] = Object.values(sectionValue).flat().filter(Boolean);
     }
+    if (Array.isArray(next[section])) {
+      next[section] = next[section].map((item) => {
+        if (isObject(item)) return item;
+        return { value: item };
+      });
+    }
   }
 
   if (isObject(next.skills)) {
@@ -188,18 +194,39 @@ function normalizeCanonicalProfileInput(value: Record<string, unknown>) {
       return [{ group, value: skills }];
     });
   }
+  if (Array.isArray(next.skills)) {
+    next.skills = next.skills
+      .filter((skill) => skill !== null && skill !== undefined)
+      .map((skill) => (typeof skill === "string" || isObject(skill) ? skill : String(skill)));
+  }
 
   if (next.openQuestions && !Array.isArray(next.openQuestions)) {
     next.openQuestions = isObject(next.openQuestions)
       ? Object.values(next.openQuestions).map(String)
       : [String(next.openQuestions)];
+  } else if (Array.isArray(next.openQuestions)) {
+    next.openQuestions = next.openQuestions.map(String);
   }
 
   return next;
 }
 
 export function parseCanonicalProfile(value: unknown): CanonicalProfile {
-  return canonicalProfileSchema.parse(normalizeCanonicalProfileInput(parseMasterProfile(value)));
+  const normalized = normalizeCanonicalProfileInput(parseMasterProfile(value));
+  const parsed = canonicalProfileSchema.safeParse(normalized);
+
+  if (parsed.success) return parsed.data;
+
+  return canonicalProfileSections.reduce((profile, section) => {
+    const sectionSchema = canonicalProfileSchema.shape[section];
+    const sectionParsed = sectionSchema.safeParse(normalized[section]);
+    const defaultParsed = sectionSchema.parse(undefined);
+
+    return {
+      ...profile,
+      [section]: sectionParsed.success ? sectionParsed.data : defaultParsed
+    };
+  }, {} as CanonicalProfile);
 }
 
 export function parseCanonicalProfileSection(

@@ -10,6 +10,7 @@ import {
   updateCanonicalProfileSection
 } from "@/lib/memory";
 import { prisma } from "@/lib/prisma";
+import { logError } from "@/lib/server-log";
 import { getCurrentUser } from "@/lib/session";
 
 const updateProfileSectionSchema = z.object({
@@ -52,14 +53,19 @@ export async function GET() {
     return NextResponse.json({ error: "Sign in to view your profile." }, { status: 401 });
   }
 
-  const profileBank = await getOrCreateProfileBank(user.id);
-  const profile = parseCanonicalProfile(profileBank.masterProfile);
+  try {
+    const profileBank = await getOrCreateProfileBank(user.id);
+    const profile = parseCanonicalProfile(profileBank.masterProfile);
 
-  return NextResponse.json({
-    profile,
-    profileBank: summarizeProfileBank(profileBank),
-    sources: summarizeProfileSources(profileBank.rawSources)
-  });
+    return NextResponse.json({
+      profile,
+      profileBank: summarizeProfileBank(profileBank),
+      sources: summarizeProfileSources(profileBank.rawSources)
+    });
+  } catch (error) {
+    logError("Profile details load failed", error, { userId: user.id });
+    return NextResponse.json({ error: "Could not load profile details from saved profile data." }, { status: 500 });
+  }
 }
 
 export async function PATCH(request: Request) {
