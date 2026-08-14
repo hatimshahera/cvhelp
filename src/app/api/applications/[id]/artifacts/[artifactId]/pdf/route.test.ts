@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const artifactFindFirst = vi.fn();
-const renderTexToPdf = vi.fn();
+const renderArtifactToPdf = vi.fn();
 
 vi.mock("next-auth", () => ({
   getServerSession: vi.fn()
@@ -16,7 +16,7 @@ vi.mock("@/lib/pdf-render", async () => {
 
   return {
     ...actual,
-    renderTexToPdf
+    renderArtifactToPdf
   };
 });
 
@@ -55,7 +55,7 @@ describe("application artifact PDF preview API", () => {
         bullets: ["Built AI API Gateway."]
       }
     });
-    renderTexToPdf.mockResolvedValueOnce(new Uint8Array([37, 80, 68, 70]));
+    renderArtifactToPdf.mockResolvedValueOnce(new Uint8Array([37, 80, 68, 70]));
 
     const { GET } = await import("./route");
     const response = await GET(
@@ -67,7 +67,15 @@ describe("application artifact PDF preview API", () => {
     expect(response.headers.get("content-type")).toContain("application/pdf");
     expect(response.headers.get("content-disposition")).toContain("inline");
     expect(response.headers.get("content-disposition")).toContain("cv_draft-v2.pdf");
-    expect(renderTexToPdf).toHaveBeenCalledWith(expect.stringContaining("\\section*{Example AI CV Draft}"));
+    expect(renderArtifactToPdf).toHaveBeenCalledWith({
+      title: "Example AI CV Draft",
+      type: "cv_draft",
+      version: 2,
+      content: {
+        summary: "AI engineer",
+        bullets: ["Built AI API Gateway."]
+      }
+    });
     expect(artifactFindFirst).toHaveBeenCalledWith({
       where: {
         id: "artifact-1",
@@ -87,11 +95,10 @@ describe("application artifact PDF preview API", () => {
     );
 
     expect(response.status).toBe(404);
-    expect(renderTexToPdf).not.toHaveBeenCalled();
+    expect(renderArtifactToPdf).not.toHaveBeenCalled();
   });
 
-  it("returns 501 when PDF rendering is unavailable", async () => {
-    const { PdfRenderUnavailableError } = await import("@/lib/pdf-render");
+  it("returns 500 when PDF rendering fails", async () => {
     artifactFindFirst.mockResolvedValueOnce({
       id: "artifact-1",
       applicationId: "app-1",
@@ -101,7 +108,7 @@ describe("application artifact PDF preview API", () => {
       version: 2,
       content: { summary: "AI engineer" }
     });
-    renderTexToPdf.mockRejectedValueOnce(new PdfRenderUnavailableError("Install tectonic."));
+    renderArtifactToPdf.mockRejectedValueOnce(new Error("Render failed."));
 
     const { GET } = await import("./route");
     const response = await GET(
@@ -110,7 +117,7 @@ describe("application artifact PDF preview API", () => {
     );
     const body = await response.json();
 
-    expect(response.status).toBe(501);
-    expect(body.error).toBe("Install tectonic.");
+    expect(response.status).toBe(500);
+    expect(body.error).toBe("Could not render this PDF preview.");
   });
 });

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { PdfRenderUnavailableError, renderTexToPdf } from "@/lib/pdf-render";
-import { artifactToTex, texFilename } from "@/lib/tex-export";
+import { renderArtifactToPdf } from "@/lib/pdf-render";
+import { texFilename } from "@/lib/tex-export";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/session";
 
@@ -31,15 +31,14 @@ export async function GET(_request: Request, context: RouteParams) {
   }
 
   try {
-    const tex = artifactToTex({
+    const pdf = await renderArtifactToPdf({
       title: artifact.title,
       type: artifact.type,
       version: artifact.version,
       content: artifact.content
     });
-    const pdf = await renderTexToPdf(tex);
 
-    return new NextResponse(pdf, {
+    return new NextResponse(new Uint8Array(pdf), {
       status: 200,
       headers: {
         "Content-Type": "application/pdf",
@@ -50,10 +49,6 @@ export async function GET(_request: Request, context: RouteParams) {
       }
     });
   } catch (error) {
-    if (error instanceof PdfRenderUnavailableError) {
-      return NextResponse.json({ error: error.message }, { status: 501 });
-    }
-
     return NextResponse.json({ error: "Could not render this PDF preview." }, { status: 500 });
   }
 }

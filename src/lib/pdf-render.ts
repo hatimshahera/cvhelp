@@ -1,40 +1,134 @@
-import { execFile } from "node:child_process";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import path from "node:path";
-import { promisify } from "node:util";
+import PDFDocument from "pdfkit";
 
-const execFileAsync = promisify(execFile);
-
-export class PdfRenderUnavailableError extends Error {
-  constructor(message = "PDF rendering is not available on this server.") {
-    super(message);
-    this.name = "PdfRenderUnavailableError";
-  }
+function formatLabel(value: string) {
+  return value
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
 
-export async function renderTexToPdf(tex: string) {
-  const workDir = await mkdtemp(path.join(tmpdir(), "cvhelp-pdf-"));
-  const texPath = path.join(workDir, "artifact.tex");
-  const pdfPath = path.join(workDir, "artifact.pdf");
+function stringifyValue(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  if (Array.isArray(value)) {
+    return value.map((item) => stringifyValue(item)).filter(Boolean).join("\n");
+  }
+  if (value && typeof value === "object") {
+    return Object.entries(value as Record<string, unknown>)
+      .map(([key, item]) => `${formatLabel(key)}: ${stringifyValue(item)}`)
+      .join("\n");
+  }
 
-  try {
-    await writeFile(texPath, tex, "utf8");
-    await execFileAsync("tectonic", ["--outdir", workDir, texPath], {
-      cwd: workDir,
-      timeout: 20_000,
-      maxBuffer: 1024 * 1024 * 4
+  return "";
+}
+
+function orderedContentEntries(content: unknown) {
+  const record =
+    content && typeof content === "object" && !Array.isArray(content)
+      ? (content as Record<string, unknown>)
+      : { content };
+  const sectionOrder = [
+    "summary",
+    "profile_summary",
+    "subject",
+    "note",
+    "message",
+    "bullets",
+    "answers",
+    "evidenceUsed",
+    "selectedEvidence",
+    "gaps",
+    "risks",
+    "assumptions",
+    "followUp",
+    "selected_projects",
+    "selected_research",
+    "selected_experience",
+    "selected_skills",
+    "honesty_notes"
+  ];
+  const orderedKeys = [
+    ...sectionOrder.filter((key) => key in record),
+    ...Object.keys(record).filter((key) => !sectionOrder.includes(key))
+  ];
+
+  return orderedKeys
+    .map((key) => [key, record[key]] as const)
+    .filter(([, value]) => stringifyValue(value).trim().length > 0);
+}
+
+function writeSection(document: PDFKit.PDFDocument, key: string, value: unknown) {
+  document.moveDown(0.8);
+  document
+    .font("Helvetica-Bold")
+    .fontSize(12)
+    .fillColor("#11623f")
+    .text(formatLabel(key), { continued: false });
+  document.moveDown(0.25);
+
+  if (Array.isArray(value)) {
+    document.font("Helvetica").fontSize(10.5).fillColor("#17201b");
+    value.map((item) => stringifyValue(item)).filter(Boolean).forEach((item) => {
+      document.text(`• ${item}`, {
+        indent: 12,
+        lineGap: 3
+      });
     });
+    return;
+  }
 
-    return await readFile(pdfPath);
-  } catch (error) {
-    const nodeError = error as NodeJS.ErrnoException;
-    if (nodeError.code === "ENOENT") {
-      throw new PdfRenderUnavailableError("Install tectonic on the server to enable PDF previews.");
+  document
+    .font("Helvetica")
+    .fontSize(10.5)
+    .fillColor("#17201b")
+    .text(stringifyValue(value), { lineGap: 3 });
+}
+
+export function renderArtifactToPdf(input: {
+  title: string;
+  type: string;
+  version: number;
+  content: unknown;
+}) {
+  return new Promise<Buffer>((resolve, reject) => {
+    const document = new PDFDocument({
+      size: "A4",
+      margins: {
+        top: 48,
+        right: 48,
+        bottom: 48,
+        left: 48
+      },
+      info: {
+        Title: input.title,
+        Subject: formatLabel(input.type)
+      }
+    });
+    const chunks: Buffer[] = [];
+
+    document.on("data", (chunk: Buffer) => chunks.push(chunk));
+    document.on("error", reject);
+    document.on("end", () => resolve(Buffer.concat(chunks)));
+
+    document.font("Helvetica-Bold").fontSize(19).fillColor("#17201b").text(input.title, {
+      lineGap: 2
+    });
+    document.moveDown(0.35);
+    document
+      .font("Helvetica")
+      .fontSize(9.5)
+      .fillColor("#6a746e")
+      .text(`${formatLabel(input.type)} v${input.version}`);
+    document.moveDown(0.7);
+    document.moveTo(48, document.y).lineTo(547, document.y).strokeColor("#dce5dd").stroke();
+
+    const sections = orderedContentEntries(input.content);
+
+    if (sections.length) {
+      sections.forEach(([key, value]) => writeSection(document, key, value));
+    } else {
+      document.moveDown().font("Helvetica").fontSize(11).fillColor("#17201b").text("No artifact content saved.");
     }
 
-    throw error;
-  } finally {
-    await rm(workDir, { recursive: true, force: true });
-  }
+    document.end();
+  });
 }
