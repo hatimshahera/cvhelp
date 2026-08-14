@@ -161,8 +161,45 @@ export function parseMasterProfile(value: unknown): Record<string, unknown> {
   return parsed.success ? parsed.data : {};
 }
 
+function normalizeCanonicalProfileInput(value: Record<string, unknown>) {
+  const next = { ...value };
+  const arraySections: Array<keyof CanonicalProfile> = [
+    "education",
+    "experience",
+    "projects",
+    "research",
+    "achievements",
+    "evidence"
+  ];
+
+  for (const section of arraySections) {
+    const sectionValue = next[section];
+    if (isObject(sectionValue)) {
+      next[section] = Object.values(sectionValue).flat().filter(Boolean);
+    }
+  }
+
+  if (isObject(next.skills)) {
+    next.skills = Object.entries(next.skills).flatMap(([group, skills]) => {
+      if (Array.isArray(skills)) {
+        return skills.map((skill) => (typeof skill === "string" ? skill : { group, value: skill }));
+      }
+
+      return [{ group, value: skills }];
+    });
+  }
+
+  if (next.openQuestions && !Array.isArray(next.openQuestions)) {
+    next.openQuestions = isObject(next.openQuestions)
+      ? Object.values(next.openQuestions).map(String)
+      : [String(next.openQuestions)];
+  }
+
+  return next;
+}
+
 export function parseCanonicalProfile(value: unknown): CanonicalProfile {
-  return canonicalProfileSchema.parse(parseMasterProfile(value));
+  return canonicalProfileSchema.parse(normalizeCanonicalProfileInput(parseMasterProfile(value)));
 }
 
 export function parseCanonicalProfileSection(

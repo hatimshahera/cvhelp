@@ -108,6 +108,25 @@ describe("profile memory helpers", () => {
     expect(profile.openQuestions).toEqual([]);
   });
 
+  it("normalizes imported grouped profile sections", () => {
+    const profile = parseCanonicalProfile({
+      skills: {
+        languages: ["Python", "TypeScript"],
+        ai: ["RAG", "LLM APIs"]
+      },
+      projects: {
+        primary: [{ name: "AI API Gateway" }]
+      },
+      openQuestions: {
+        proof: "Which metric should be verified?"
+      }
+    });
+
+    expect(profile.skills).toEqual(["Python", "TypeScript", "RAG", "LLM APIs"]);
+    expect(profile.projects).toEqual([{ name: "AI API Gateway" }]);
+    expect(profile.openQuestions).toEqual(["Which metric should be verified?"]);
+  });
+
   it("attaches normalized provenance to profile facts", () => {
     const fact = attachProvenanceToProfileFact(
       { name: "AI API Gateway" },
