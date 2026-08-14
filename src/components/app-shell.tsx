@@ -6,6 +6,8 @@ import { signOut } from "next-auth/react";
 import {
   BriefcaseBusiness,
   CheckCircle2,
+  ChevronDown,
+  ChevronRight,
   Database,
   FileText,
   FilePlus2,
@@ -84,6 +86,17 @@ type ArtifactItem = {
 type ApplicationDetail = ApplicationItem & {
   nextAction: string | null;
   archivedAt: string | null;
+  jobPost?: {
+    source?: string;
+    sourceUrl?: string | null;
+    content?: string;
+    capturedAt?: string;
+  } | null;
+  jobSummary?: {
+    requirements?: string[];
+    responsibilities?: string[];
+    keywords?: string[];
+  } | null;
   memory: {
     requirements?: string[];
     responsibilities?: string[];
@@ -102,16 +115,13 @@ type ApplicationDetail = ApplicationItem & {
   artifacts: ArtifactItem[];
 };
 
-const applicationStatuses = [
-  "draft",
-  "researching",
-  "tailoring_cv",
-  "cover_note_ready",
-  "submitted",
-  "interviewing",
-  "rejected",
-  "archived"
-];
+type WorkspaceFile =
+  | { kind: "overview"; label: string }
+  | { kind: "job_post"; label: string }
+  | { kind: "requirements"; label: string }
+  | { kind: "evidence"; label: string }
+  | { kind: "risks"; label: string }
+  | { kind: "artifact"; label: string; artifactId: string };
 
 type ProfileSection =
   | "identity"
@@ -156,13 +166,6 @@ const applicationCommandSuggestions = [
   "Draft tailored CV bullets for this application.",
   "Write a concise recruiter message for this application.",
   "What gaps, risks, and next actions should I handle?"
-];
-
-const applicationArtifactCommands = [
-  { type: "proofcv_data", label: "ProofCV data" },
-  { type: "cv_draft", label: "CV draft" },
-  { type: "cover_note", label: "Cover note" },
-  { type: "recruiter_message", label: "Recruiter message" }
 ];
 
 function formatLabel(value: string) {
@@ -261,14 +264,8 @@ export function AppShell({
   const [jobSource, setJobSource] = useState("");
   const [isCreatingApplication, setIsCreatingApplication] = useState(false);
   const [applicationDetail, setApplicationDetail] = useState<ApplicationDetail | null>(null);
-  const [applicationStatusDraft, setApplicationStatusDraft] = useState("draft");
-  const [applicationNextActionDraft, setApplicationNextActionDraft] = useState("");
   const [isLoadingApplicationDetail, setIsLoadingApplicationDetail] = useState(false);
-  const [isSavingApplicationDetail, setIsSavingApplicationDetail] = useState(false);
-  const [generatingArtifactType, setGeneratingArtifactType] = useState<string | null>(null);
-  const [selectedArtifactId, setSelectedArtifactId] = useState<string | null>(null);
-  const [artifactRefinePrompt, setArtifactRefinePrompt] = useState("");
-  const [applicationEditorMessage, setApplicationEditorMessage] = useState("");
+  const [selectedWorkspaceFile, setSelectedWorkspaceFile] = useState<WorkspaceFile>({ kind: "overview", label: "Overview" });
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
@@ -364,7 +361,6 @@ export function AppShell({
 
   async function loadApplicationDetail(applicationId: string) {
     setIsLoadingApplicationDetail(true);
-    setApplicationEditorMessage("");
     try {
       const response = await fetch(`/api/applications/${applicationId}`, { cache: "no-store" });
       const data = await readJsonResponse(response);
@@ -374,18 +370,14 @@ export function AppShell({
       }
 
       setApplicationDetail(data.application);
-      setApplicationStatusDraft(data.application.status || "draft");
-      setApplicationNextActionDraft(data.application.nextAction || "");
-      setSelectedArtifactId((current) => {
-        if (current && data.application.artifacts?.some((artifact: { id: string }) => artifact.id === current)) {
-          return current;
-        }
-        return data.application.artifacts?.[0]?.id ?? null;
+      setSelectedWorkspaceFile((current) => {
+        if (current.kind !== "artifact") return current;
+        return data.application.artifacts?.some((artifact: { id: string }) => artifact.id === current.artifactId)
+          ? current
+          : { kind: "overview", label: "Overview" };
       });
     } catch (applicationError) {
-      setApplicationEditorMessage(
-        applicationError instanceof Error ? applicationError.message : "Could not load application details."
-      );
+      setError(applicationError instanceof Error ? applicationError.message : "Could not load application details.");
     } finally {
       setIsLoadingApplicationDetail(false);
     }
@@ -402,7 +394,6 @@ export function AppShell({
       loadApplicationDetail(activeApplicationId);
     } else {
       setApplicationDetail(null);
-      setApplicationEditorMessage("");
     }
   }, [activeMode, activeApplicationId]);
 
@@ -583,8 +574,7 @@ export function AppShell({
       setActiveMode("application");
       setActiveApplicationId(data.application.id);
       setApplicationDetail(data.application);
-      setApplicationStatusDraft(data.application.status || "draft");
-      setApplicationNextActionDraft(data.application.nextAction || "");
+      setSelectedWorkspaceFile({ kind: "overview", label: "Overview" });
       setConversationId(null);
       setMessages([]);
       setMessage("");
@@ -721,104 +711,29 @@ export function AppShell({
     setProfileEditorMessage("Correction queued in chat. Press Send when ready.");
   }
 
-  async function saveApplicationDetail(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (!activeApplicationId || isSavingApplicationDetail) return;
-
-    setIsSavingApplicationDetail(true);
-    setApplicationEditorMessage("");
-
-    try {
-      const response = await fetch(`/api/applications/${activeApplicationId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          status: applicationStatusDraft,
-          nextAction: applicationNextActionDraft || null
-        })
-      });
-      const data = await readJsonResponse(response);
-
-      if (!response.ok) {
-        throw new Error(data.error || "Could not save this application.");
-      }
-
-      setApplicationDetail(data.application);
-      setSelectedArtifactId(data.application.artifacts?.[0]?.id ?? null);
-      setApplications((current) =>
-        current.map((item) =>
-          item.id === data.application.id
-            ? {
-                ...item,
-                company: data.application.company,
-                role: data.application.role,
-                status: data.application.status
-              }
-            : item
-        )
-      );
-      setApplicationEditorMessage("Saved.");
-    } catch (saveError) {
-      setApplicationEditorMessage(
-        saveError instanceof Error ? saveError.message : "Could not save this application."
-      );
-    } finally {
-      setIsSavingApplicationDetail(false);
-    }
-  }
-
-  async function generateApplicationArtifact(
-    type: string,
-    prompt?: string,
-    refineFromArtifactId?: string
-  ) {
-    if (!activeApplicationId || generatingArtifactType) return;
-
-    setGeneratingArtifactType(type);
-    setApplicationEditorMessage("");
-
-    try {
-      const response = await fetch(`/api/applications/${activeApplicationId}/artifacts`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type, prompt, refineFromArtifactId })
-      });
-      const data = await readJsonResponse(response);
-
-      if (!response.ok) {
-        throw new Error(data.error || "Could not generate this artifact.");
-      }
-
-      await loadApplicationDetail(activeApplicationId);
-      if (refineFromArtifactId) setArtifactRefinePrompt("");
-      setApplicationEditorMessage("Artifact saved.");
-    } catch (generateError) {
-      setApplicationEditorMessage(
-        generateError instanceof Error ? generateError.message : "Could not generate this artifact."
-      );
-    } finally {
-      setGeneratingArtifactType(null);
-    }
-  }
-
   const applicationMemory = applicationDetail?.memory;
   const selectedEvidence = applicationMemory?.selectedEvidence;
   const selectedArtifact =
-    applicationDetail?.artifacts.find((artifact) => artifact.id === selectedArtifactId) ??
-    applicationDetail?.artifacts[0] ??
-    null;
-  const selectedArtifactJson = selectedArtifact?.content
-    ? JSON.stringify(selectedArtifact.content, null, 2)
-    : "";
-  const selectedArtifactDownloadHref = selectedArtifactJson
-    ? `data:application/json;charset=utf-8,${encodeURIComponent(selectedArtifactJson)}`
-    : "";
-  const selectedArtifactTexHref =
-    activeApplicationId && selectedArtifact
-      ? `/api/applications/${activeApplicationId}/artifacts/${selectedArtifact.id}/export`
-      : "";
+    selectedWorkspaceFile.kind === "artifact"
+      ? applicationDetail?.artifacts.find((artifact) => artifact.id === selectedWorkspaceFile.artifactId) ?? null
+      : null;
+  const workspaceFiles: WorkspaceFile[] = activeApplication
+    ? [
+        { kind: "overview", label: "Overview" },
+        { kind: "job_post", label: "Job post" },
+        { kind: "requirements", label: "Requirements" },
+        { kind: "evidence", label: "Evidence" },
+        { kind: "risks", label: "Gaps and risks" },
+        ...(applicationDetail?.artifacts ?? []).map((artifact) => ({
+          kind: "artifact" as const,
+          label: `${formatLabel(artifact.type)} v${artifact.version}`,
+          artifactId: artifact.id
+        }))
+      ]
+    : [];
   const commandSuggestions =
     activeMode === "build_profile" ? profileCommandSuggestions : applicationCommandSuggestions;
+  const showCommandSuggestions = !isLoadingHistory && messages.length === 0;
 
   function applyCommandSuggestion(command: string) {
     setMessage(command);
@@ -924,32 +839,56 @@ export function AppShell({
 
           <div className="applications-list">
             {filteredApplications.length ? (
-              filteredApplications.map((application) => (
-                <button
-                  className={
-                    activeMode === "application" && activeApplicationId === application.id ? "active" : ""
-                  }
-                  type="button"
-                  key={application.id}
-                  onClick={() => {
-                    setActiveMode("application");
-                    setActiveApplicationId(application.id);
-                    setConversationId(null);
-                    setMessages([]);
-                    setMessage("");
-                    setSelectedFiles([]);
-                  }}
-                >
-                  <div className="application-list-title">
-                    <strong>{application.company}</strong>
-                    <span className="status-pill">{formatLabel(application.status)}</span>
+              filteredApplications.map((application) => {
+                const isActive = activeMode === "application" && activeApplicationId === application.id;
+                const visibleFiles = isActive ? workspaceFiles : [];
+
+                return (
+                  <div className={`application-tree-item ${isActive ? "active" : ""}`} key={application.id}>
+                    <button
+                      className="application-folder-button"
+                      type="button"
+                      onClick={() => {
+                        setActiveMode("application");
+                        setActiveApplicationId(application.id);
+                        setSelectedWorkspaceFile({ kind: "overview", label: "Overview" });
+                        setConversationId(null);
+                        setMessages([]);
+                        setMessage("");
+                        setSelectedFiles([]);
+                      }}
+                    >
+                      {isActive ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
+                      <strong>{application.company}</strong>
+                    </button>
+                    {isActive ? <span className="application-tree-role">{application.role}</span> : null}
+                    {visibleFiles.length ? (
+                      <div className="application-file-list" aria-label={`${application.company} files`}>
+                        {visibleFiles.map((file) => {
+                          const key = file.kind === "artifact" ? file.artifactId : file.kind;
+                          const isSelected =
+                            selectedWorkspaceFile.kind === file.kind &&
+                            (file.kind !== "artifact" ||
+                              (selectedWorkspaceFile.kind === "artifact" &&
+                                selectedWorkspaceFile.artifactId === file.artifactId));
+
+                          return (
+                            <button
+                              className={isSelected ? "active" : ""}
+                              key={key}
+                              type="button"
+                              onClick={() => setSelectedWorkspaceFile(file)}
+                            >
+                              <FileText size={13} />
+                              <span>{file.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ) : null}
                   </div>
-                  <span>{application.role}</span>
-                  {application.updatedAt ? (
-                    <small>{formatShortDate(application.updatedAt)}</small>
-                  ) : null}
-                </button>
-              ))
+                );
+              })
             ) : (
               <p>No matching applications.</p>
             )}
@@ -1017,13 +956,7 @@ export function AppShell({
           <div className="chat-header-main">
             <p className="eyebrow">Workspace</p>
             <h1>{activeTitle}</h1>
-            {activeMode === "application" && activeApplication ? (
-              <div className="chat-status-row">
-                <span className="status-pill">{formatLabel(activeApplication.status)}</span>
-                <span>One saved thread for this application</span>
-              </div>
-            ) : null}
-            <p>{activeDescription}</p>
+            {activeMode === "build_profile" ? <p>{activeDescription}</p> : null}
           </div>
           {activeMode === "build_profile" ? (
             <button
@@ -1076,18 +1009,20 @@ export function AppShell({
         {error ? <p className="chat-error">{error}</p> : null}
 
         <form className="composer" onSubmit={sendMessage}>
-          <div className="command-suggestions" aria-label="Suggested chat commands">
-            {commandSuggestions.map((command) => (
-              <button
-                key={command}
-                type="button"
-                onClick={() => applyCommandSuggestion(command)}
-                disabled={isSending || isLoadingHistory || (activeMode === "application" && !activeApplication)}
-              >
-                {command}
-              </button>
-            ))}
-          </div>
+          {showCommandSuggestions ? (
+            <div className="command-suggestions" aria-label="Suggested chat commands">
+              {commandSuggestions.map((command) => (
+                <button
+                  key={command}
+                  type="button"
+                  onClick={() => applyCommandSuggestion(command)}
+                  disabled={isSending || isLoadingHistory || (activeMode === "application" && !activeApplication)}
+                >
+                  {command}
+                </button>
+              ))}
+            </div>
+          ) : null}
           {selectedFiles.length ? (
             <div className="selected-files">
               {selectedFiles.map((file) => (
@@ -1257,272 +1192,129 @@ export function AppShell({
             <div className="side-panel-heading">
               <p className="eyebrow">Application</p>
               <div className="side-panel-title-row">
-                <h2>Workspace</h2>
-                {activeApplication ? (
-                  <span className="status-pill">{formatLabel(activeApplication.status)}</span>
-                ) : null}
+                <h2>{selectedWorkspaceFile.label}</h2>
               </div>
-              <p>Scoped memory and outputs for the selected role.</p>
             </div>
 
             {activeApplication ? (
               <>
-                <section className="application-workspace-summary" aria-label="Application summary">
-                  <div>
-                    <span>Company</span>
-                    <strong>{activeApplication.company}</strong>
+                {isLoadingApplicationDetail ? (
+                  <div className="empty-side-panel">
+                    <Loader2 className="spin" size={16} />
+                    Loading application...
                   </div>
-                  <div>
-                    <span>Role</span>
-                    <strong>{activeApplication.role}</strong>
-                  </div>
-                  {applicationDetail?.updatedAt ? (
+                ) : null}
+
+                {selectedWorkspaceFile.kind === "overview" ? (
+                  <section className="application-workspace-summary" aria-label="Application overview">
                     <div>
-                      <span>Updated</span>
-                      <strong>{formatShortDate(applicationDetail.updatedAt)}</strong>
+                      <span>Company</span>
+                      <strong>{activeApplication.company}</strong>
                     </div>
-                  ) : null}
-                </section>
-
-                <form className="application-detail-form compact" onSubmit={saveApplicationDetail}>
-                  <div className="application-status-row">
-                    <label>
-                      Status
-                      <select
-                        value={applicationStatusDraft}
-                        onChange={(event) => setApplicationStatusDraft(event.target.value)}
-                        disabled={isLoadingApplicationDetail || isSavingApplicationDetail}
-                      >
-                        {applicationStatuses.map((status) => (
-                          <option key={status} value={status}>
-                            {formatLabel(status)}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                    <button
-                      type="submit"
-                      disabled={isLoadingApplicationDetail || isSavingApplicationDetail || !applicationDetail}
-                      aria-label="Save application status and next action"
-                    >
-                      {isSavingApplicationDetail ? (
-                        <Loader2 className="spin" size={16} />
-                      ) : (
-                        <Save size={16} />
-                      )}
-                      Save
-                    </button>
-                  </div>
-
-                  <label>
-                    Next action
-                    <input
-                      value={applicationNextActionDraft}
-                      onChange={(event) => setApplicationNextActionDraft(event.target.value)}
-                      disabled={isLoadingApplicationDetail || isSavingApplicationDetail}
-                      placeholder="What should happen next?"
-                    />
-                  </label>
-
-                  {applicationEditorMessage ? (
-                    <p
-                      className={
-                        applicationEditorMessage === "Saved." || applicationEditorMessage === "Artifact saved."
-                          ? "editor-success"
-                          : "editor-error"
-                      }
-                    >
-                      {applicationEditorMessage}
-                    </p>
-                  ) : null}
-                </form>
-
-                <div className="memory-stat-grid" aria-label="Application memory summary">
-                  <div>
-                    <strong>{applicationMemory?.requirements?.length ?? 0}</strong>
-                    <span>requirements</span>
-                  </div>
-                  <div>
-                    <strong>{selectedEvidence?.projects?.length ?? 0}</strong>
-                    <span>projects</span>
-                  </div>
-                  <div>
-                    <strong>{selectedEvidence?.skills?.length ?? 0}</strong>
-                    <span>skills</span>
-                  </div>
-                  <div>
-                    <strong>{applicationMemory?.notes?.length ?? 0}</strong>
-                    <span>notes</span>
-                  </div>
-                </div>
-
-                <section className="application-memory-list" aria-label="Application requirements">
-                  <h3>Requirements</h3>
-                  {applicationMemory?.requirements?.length ? (
-                    <ul>
-                      {applicationMemory.requirements.slice(0, 6).map((item) => (
-                        <li key={item}>{item}</li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p>No requirements saved yet.</p>
-                  )}
-                </section>
-
-                <section className="application-memory-list" aria-label="Application evidence">
-                  <h3>Evidence</h3>
-                  {selectedEvidence?.projects?.length ||
-                  selectedEvidence?.research?.length ||
-                  selectedEvidence?.experience?.length ||
-                  selectedEvidence?.skills?.length ? (
-                    <ul>
-                      {[
-                        ...(selectedEvidence.projects ?? []),
-                        ...(selectedEvidence.research ?? []),
-                        ...(selectedEvidence.experience ?? []),
-                        ...(selectedEvidence.skills ?? [])
-                      ]
-                        .slice(0, 8)
-                        .map((item) => (
-                          <li key={item}>{item}</li>
-                        ))}
-                    </ul>
-                  ) : (
-                    <p>No selected evidence yet.</p>
-                  )}
-                </section>
-
-                <section className="application-memory-list" aria-label="Application risks">
-                  <h3>Gaps and risks</h3>
-                  {applicationMemory?.gaps?.length || applicationMemory?.risks?.length || applicationMemory?.honestyNotes?.length ? (
-                    <ul>
-                      {[
-                        ...(applicationMemory?.gaps ?? []),
-                        ...(applicationMemory?.risks ?? []),
-                        ...(applicationMemory?.honestyNotes ?? [])
-                      ]
-                        .slice(0, 6)
-                        .map((item) => (
-                          <li key={item}>{item}</li>
-                        ))}
-                    </ul>
-                  ) : (
-                    <p>No saved gaps or honesty notes yet.</p>
-                  )}
-                </section>
-
-                <section className="application-memory-list artifacts-compact" aria-label="Application artifacts">
-                  <div className="workspace-section-heading">
-                    <h3>Artifacts</h3>
-                    <span>{applicationDetail?.artifacts.length ?? 0}</span>
-                  </div>
-                  <div className="artifact-actions" aria-label="Generate artifacts">
-                    {applicationArtifactCommands.map(({ type, label }) => (
-                      <button
-                        key={type}
-                        type="button"
-                        onClick={() => generateApplicationArtifact(type)}
-                        disabled={Boolean(generatingArtifactType) || isLoadingApplicationDetail}
-                      >
-                        {generatingArtifactType === type ? (
-                          <Loader2 className="spin" size={14} />
-                        ) : (
-                          <FileText size={14} />
-                        )}
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                  {applicationDetail?.artifacts.length ? (
-                    <ul>
-                      {applicationDetail.artifacts.slice(0, 5).map((artifact) => (
-                        <li key={artifact.id}>
-                          <div className="artifact-title-line">
-                            <FileText size={14} />
-                            <button
-                              className={selectedArtifact?.id === artifact.id ? "active" : ""}
-                              type="button"
-                              onClick={() => setSelectedArtifactId(artifact.id)}
-                            >
-                              {artifact.title} v{artifact.version}
-                            </button>
-                          </div>
-                          {summarizeArtifactContent(artifact.content) ? (
-                            <p>{summarizeArtifactContent(artifact.content)}</p>
-                          ) : null}
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p>No generated artifacts yet.</p>
-                  )}
-                </section>
-
-                {selectedArtifact ? (
-                  <section className="artifact-preview-panel" aria-label="Selected artifact preview">
                     <div>
+                      <span>Role</span>
+                      <strong>{activeApplication.role}</strong>
+                    </div>
+                    {applicationDetail?.nextAction ? (
                       <div>
-                        <h3>{selectedArtifact.title}</h3>
-                        <p>
-                          {formatLabel(selectedArtifact.type)} v{selectedArtifact.version}
-                        </p>
+                        <span>Next action</span>
+                        <strong>{applicationDetail.nextAction}</strong>
                       </div>
-                      <div className="artifact-download-links">
-                        {selectedArtifactTexHref ? (
-                          <a href={selectedArtifactTexHref}>
-                            Download TeX
-                          </a>
-                        ) : null}
-                        {selectedArtifactDownloadHref ? (
-                          <a
-                            href={selectedArtifactDownloadHref}
-                            download={`${selectedArtifact.type}-v${selectedArtifact.version}.json`}
-                          >
-                            Download JSON
-                          </a>
-                        ) : null}
+                    ) : null}
+                    {applicationDetail?.updatedAt ? (
+                      <div>
+                        <span>Updated</span>
+                        <strong>{formatShortDate(applicationDetail.updatedAt)}</strong>
+                      </div>
+                    ) : null}
+                    <div className="memory-stat-grid compact" aria-label="Application memory summary">
+                      <div>
+                        <strong>{applicationMemory?.requirements?.length ?? 0}</strong>
+                        <span>requirements</span>
+                      </div>
+                      <div>
+                        <strong>{selectedEvidence?.projects?.length ?? 0}</strong>
+                        <span>projects</span>
+                      </div>
+                      <div>
+                        <strong>{selectedEvidence?.skills?.length ?? 0}</strong>
+                        <span>skills</span>
+                      </div>
+                      <div>
+                        <strong>{applicationDetail?.artifacts.length ?? 0}</strong>
+                        <span>files</span>
                       </div>
                     </div>
-                    <div className="artifact-preview-summary">
-                      <p>{summarizeArtifactContent(selectedArtifact.content) || "Saved artifact data."}</p>
-                    </div>
-                    {selectedArtifact.type !== "proofcv_data" ? (
-                      <form
-                        className="artifact-refine-form"
-                        onSubmit={(event) => {
-                          event.preventDefault();
-                          generateApplicationArtifact(
-                            selectedArtifact.type,
-                            artifactRefinePrompt,
-                            selectedArtifact.id
-                          );
-                        }}
-                      >
-                        <label>
-                          Refine this version
-                          <textarea
-                            value={artifactRefinePrompt}
-                            onChange={(event) => setArtifactRefinePrompt(event.target.value)}
-                            placeholder="Example: make it shorter, add more Python evidence, reduce hype, or answer in STAR format."
-                            disabled={Boolean(generatingArtifactType) || isLoadingApplicationDetail}
-                          />
-                        </label>
-                        <button
-                          type="submit"
-                          disabled={
-                            Boolean(generatingArtifactType) ||
-                            isLoadingApplicationDetail ||
-                            artifactRefinePrompt.trim().length < 5
-                          }
-                        >
-                          {generatingArtifactType === selectedArtifact.type ? (
-                            <Loader2 className="spin" size={14} />
-                          ) : (
-                            <FileText size={14} />
-                          )}
-                          Save new version
-                        </button>
-                      </form>
+                  </section>
+                ) : null}
+
+                {selectedWorkspaceFile.kind === "job_post" ? (
+                  <section className="workspace-file-viewer" aria-label="Job post">
+                    <pre>{applicationDetail?.jobPost?.content || "No job post saved."}</pre>
+                  </section>
+                ) : null}
+
+                {selectedWorkspaceFile.kind === "requirements" ? (
+                  <section className="application-memory-list" aria-label="Application requirements">
+                    {applicationMemory?.requirements?.length ? (
+                      <ul>
+                        {applicationMemory.requirements.map((item) => (
+                          <li key={item}>{item}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p>No requirements saved yet.</p>
+                    )}
+                  </section>
+                ) : null}
+
+                {selectedWorkspaceFile.kind === "evidence" ? (
+                  <section className="application-memory-list" aria-label="Application evidence">
+                    {selectedEvidence?.projects?.length ||
+                    selectedEvidence?.research?.length ||
+                    selectedEvidence?.experience?.length ||
+                    selectedEvidence?.skills?.length ? (
+                      <ul>
+                        {[
+                          ...(selectedEvidence.projects ?? []),
+                          ...(selectedEvidence.research ?? []),
+                          ...(selectedEvidence.experience ?? []),
+                          ...(selectedEvidence.skills ?? [])
+                        ].map((item) => (
+                          <li key={item}>{item}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p>No selected evidence yet.</p>
+                    )}
+                  </section>
+                ) : null}
+
+                {selectedWorkspaceFile.kind === "risks" ? (
+                  <section className="application-memory-list" aria-label="Application risks">
+                    {applicationMemory?.gaps?.length ||
+                    applicationMemory?.risks?.length ||
+                    applicationMemory?.honestyNotes?.length ? (
+                      <ul>
+                        {[
+                          ...(applicationMemory?.gaps ?? []),
+                          ...(applicationMemory?.risks ?? []),
+                          ...(applicationMemory?.honestyNotes ?? [])
+                        ].map((item) => (
+                          <li key={item}>{item}</li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p>No saved gaps or honesty notes yet.</p>
+                    )}
+                  </section>
+                ) : null}
+
+                {selectedWorkspaceFile.kind === "artifact" ? (
+                  <section className="workspace-file-viewer" aria-label="Selected artifact">
+                    <p>{selectedArtifact ? summarizeArtifactContent(selectedArtifact.content) || "Saved artifact data." : "Artifact not found."}</p>
+                    {selectedArtifact?.content ? (
+                      <pre>{JSON.stringify(selectedArtifact.content, null, 2)}</pre>
                     ) : null}
                   </section>
                 ) : null}
