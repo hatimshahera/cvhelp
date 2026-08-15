@@ -13,6 +13,7 @@ import {
   FilePlus2,
   Loader2,
   LogOut,
+  MessageSquareText,
   Paperclip,
   PencilLine,
   Save,
@@ -31,6 +32,7 @@ type Message = {
 };
 
 type ChatMode = "build_profile" | "application";
+type ProfileWorkspaceView = "chat" | "profile";
 
 type ProfileBankSummary = {
   sourceCount: number;
@@ -298,6 +300,10 @@ export function AppShell({
   userEmail: string;
 }) {
   const [activeMode, setActiveMode] = useState<ChatMode>("build_profile");
+  const [profileView, setProfileView] = useState<ProfileWorkspaceView>("chat");
+  const [isBuildProfileOpen, setIsBuildProfileOpen] = useState(true);
+  const [isApplicationsOpen, setIsApplicationsOpen] = useState(true);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [activeApplicationId, setActiveApplicationId] = useState<string | null>(null);
   const [expandedApplicationId, setExpandedApplicationId] = useState<string | null>(null);
   const [isSidePanelOpen, setIsSidePanelOpen] = useState(true);
@@ -347,13 +353,17 @@ export function AppShell({
   });
   const activeTitle =
     activeMode === "build_profile"
-      ? "Build profile"
+      ? profileView === "profile"
+        ? "Profile"
+        : "Build profile"
       : activeApplication
         ? `${activeApplication.company} - ${activeApplication.role}`
         : "Applications";
   const activeDescription =
     activeMode === "build_profile"
-      ? "Add CV, LinkedIn, GitHub, projects, evidence"
+      ? profileView === "profile"
+        ? "Review and edit your saved profile sections."
+        : "Add CV, LinkedIn, GitHub, projects, evidence."
       : activeApplication
         ? "Application-specific chat, notes, CV tailoring, cover letters, and answers"
         : "Add a job description to create an application workspace";
@@ -803,8 +813,177 @@ export function AppShell({
     setMessage(command);
   }
 
+  const shellClassName = [
+    "workspace-shell",
+    activeMode === "application" && isSidePanelOpen ? "" : "side-panel-collapsed",
+    activeMode === "build_profile" ? "profile-workspace" : ""
+  ]
+    .filter(Boolean)
+    .join(" ");
+  const isProfileEditorActive = activeMode === "build_profile" && profileView === "profile";
+
+  function openProfileChat() {
+    setActiveMode("build_profile");
+    setProfileView("chat");
+    setActiveApplicationId(null);
+    setExpandedApplicationId(null);
+    setConversationId(null);
+    setMessages([]);
+    setMessage("");
+    setSelectedFiles([]);
+  }
+
+  function openProfileEditor() {
+    setActiveMode("build_profile");
+    setProfileView("profile");
+    setActiveApplicationId(null);
+    setExpandedApplicationId(null);
+    setConversationId(null);
+    setMessages([]);
+    setMessage("");
+    setSelectedFiles([]);
+  }
+
+  function renderProfileEditor() {
+    return (
+      <div className="profile-main-view">
+        {profileBank ? (
+          <section className="profile-bank-panel profile-bank-summary" aria-label="Profile bank status">
+            <div className="profile-bank-title">
+              <Database size={17} />
+              <strong>Profile bank</strong>
+            </div>
+            <div className="profile-bank-metrics">
+              <span>
+                <strong>{profileBank.sourceCount}</strong>
+                sources
+              </span>
+              <span>
+                <strong>
+                  {profileBank.intake.completedCount}/{profileBank.intake.totalCount}
+                </strong>
+                {profileBank.intake.complete ? "intake done" : "intake"}
+              </span>
+              <span>
+                <strong>{profileBank.completeness}%</strong>
+                complete
+              </span>
+            </div>
+            <p>{profileBank.intake.nextPrompt}</p>
+            <div className="profile-completeness" aria-label="Profile completeness">
+              <progress value={profileBank.completeness} max={100} />
+            </div>
+            {profileBank.sections.length ? (
+              <div className="profile-sections">
+                {profileBank.sections.slice(0, 6).map((section) => (
+                  <span key={section}>{section}</span>
+                ))}
+              </div>
+            ) : null}
+            {profileBank.missingSections.length ? (
+              <p className="profile-missing">
+                Missing: {profileBank.missingSections.slice(0, 3).join(", ")}
+              </p>
+            ) : null}
+          </section>
+        ) : null}
+
+        <div className="section-tabs" role="tablist" aria-label="Profile sections">
+          {profileSections.map((section) => (
+            <button
+              key={section}
+              type="button"
+              className={selectedProfileSection === section ? "active" : ""}
+              onClick={() => setSelectedProfileSection(section)}
+            >
+              {section}
+            </button>
+          ))}
+        </div>
+
+        <form className="profile-section-editor" onSubmit={saveProfileSection}>
+          <label>
+            {selectedProfileSection}
+            <textarea
+              value={profileSectionDraft}
+              onChange={(event) => setProfileSectionDraft(event.target.value)}
+              disabled={isLoadingProfileDetails || isSavingProfileSection}
+              spellCheck={false}
+            />
+          </label>
+
+          {profileEditorMessage ? (
+            <p className={isEditorSuccessMessage(profileEditorMessage) ? "editor-success" : "editor-error"}>
+              {profileEditorMessage}
+            </p>
+          ) : null}
+
+          <button type="submit" disabled={isLoadingProfileDetails || isSavingProfileSection}>
+            {isSavingProfileSection ? <Loader2 className="spin" size={16} /> : <Save size={16} />}
+            Save section
+          </button>
+        </form>
+
+        <section className="profile-correction-flow" aria-label="Profile correction flow">
+          <div>
+            <h3>Correction</h3>
+            <span>{selectedProfileSection}</span>
+          </div>
+          <textarea
+            value={profileCorrectionDraft}
+            onChange={(event) => setProfileCorrectionDraft(event.target.value)}
+            placeholder="Example: remove the AWS claim, change the project metric to 20%, or ask me before saving this employer."
+            disabled={isSending || isLoadingHistory}
+          />
+          <button
+            type="button"
+            onClick={queueProfileCorrection}
+            disabled={isSending || isLoadingHistory || !profileCorrectionDraft.trim()}
+          >
+            <PencilLine size={15} />
+            Queue correction
+          </button>
+        </section>
+
+        <section className="profile-source-list" aria-label="Saved profile sources">
+          <div className="source-list-heading">
+            <h3>Saved sources</h3>
+            <span>{profileSources.length}</span>
+          </div>
+          {profileSources.length ? (
+            <ul>
+              {profileSources.map((source) => (
+                <li key={source.id}>
+                  <div>
+                    <strong>{source.name || formatLabel(source.type)}</strong>
+                    <span>{formatShortDate(source.createdAt)}</span>
+                    <button
+                      type="button"
+                      onClick={() => deleteProfileSource(source.id)}
+                      disabled={Boolean(deletingProfileSourceId)}
+                      aria-label={`Delete ${source.name || source.type}`}
+                    >
+                      {deletingProfileSourceId === source.id ? (
+                        <Loader2 className="spin" size={13} />
+                      ) : (
+                        <Trash2 size={13} />
+                      )}
+                    </button>
+                  </div>
+                  <p>{source.preview || "No source preview saved."}</p>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p>No saved sources yet.</p>
+          )}
+        </section>
+      </div>
+    );
+  }
+
   return (
-    <main className={`workspace-shell ${isSidePanelOpen ? "" : "side-panel-collapsed"}`}>
+    <main className={shellClassName}>
       <aside className="settings-rail">
         <div>
           <p className="brand">CVhelp</p>
@@ -815,34 +994,60 @@ export function AppShell({
               <span>{userEmail}</span>
             </div>
           </div>
-          <Link className="account-link" href="/app/account">
-            <Settings size={16} />
-            Account settings
-          </Link>
         </div>
 
         <nav className="rail-nav" aria-label="Workspace navigation">
           <button
-            className={activeMode === "build_profile" ? "active" : ""}
+            className="nav-section-toggle"
             type="button"
-            onClick={() => {
-              setActiveMode("build_profile");
-              setActiveApplicationId(null);
-              setExpandedApplicationId(null);
-              setConversationId(null);
-              setMessages([]);
-              setMessage("");
-              setSelectedFiles([]);
-            }}
+            onClick={() => setIsBuildProfileOpen((current) => !current)}
+            aria-expanded={isBuildProfileOpen}
           >
             <UserRound size={18} />
             <span>
               <strong>Build profile</strong>
-              <small>Add CV, LinkedIn, GitHub, projects, evidence</small>
+              <small>Chat or edit profile</small>
             </span>
+            {isBuildProfileOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+          </button>
+
+          {isBuildProfileOpen ? (
+            <div className="nav-subitems" aria-label="Build profile views">
+              <button
+                className={activeMode === "build_profile" && profileView === "chat" ? "active nav-subitem" : "nav-subitem"}
+                type="button"
+                onClick={openProfileChat}
+              >
+                <MessageSquareText size={15} />
+                Chat
+              </button>
+              <button
+                className={activeMode === "build_profile" && profileView === "profile" ? "active nav-subitem" : "nav-subitem"}
+                type="button"
+                onClick={openProfileEditor}
+              >
+                <Database size={15} />
+                Profile
+              </button>
+            </div>
+          ) : null}
+
+          <button
+            className="nav-section-toggle"
+            type="button"
+            onClick={() => setIsApplicationsOpen((current) => !current)}
+            aria-expanded={isApplicationsOpen}
+          >
+            <BriefcaseBusiness size={18} />
+            <span>
+              <strong>Applications</strong>
+              <small>{applications.length} saved jobs</small>
+            </span>
+            {isApplicationsOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
           </button>
         </nav>
 
+        {isApplicationsOpen ? (
         <section className="applications-panel" aria-label="Applications">
           <div className="applications-heading">
             <div>
@@ -920,6 +1125,7 @@ export function AppShell({
                           return;
                         }
                         setActiveMode("application");
+                        setProfileView("chat");
                         setActiveApplicationId(application.id);
                         setExpandedApplicationId(application.id);
                         setSelectedWorkspaceFile({ kind: "empty", label: "Workspace" });
@@ -971,15 +1177,40 @@ export function AppShell({
             )}
           </div>
         </section>
+        ) : null}
 
-        <button
-          className="logout-button"
-          type="button"
-          onClick={() => signOut({ callbackUrl: "/" })}
-        >
-          <LogOut size={18} />
-          Logout
-        </button>
+        <section className="settings-menu" aria-label="Settings">
+          <button
+            className="nav-section-toggle"
+            type="button"
+            onClick={() => setIsSettingsOpen((current) => !current)}
+            aria-expanded={isSettingsOpen}
+          >
+            <Settings size={18} />
+            <span>
+              <strong>Settings</strong>
+              <small>Account and session</small>
+            </span>
+            {isSettingsOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+          </button>
+
+          {isSettingsOpen ? (
+            <div className="settings-actions">
+              <Link className="account-link" href="/app/account">
+                <Settings size={16} />
+                Account settings
+              </Link>
+              <button
+                className="logout-button"
+                type="button"
+                onClick={() => signOut({ callbackUrl: "/" })}
+              >
+                <LogOut size={18} />
+                Logout
+              </button>
+            </div>
+          ) : null}
+        </section>
       </aside>
 
       <section className="chat-area">
@@ -987,24 +1218,9 @@ export function AppShell({
           <div className="chat-header-main">
             <p className="eyebrow">Workspace</p>
             <h1>{activeTitle}</h1>
-            {activeMode === "build_profile" ? <p>{activeDescription}</p> : null}
-            <div className="workspace-context" aria-label="Workspace status">
-              {activeMode === "build_profile" ? (
-                <>
-                  <span>
-                    <strong>{profileBank?.completeness ?? 0}%</strong>
-                    Profile complete
-                  </span>
-                  <span>
-                    <strong>{profileBank?.sourceCount ?? 0}</strong>
-                    Saved sources
-                  </span>
-                  <span>
-                    <strong>{profileBank?.intake.completedCount ?? 0}/{profileBank?.intake.totalCount ?? 0}</strong>
-                    Intake steps
-                  </span>
-                </>
-              ) : (
+            <p>{activeDescription}</p>
+            {activeMode === "application" ? (
+              <div className="workspace-context" aria-label="Workspace status">
                 <>
                   <span>
                     <strong>{activeApplication?.company ?? "No company"}</strong>
@@ -1019,11 +1235,11 @@ export function AppShell({
                     Files
                   </span>
                 </>
-              )}
-            </div>
+              </div>
+            ) : null}
           </div>
           <div className="chat-header-actions">
-            {activeMode === "build_profile" ? (
+            {activeMode === "build_profile" && profileView === "chat" ? (
               <button
                 className="clear-conversation-button"
                 type="button"
@@ -1039,17 +1255,22 @@ export function AppShell({
                 Clear conversation
               </button>
             ) : null}
-            <button
-              className="panel-toggle-button"
-              type="button"
-              onClick={() => setIsSidePanelOpen((current) => !current)}
-              aria-label={isSidePanelOpen ? "Hide side panel" : "Show side panel"}
-            >
-              {isSidePanelOpen ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
-            </button>
+            {activeMode === "application" ? (
+              <button
+                className="panel-toggle-button"
+                type="button"
+                onClick={() => setIsSidePanelOpen((current) => !current)}
+                aria-label={isSidePanelOpen ? "Hide side panel" : "Show side panel"}
+              >
+                {isSidePanelOpen ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
+              </button>
+            ) : null}
           </div>
         </header>
 
+        {isProfileEditorActive ? (
+          renderProfileEditor()
+        ) : (
         <div className="message-list" ref={listRef}>
           {isLoadingHistory ? (
             <div className="empty-state">
@@ -1079,9 +1300,11 @@ export function AppShell({
             </article>
           ) : null}
         </div>
+        )}
 
         {error ? <p className="chat-error">{error}</p> : null}
 
+        {!isProfileEditorActive ? (
         <form className="composer" onSubmit={sendMessage}>
           {showCommandSuggestions ? (
             <div className="command-suggestions" aria-label="Suggested chat commands">
@@ -1160,159 +1383,11 @@ export function AppShell({
             Send
           </button>
         </form>
+        ) : null}
       </section>
 
-      <aside className="memory-side-panel" aria-label="Structured profile editor">
-        {activeMode === "build_profile" ? (
-          <>
-            <div className="side-panel-heading">
-              <div>
-                <p className="eyebrow">Profile</p>
-                <h2>Structured editor</h2>
-              </div>
-              <button
-                className="panel-toggle-button"
-                type="button"
-                onClick={() => setIsSidePanelOpen(false)}
-                aria-label="Hide side panel"
-              >
-                <ChevronRight size={18} />
-              </button>
-            </div>
-
-            {profileBank ? (
-              <section className="profile-bank-panel profile-bank-summary" aria-label="Profile bank status">
-                <div className="profile-bank-title">
-                  <Database size={17} />
-                  <strong>Profile bank</strong>
-                </div>
-                <div className="profile-bank-metrics">
-                  <span>
-                    <strong>{profileBank.sourceCount}</strong>
-                    sources
-                  </span>
-                  <span>
-                    <strong>
-                      {profileBank.intake.completedCount}/{profileBank.intake.totalCount}
-                    </strong>
-                    {profileBank.intake.complete ? "intake done" : "intake"}
-                  </span>
-                  <span>
-                    <strong>{profileBank.completeness}%</strong>
-                    complete
-                  </span>
-                </div>
-                <p>{profileBank.intake.nextPrompt}</p>
-                <div className="profile-completeness" aria-label="Profile completeness">
-                  <progress value={profileBank.completeness} max={100} />
-                </div>
-                {profileBank.sections.length ? (
-                  <div className="profile-sections">
-                    {profileBank.sections.slice(0, 5).map((section) => (
-                      <span key={section}>{section}</span>
-                    ))}
-                  </div>
-                ) : null}
-                {profileBank.missingSections.length ? (
-                  <p className="profile-missing">
-                    Missing: {profileBank.missingSections.slice(0, 3).join(", ")}
-                  </p>
-                ) : null}
-              </section>
-            ) : null}
-
-            <div className="section-tabs" role="tablist" aria-label="Profile sections">
-              {profileSections.map((section) => (
-                <button
-                  key={section}
-                  type="button"
-                  className={selectedProfileSection === section ? "active" : ""}
-                  onClick={() => setSelectedProfileSection(section)}
-                >
-                  {section}
-                </button>
-              ))}
-            </div>
-
-            <form className="profile-section-editor" onSubmit={saveProfileSection}>
-              <label>
-                {selectedProfileSection}
-                <textarea
-                  value={profileSectionDraft}
-                  onChange={(event) => setProfileSectionDraft(event.target.value)}
-                  disabled={isLoadingProfileDetails || isSavingProfileSection}
-                  spellCheck={false}
-                />
-              </label>
-
-              {profileEditorMessage ? (
-                <p className={isEditorSuccessMessage(profileEditorMessage) ? "editor-success" : "editor-error"}>
-                  {profileEditorMessage}
-                </p>
-              ) : null}
-
-              <button type="submit" disabled={isLoadingProfileDetails || isSavingProfileSection}>
-                {isSavingProfileSection ? <Loader2 className="spin" size={16} /> : <Save size={16} />}
-                Save section
-              </button>
-            </form>
-
-            <section className="profile-correction-flow" aria-label="Profile correction flow">
-              <div>
-                <h3>Correction</h3>
-                <span>{selectedProfileSection}</span>
-              </div>
-              <textarea
-                value={profileCorrectionDraft}
-                onChange={(event) => setProfileCorrectionDraft(event.target.value)}
-                placeholder="Example: remove the AWS claim, change the project metric to 20%, or ask me before saving this employer."
-                disabled={isSending || isLoadingHistory}
-              />
-              <button
-                type="button"
-                onClick={queueProfileCorrection}
-                disabled={isSending || isLoadingHistory || !profileCorrectionDraft.trim()}
-              >
-                <PencilLine size={15} />
-                Queue correction
-              </button>
-            </section>
-
-            <section className="profile-source-list" aria-label="Saved profile sources">
-              <div className="source-list-heading">
-                <h3>Saved sources</h3>
-                <span>{profileSources.length}</span>
-              </div>
-              {profileSources.length ? (
-                <ul>
-                  {profileSources.map((source) => (
-                    <li key={source.id}>
-                      <div>
-                        <strong>{source.name || formatLabel(source.type)}</strong>
-                        <span>{formatShortDate(source.createdAt)}</span>
-                        <button
-                          type="button"
-                          onClick={() => deleteProfileSource(source.id)}
-                          disabled={Boolean(deletingProfileSourceId)}
-                          aria-label={`Delete ${source.name || source.type}`}
-                        >
-                          {deletingProfileSourceId === source.id ? (
-                            <Loader2 className="spin" size={13} />
-                          ) : (
-                            <Trash2 size={13} />
-                          )}
-                        </button>
-                      </div>
-                      <p>{source.preview || "No source preview saved."}</p>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p>No saved sources yet.</p>
-              )}
-            </section>
-          </>
-        ) : (
+      {activeMode === "application" ? (
+      <aside className="memory-side-panel" aria-label="Application files">
           <>
             <div className="side-panel-heading">
               <div>
@@ -1378,8 +1453,8 @@ export function AppShell({
               <p className="empty-side-panel">Choose an application to view its saved memory.</p>
             )}
           </>
-        )}
       </aside>
+      ) : null}
     </main>
   );
 }
