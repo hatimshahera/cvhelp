@@ -975,7 +975,7 @@ export function AppShell({
         <button
           className="logout-button"
           type="button"
-          onClick={() => signOut({ callbackUrl: "/sign-in" })}
+          onClick={() => signOut({ callbackUrl: "/" })}
         >
           <LogOut size={18} />
           Logout

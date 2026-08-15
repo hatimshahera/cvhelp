@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { useState } from "react";
-import { ArrowRight, CheckCircle2, Loader2, LockKeyhole, Mail } from "lucide-react";
+import { ArrowLeft, ArrowRight, CheckCircle2, Loader2, LockKeyhole, Mail } from "lucide-react";
 
 type EnabledProviders = {
   google: boolean;
@@ -167,6 +167,11 @@ export function AuthForm({
           {isSignup ? "Sign in" : "Sign up"}
         </Link>
       </p>
+
+      <Link className="auth-home-link" href="/">
+        <ArrowLeft size={16} />
+        Back to homepage
+      </Link>
 
       {!enabledProviders.google ? (
         <div className="provider-note" id="provider-status">

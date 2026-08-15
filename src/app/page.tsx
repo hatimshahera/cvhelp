@@ -4,7 +4,6 @@ import {
   ArrowRight,
   CheckCircle2,
   Database,
-  FileText,
   LockKeyhole,
   MessageSquareText,
   Sparkles,
