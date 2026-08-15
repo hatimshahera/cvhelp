@@ -1,7 +1,22 @@
 import Link from "next/link";
 import { getServerSession } from "next-auth";
-import { ArrowRight, CheckCircle2, FileText, LockKeyhole, MessageSquareText, Sparkles } from "lucide-react";
+import {
+  ArrowRight,
+  CheckCircle2,
+  Database,
+  FileText,
+  LockKeyhole,
+  MessageSquareText,
+  Sparkles,
+  Target
+} from "lucide-react";
 import { authOptions } from "@/lib/auth";
+
+const landingMetrics = [
+  ["01", "Profile bank"],
+  ["02", "Role evidence"],
+  ["03", "Grounded drafts"]
+];
 
 export default async function Home() {
   const session = await getServerSession(authOptions);
@@ -53,22 +68,33 @@ export default async function Home() {
               {session ? "Continue" : "Login"}
             </Link>
           </div>
+          <div className="hero-proof" aria-label="CVhelp workflow steps">
+            {landingMetrics.map(([number, label]) => (
+              <div key={label}>
+                <span>{number}</span>
+                <strong>{label}</strong>
+              </div>
+            ))}
+          </div>
         </div>
 
         <div className="hero-preview" aria-label="CVhelp workflow preview">
           <div className="preview-toolbar">
-            <span />
-            <span />
-            <span />
+            <span>Mercor / AI generalist</span>
+            <strong>Evidence desk</strong>
           </div>
           <div className="preview-content">
-            <div className="preview-column">
-              <p className="preview-label">Job post</p>
-              <h2>AI Engineering Fellowship</h2>
-              <p>Research, agents, evaluation, product judgement, written communication.</p>
+            <div className="preview-column preview-column-primary">
+              <p className="preview-label">Signal pulled from role</p>
+              <h2>Agents, evaluation, product judgement, written communication.</h2>
+              <div className="preview-tags" aria-label="Role keywords">
+                <span>LLM evals</span>
+                <span>Research</span>
+                <span>Shipping taste</span>
+              </div>
             </div>
             <div className="preview-column highlighted">
-              <p className="preview-label">CVhelp output</p>
+              <p className="preview-label">Drafting guardrails</p>
               <ul>
                 <li>
                   <CheckCircle2 size={16} />
@@ -84,6 +110,10 @@ export default async function Home() {
                 </li>
               </ul>
             </div>
+            <div className="preview-column preview-column-footer">
+              <p className="preview-label">Next action</p>
+              <p>Generate a tailored CV PDF and keep the reasoning attached to this application.</p>
+            </div>
           </div>
         </div>
       </section>
@@ -95,7 +125,7 @@ export default async function Home() {
         </div>
         <div className="feature-grid">
           <article className="feature-card">
-            <FileText size={22} />
+            <Target size={22} />
             <h3>Understand the role</h3>
             <p>Paste a job post and break it into the skills, evidence, and priorities that matter.</p>
           </article>
@@ -105,9 +135,14 @@ export default async function Home() {
             <p>Use chat to shape CV bullets, cover notes, and application answers around your real work.</p>
           </article>
           <article className="feature-card">
+            <Database size={22} />
+            <h3>Build a source bank</h3>
+            <p>Keep source notes, profile sections, saved artifacts, and application files in one workspace.</p>
+          </article>
+          <article className="feature-card feature-card-dark">
             <LockKeyhole size={22} />
-            <h3>Keep it private</h3>
-            <p>Work from your own account, with saved conversations and a profile base you control.</p>
+            <h3>Stay grounded</h3>
+            <p>Draft stronger applications without inventing claims or losing the evidence trail.</p>
           </article>
         </div>
       </section>

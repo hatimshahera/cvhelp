@@ -1035,6 +1035,39 @@ export function AppShell({
             <p className="eyebrow">Workspace</p>
             <h1>{activeTitle}</h1>
             {activeMode === "build_profile" ? <p>{activeDescription}</p> : null}
+            <div className="workspace-context" aria-label="Workspace status">
+              {activeMode === "build_profile" ? (
+                <>
+                  <span>
+                    <strong>{profileBank?.completeness ?? 0}%</strong>
+                    Profile complete
+                  </span>
+                  <span>
+                    <strong>{profileBank?.sourceCount ?? 0}</strong>
+                    Saved sources
+                  </span>
+                  <span>
+                    <strong>{profileBank?.intake.completedCount ?? 0}/{profileBank?.intake.totalCount ?? 0}</strong>
+                    Intake steps
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span>
+                    <strong>{activeApplication?.company ?? "No company"}</strong>
+                    Company
+                  </span>
+                  <span>
+                    <strong>{applicationDetail?.artifacts.length ?? 0}</strong>
+                    Artifacts
+                  </span>
+                  <span>
+                    <strong>{workspaceFiles.length}</strong>
+                    Files
+                  </span>
+                </>
+              )}
+            </div>
           </div>
           <div className="chat-header-actions">
             {activeMode === "build_profile" ? (
