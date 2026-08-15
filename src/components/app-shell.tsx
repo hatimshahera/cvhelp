@@ -5,7 +5,6 @@ import { useEffect, useRef, useState } from "react";
 import { signOut } from "next-auth/react";
 import {
   BriefcaseBusiness,
-  CheckCircle2,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -973,52 +972,6 @@ export function AppShell({
           </div>
         </section>
 
-        {profileBank ? (
-          <section className="profile-bank-panel" aria-label="Profile bank status">
-            <div className="profile-bank-title">
-              <Database size={17} />
-              <strong>Profile bank</strong>
-            </div>
-            <p>{profileBank.sourceCount} saved source notes</p>
-            <div className="profile-intake-status" aria-label="Profile intake next step">
-              <div>
-                <strong>
-                  {profileBank.intake.completedCount}/{profileBank.intake.totalCount}
-                </strong>
-                <span>{profileBank.intake.complete ? "intake complete" : "intake steps"}</span>
-              </div>
-              <p>{profileBank.intake.nextPrompt}</p>
-            </div>
-            <div className="profile-completeness" aria-label="Profile completeness">
-              <div>
-                <strong>{profileBank.completeness}%</strong>
-                <span>complete</span>
-              </div>
-              <progress value={profileBank.completeness} max={100} />
-            </div>
-            {profileBank.sections.length ? (
-              <div className="profile-sections">
-                {profileBank.sections.slice(0, 5).map((section) => (
-                  <span key={section}>{section}</span>
-                ))}
-              </div>
-            ) : null}
-            <ul>
-              {profileBank.checklist.map((item) => (
-                <li className={item.done ? "done" : ""} key={item.id}>
-                  <CheckCircle2 size={15} />
-                  {item.label}
-                </li>
-              ))}
-            </ul>
-            {profileBank.missingSections.length ? (
-              <p className="profile-missing">
-                Missing: {profileBank.missingSections.slice(0, 3).join(", ")}
-              </p>
-            ) : null}
-          </section>
-        ) : null}
-
         <button
           className="logout-button"
           type="button"
@@ -1226,6 +1179,47 @@ export function AppShell({
                 <ChevronRight size={18} />
               </button>
             </div>
+
+            {profileBank ? (
+              <section className="profile-bank-panel profile-bank-summary" aria-label="Profile bank status">
+                <div className="profile-bank-title">
+                  <Database size={17} />
+                  <strong>Profile bank</strong>
+                </div>
+                <div className="profile-bank-metrics">
+                  <span>
+                    <strong>{profileBank.sourceCount}</strong>
+                    sources
+                  </span>
+                  <span>
+                    <strong>
+                      {profileBank.intake.completedCount}/{profileBank.intake.totalCount}
+                    </strong>
+                    {profileBank.intake.complete ? "intake done" : "intake"}
+                  </span>
+                  <span>
+                    <strong>{profileBank.completeness}%</strong>
+                    complete
+                  </span>
+                </div>
+                <p>{profileBank.intake.nextPrompt}</p>
+                <div className="profile-completeness" aria-label="Profile completeness">
+                  <progress value={profileBank.completeness} max={100} />
+                </div>
+                {profileBank.sections.length ? (
+                  <div className="profile-sections">
+                    {profileBank.sections.slice(0, 5).map((section) => (
+                      <span key={section}>{section}</span>
+                    ))}
+                  </div>
+                ) : null}
+                {profileBank.missingSections.length ? (
+                  <p className="profile-missing">
+                    Missing: {profileBank.missingSections.slice(0, 3).join(", ")}
+                  </p>
+                ) : null}
+              </section>
+            ) : null}
 
             <div className="section-tabs" role="tablist" aria-label="Profile sections">
               {profileSections.map((section) => (
