@@ -6,7 +6,6 @@ import {
   Database,
   LockKeyhole,
   MessageSquareText,
-  Sparkles,
   Target
 } from "lucide-react";
 import { authOptions } from "@/lib/auth";
@@ -34,10 +33,6 @@ export default async function Home() {
 
         <section className="landing-hero aside-hero" id="workspace">
           <div className="hero-copy aside-hero-copy">
-            <p className="hero-kicker">
-              <Sparkles size={16} />
-              Custom CVs and job tracking
-            </p>
             <h1>Tailor your CV to each application.</h1>
             <p className="hero-lead">
               Keep your profile, evidence, and job applications in one workspace, then
