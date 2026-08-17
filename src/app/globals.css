@@ -3801,13 +3801,26 @@ body {
 
 .landing-theme-shell .product-section,
 .landing-theme-shell .aside-capabilities {
+  position: relative;
   display: grid;
   width: 100%;
   min-height: 100vh;
   min-height: 100svh;
   padding: clamp(52px, 7vh, 84px) clamp(18px, 5vw, 64px);
   place-items: center;
-  border-top: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.landing-theme-shell .product-section::before,
+.landing-theme-shell .aside-capabilities::before,
+.landing-theme-shell .landing-footer::before {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: min(54vw, 920px);
+  height: 1px;
+  content: "";
+  background: rgba(255, 255, 255, 0.14);
+  transform: translateX(-50%);
 }
 
 .landing-theme-shell .product-frame,
@@ -4190,13 +4203,13 @@ body {
 }
 
 .landing-theme-shell .landing-footer {
+  position: relative;
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
   gap: 12px 24px;
   min-height: auto;
   padding: 22px clamp(18px, 5vw, 64px) 26px;
-  border-top: 1px solid rgba(255, 255, 255, 0.14);
   background: transparent;
   color: rgba(255, 255, 255, 0.72);
   font-size: 14px;
