@@ -6261,3 +6261,179 @@ body {
     font-size: clamp(32px, 9vw, 42px);
   }
 }
+
+/* Final landing proportions: compact centered intro, then separate full-height panels. */
+.landing-theme-shell .landing-site-header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 3;
+  display: flex;
+  justify-content: flex-start;
+  width: 100%;
+  padding: clamp(18px, 2.6vw, 30px) clamp(20px, 4vw, 52px) 0;
+}
+
+.landing-theme-shell .landing-site-header .landing-brand {
+  display: inline-flex;
+  align-items: center;
+  font-size: clamp(18px, 1.55vw, 24px);
+  line-height: 1;
+}
+
+.landing-theme-shell .aside-hero {
+  display: grid;
+  width: 100%;
+  min-height: 100vh;
+  min-height: 100svh;
+  margin: 0;
+  overflow: hidden;
+  padding: clamp(78px, 10vh, 112px) clamp(20px, 5vw, 72px) clamp(42px, 7vh, 72px);
+  place-items: center;
+}
+
+.landing-theme-shell .aside-hero-copy {
+  align-content: center;
+  justify-items: center;
+  gap: clamp(12px, 2vh, 20px);
+  width: min(100%, 900px);
+  max-width: none;
+  min-height: 0;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.landing-theme-shell .hero-kicker {
+  font-size: clamp(10px, 0.9vw, 12px);
+  letter-spacing: 0.12em;
+}
+
+.landing-theme-shell .aside-hero h1 {
+  max-width: 920px;
+  font-size: clamp(42px, 5.45vw, 78px);
+  line-height: 1.02;
+}
+
+.landing-theme-shell .hero-lead {
+  max-width: 620px;
+  font-size: clamp(16px, 1.18vw, 19px);
+  line-height: 1.45;
+}
+
+.landing-theme-shell .hero-actions {
+  gap: 10px;
+  padding-top: 6px;
+}
+
+.landing-theme-shell .primary-link,
+.landing-theme-shell .secondary-link {
+  min-height: 40px;
+  padding-inline: 16px;
+  border-radius: 999px;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.landing-theme-shell .primary-link svg,
+.landing-theme-shell .secondary-link svg {
+  width: 16px;
+  height: 16px;
+}
+
+.landing-theme-shell .product-section {
+  margin-top: 0;
+}
+
+.landing-theme-shell .product-section,
+.landing-theme-shell .aside-capabilities,
+.landing-theme-shell .aside-privacy {
+  display: grid;
+  min-height: 100vh;
+  min-height: 100svh;
+  padding: clamp(52px, 7vh, 84px) clamp(18px, 5vw, 64px);
+  place-items: center;
+}
+
+.landing-theme-shell .product-frame,
+.landing-theme-shell .aside-capabilities .section-frame,
+.landing-theme-shell .aside-privacy .section-frame {
+  width: min(100%, 1220px);
+  margin: 0 auto;
+}
+
+.landing-theme-shell .product-frame {
+  padding: clamp(24px, 3.4vw, 44px);
+}
+
+.landing-theme-shell .product-frame .aside-browser {
+  width: min(100%, 1040px);
+}
+
+.landing-theme-shell .product-frame .workspace-mock,
+.landing-theme-dark .product-frame .workspace-mock {
+  min-height: clamp(440px, 52vh, 620px);
+}
+
+.landing-theme-shell .aside-capabilities .section-frame,
+.landing-theme-shell .aside-privacy .section-frame {
+  padding: 0;
+  border-top: 0;
+}
+
+.landing-theme-shell .feature-grid,
+.landing-theme-shell .privacy-grid {
+  width: 100%;
+}
+
+@media (max-width: 860px) {
+  .landing-theme-shell .aside-hero {
+    padding-top: clamp(76px, 12vh, 104px);
+  }
+
+  .landing-theme-shell .aside-hero h1 {
+    font-size: clamp(38px, 8.2vw, 60px);
+  }
+
+  .landing-theme-shell .product-frame .aside-browser {
+    overflow-x: auto;
+  }
+
+  .landing-theme-shell .product-frame .workspace-mock {
+    min-width: 760px;
+  }
+}
+
+@media (max-width: 680px) {
+  .landing-theme-shell .aside-hero {
+    padding: 86px 18px 42px;
+  }
+
+  .landing-theme-shell .aside-hero-copy {
+    gap: 14px;
+  }
+
+  .landing-theme-shell .aside-hero h1 {
+    font-size: clamp(34px, 10vw, 46px);
+  }
+
+  .landing-theme-shell .hero-lead {
+    font-size: 16px;
+  }
+
+  .landing-theme-shell .primary-link,
+  .landing-theme-shell .secondary-link {
+    min-height: 38px;
+    padding-inline: 14px;
+    font-size: 13px;
+  }
+
+  .landing-theme-shell .product-section,
+  .landing-theme-shell .aside-capabilities,
+  .landing-theme-shell .aside-privacy {
+    padding: 44px 14px;
+  }
+
+  .landing-theme-shell .product-frame .workspace-mock {
+    min-width: 680px;
+  }
+}
