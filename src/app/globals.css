@@ -5692,3 +5692,69 @@ body {
     min-width: 760px;
   }
 }
+
+/* Text-led landing sections: no visible section titles, high-contrast wallpaper overlays. */
+.landing-theme-shell::after {
+  background:
+    linear-gradient(180deg, rgba(2, 7, 12, 0.8), rgba(2, 7, 12, 0.7) 34%, rgba(2, 7, 12, 0.95)),
+    linear-gradient(90deg, rgba(2, 7, 12, 0.72), rgba(2, 7, 12, 0.48) 52%, rgba(2, 7, 12, 0.72));
+}
+
+.landing-theme-shell .landing-brand,
+.landing-theme-shell .hero-kicker,
+.landing-theme-shell .aside-hero h1,
+.landing-theme-shell .hero-lead,
+.landing-theme-shell .product-copy,
+.landing-theme-shell .feature-card h3,
+.landing-theme-shell .feature-card p,
+.landing-theme-shell .privacy-grid h3,
+.landing-theme-shell .privacy-grid p {
+  text-shadow: 0 14px 46px rgba(0, 0, 0, 0.46);
+}
+
+.landing-theme-shell .hero-kicker,
+.landing-theme-shell .hero-lead,
+.landing-theme-shell .product-copy {
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.landing-theme-shell .product-frame {
+  padding-top: clamp(22px, 3vw, 34px);
+  background: rgba(3, 9, 15, 0.72);
+}
+
+.landing-theme-shell .product-copy {
+  max-width: 760px;
+  font-size: clamp(18px, 1.45vw, 22px);
+  font-weight: 650;
+  line-height: 1.48;
+}
+
+.landing-theme-shell .aside-capabilities .section-frame,
+.landing-theme-shell .aside-privacy .section-frame {
+  padding-block: clamp(54px, 8vw, 92px);
+}
+
+.landing-theme-shell .feature-grid {
+  margin-top: 0;
+}
+
+.landing-theme-shell .feature-card p,
+.landing-theme-shell .privacy-grid p {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.landing-theme-shell .privacy-frame {
+  display: block;
+}
+
+.landing-theme-shell .privacy-grid {
+  max-width: 980px;
+  margin: 0 auto;
+}
+
+@media (max-width: 680px) {
+  .landing-theme-shell .product-copy {
+    font-size: 17px;
+  }
+}

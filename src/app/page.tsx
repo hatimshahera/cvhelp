@@ -72,16 +72,12 @@ export default async function Home() {
           </div>
         </section>
 
-        <section className="landing-section product-section" id="product" aria-labelledby="product-preview">
+        <section className="landing-section product-section" id="product" aria-label="CVhelp product preview">
           <div className="section-frame product-frame">
-            <div className="section-heading product-heading">
-              <p className="eyebrow">Product</p>
-              <h2 id="product-preview">The workspace view.</h2>
-              <p>
-                Profile bank, role evidence, drafting chat, and settings stay in clear
-                lanes instead of fighting for the same screen.
-              </p>
-            </div>
+            <p className="product-copy">
+              Profile bank, role evidence, drafting chat, and settings stay in clear lanes
+              instead of fighting for the same screen.
+            </p>
             <div className="hero-preview aside-browser" aria-label="CVhelp workspace preview">
               <div className="aside-browser-top">
                 <div className="browser-dots" aria-hidden="true">
@@ -165,12 +161,8 @@ export default async function Home() {
           </div>
         </section>
 
-        <section className="landing-section aside-capabilities" id="workflow" aria-labelledby="helps-with">
+        <section className="landing-section aside-capabilities" id="workflow" aria-label="CVhelp workflow">
           <div className="section-frame">
-            <div className="section-heading">
-              <p className="eyebrow">How it works</p>
-              <h2 id="helps-with">One workspace for profile, roles, drafts, and decisions.</h2>
-            </div>
             <div className="feature-grid">
               <article className="feature-card">
                 <Database size={22} />
@@ -191,12 +183,8 @@ export default async function Home() {
           </div>
         </section>
 
-        <section className="landing-section aside-privacy" id="privacy" aria-labelledby="privacy-title">
+        <section className="landing-section aside-privacy" id="privacy" aria-label="CVhelp privacy and control">
           <div className="section-frame privacy-frame">
-            <div>
-              <p className="eyebrow">Private by design</p>
-              <h2 id="privacy-title">A focused place for sensitive career data.</h2>
-            </div>
             <div className="privacy-grid">
               <article>
                 <LockKeyhole size={22} />
