@@ -154,20 +154,6 @@ const profileSections: ProfileSection[] = [
   "openQuestions"
 ];
 
-const profileCommandSuggestions = [
-  "What profile info do you still need from me?",
-  "Summarize my strongest evidence and missing proof.",
-  "I need to correct something saved in my profile.",
-  "Review the structured profile for gaps or overstated claims."
-];
-
-const applicationCommandSuggestions = [
-  "Generate a CV draft PDF for this application.",
-  "Compare this job against my profile and list the best evidence.",
-  "Write a concise recruiter message for this application.",
-  "What gaps, risks, and next actions should I handle?"
-];
-
 function formatLabel(value: string) {
   return value
     .replace(/_/g, " ")
@@ -805,13 +791,6 @@ export function AppShell({
       ? applicationDetail?.artifacts.find((artifact) => artifact.id === selectedWorkspaceFile.artifactId) ?? null
       : null;
   const workspaceFiles = activeApplication ? buildWorkspaceFiles(applicationDetail) : [];
-  const commandSuggestions =
-    activeMode === "build_profile" ? profileCommandSuggestions : applicationCommandSuggestions;
-  const showCommandSuggestions = !isLoadingHistory && messages.length === 0;
-
-  function applyCommandSuggestion(command: string) {
-    setMessage(command);
-  }
 
   const shellClassName = [
     "workspace-shell",
@@ -1305,20 +1284,6 @@ export function AppShell({
 
         {!isProfileEditorActive ? (
         <form className="composer" onSubmit={sendMessage}>
-          {showCommandSuggestions ? (
-            <div className="command-suggestions" aria-label="Suggested chat commands">
-              {commandSuggestions.map((command) => (
-                <button
-                  key={command}
-                  type="button"
-                  onClick={() => applyCommandSuggestion(command)}
-                  disabled={isSending || isLoadingHistory || (activeMode === "application" && !activeApplication)}
-                >
-                  {command}
-                </button>
-              ))}
-            </div>
-          ) : null}
           {selectedFiles.length ? (
             <div className="selected-files">
               {selectedFiles.map((file) => (
