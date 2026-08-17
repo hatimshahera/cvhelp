@@ -26,18 +26,23 @@ export default async function Home() {
   return (
     <LandingThemeShell>
       <main className="landing-page">
+        <header className="landing-site-header">
+          <Link className="brand landing-brand" href="/">
+            CVhelp
+          </Link>
+        </header>
+
         <section className="landing-hero aside-hero" id="workspace">
           <div className="hero-copy aside-hero-copy">
-            <div className="hero-topline">
-              <Link className="brand landing-brand" href="/">
-                CVhelp
-              </Link>
-            </div>
             <p className="hero-kicker">
               <Sparkles size={16} />
               Custom CVs and job tracking
             </p>
-            <h1>Create tailored CVs and track every application.</h1>
+            <h1>
+              Tailored CVs.
+              <br />
+              Tracked applications.
+            </h1>
             <p className="hero-lead">
               Keep your profile, evidence, and job applications in one workspace, then
               turn saved experience into role-specific CVs.
@@ -48,7 +53,7 @@ export default async function Home() {
                 <ArrowRight size={18} />
               </Link>
               <Link className="secondary-link" href={session ? "/app" : "/sign-in"}>
-                {session ? "View workspace" : "Login"}
+                {session ? "Open workspace" : "Login"}
               </Link>
             </div>
           </div>

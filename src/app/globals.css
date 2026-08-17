@@ -6196,3 +6196,68 @@ body {
     min-width: 640px;
   }
 }
+
+/* Header/hero separation: brand spans viewport, hero copy centers independently. */
+.landing-theme-shell .landing-site-header {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  justify-items: center;
+  width: 100%;
+  padding: clamp(24px, 4vh, 42px) 18px 0;
+}
+
+.landing-theme-shell .landing-site-header .landing-brand {
+  display: inline-flex;
+  align-items: center;
+  color: #ffffff;
+  font-size: clamp(22px, 2.2vw, 32px);
+  line-height: 1;
+}
+
+.landing-theme-shell .aside-hero {
+  width: 100%;
+  min-height: auto;
+  padding: clamp(84px, 13vh, 132px) clamp(18px, 5vw, 52px) clamp(42px, 7vh, 70px);
+}
+
+.landing-theme-shell .aside-hero-copy {
+  max-width: min(92vw, 980px);
+}
+
+.landing-theme-shell .hero-topline {
+  display: none;
+}
+
+.landing-theme-shell .aside-hero h1 {
+  max-width: min(92vw, 860px);
+  font-size: clamp(36px, 4.1vw, 58px);
+  line-height: 1.04;
+  text-wrap: balance;
+}
+
+.landing-theme-shell .hero-lead {
+  max-width: 610px;
+  font-size: clamp(15px, 1.1vw, 18px);
+}
+
+.landing-theme-shell .primary-link,
+.landing-theme-shell .secondary-link {
+  min-height: 36px;
+  padding-inline: 15px;
+  font-size: 13px;
+}
+
+@media (max-width: 680px) {
+  .landing-theme-shell .landing-site-header {
+    padding-top: 20px;
+  }
+
+  .landing-theme-shell .aside-hero {
+    padding-top: 64px;
+  }
+
+  .landing-theme-shell .aside-hero h1 {
+    font-size: clamp(32px, 9vw, 42px);
+  }
+}
