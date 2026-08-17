@@ -79,7 +79,7 @@ export default async function Home() {
 
         <div className="hero-preview" aria-label="CVhelp workflow preview">
           <div className="preview-toolbar">
-            <span>Mercor / AI generalist</span>
+            <span>Sample role / AI generalist</span>
             <strong>Evidence desk</strong>
           </div>
           <div className="preview-content">
