@@ -6283,6 +6283,7 @@ body {
 
 .landing-theme-shell .aside-hero {
   display: grid;
+  grid-template-columns: 1fr;
   width: 100%;
   min-height: 100vh;
   min-height: 100svh;
@@ -6293,8 +6294,10 @@ body {
 }
 
 .landing-theme-shell .aside-hero-copy {
+  display: grid;
   align-content: center;
   justify-items: center;
+  justify-self: center;
   gap: clamp(12px, 2vh, 20px);
   width: min(100%, 900px);
   max-width: none;
@@ -6310,17 +6313,22 @@ body {
 
 .landing-theme-shell .aside-hero h1 {
   max-width: 920px;
+  margin-inline: auto;
   font-size: clamp(42px, 5.45vw, 78px);
   line-height: 1.02;
+  text-align: center;
 }
 
 .landing-theme-shell .hero-lead {
   max-width: 620px;
+  margin-inline: auto;
   font-size: clamp(16px, 1.18vw, 19px);
   line-height: 1.45;
+  text-align: center;
 }
 
 .landing-theme-shell .hero-actions {
+  justify-content: center;
   gap: 10px;
   padding-top: 6px;
 }

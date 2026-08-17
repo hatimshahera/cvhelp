@@ -38,11 +38,7 @@ export default async function Home() {
               <Sparkles size={16} />
               Custom CVs and job tracking
             </p>
-            <h1>
-              Tailored CVs.
-              <br />
-              Tracked applications.
-            </h1>
+            <h1>Tailor your CV to each application.</h1>
             <p className="hero-lead">
               Keep your profile, evidence, and job applications in one workspace, then
               turn saved experience into role-specific CVs.
