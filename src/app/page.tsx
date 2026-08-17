@@ -12,12 +12,6 @@ import {
 import { authOptions } from "@/lib/auth";
 import { LandingThemeShell } from "./LandingThemeShell";
 
-const landingMetrics = [
-  ["Profile bank", "7 saved sources"],
-  ["Applications", "Role evidence desk"],
-  ["Settings", "Account and privacy"]
-];
-
 const workspaceNav = ["Build profile", "Applications", "Settings"];
 
 const applicationRows = [
@@ -63,8 +57,8 @@ export default async function Home() {
             </p>
             <h1>Build applications with the evidence already in place.</h1>
             <p className="hero-lead">
-              Build your profile once, compare it against each role, then draft CVs,
-              cover notes, and application answers with the evidence still attached.
+              Save your real experience once, match it to each role, and draft with
+              grounded evidence.
             </p>
             <div className="hero-actions">
               <Link className="primary-link" href={session ? "/app" : "/sign-up"}>
@@ -75,94 +69,98 @@ export default async function Home() {
                 {session ? "Continue" : "Login"}
               </Link>
             </div>
-            <div className="hero-proof aside-proof" aria-label="CVhelp workspace areas">
-              {landingMetrics.map(([title, detail]) => (
-                <div key={title}>
-                  <span>{title}</span>
-                  <strong>{detail}</strong>
-                </div>
-              ))}
-            </div>
           </div>
+        </section>
 
-          <div className="hero-preview aside-browser" aria-label="CVhelp workspace preview">
-            <div className="aside-browser-top">
-              <div className="browser-dots" aria-hidden="true">
-                <span />
-                <span />
-                <span />
-              </div>
-              <span>cvhelp.app/workspace</span>
-              <strong>Evidence desk</strong>
+        <section className="landing-section product-section" id="product" aria-labelledby="product-preview">
+          <div className="section-frame product-frame">
+            <div className="section-heading product-heading">
+              <p className="eyebrow">Product</p>
+              <h2 id="product-preview">The workspace view.</h2>
+              <p>
+                Profile bank, role evidence, drafting chat, and settings stay in clear
+                lanes instead of fighting for the same screen.
+              </p>
             </div>
+            <div className="hero-preview aside-browser" aria-label="CVhelp workspace preview">
+              <div className="aside-browser-top">
+                <div className="browser-dots" aria-hidden="true">
+                  <span />
+                  <span />
+                  <span />
+                </div>
+                <span>cvhelp.app/workspace</span>
+                <strong>Evidence desk</strong>
+              </div>
 
-            <div className="workspace-mock">
-              <aside className="mock-sidebar" aria-label="Workspace navigation preview">
-                <div className="mock-user">
-                  <span>YOU</span>
-                  <strong>Your profile</strong>
-                </div>
-                {workspaceNav.map((item, index) => (
-                  <div className={index === 0 ? "active" : ""} key={item}>
-                    {index === 0 && <Database size={15} />}
-                    {index === 1 && <Target size={15} />}
-                    {index === 2 && <LockKeyhole size={15} />}
-                    <span>{item}</span>
+              <div className="workspace-mock">
+                <aside className="mock-sidebar" aria-label="Workspace navigation preview">
+                  <div className="mock-user">
+                    <span>YOU</span>
+                    <strong>Your profile</strong>
                   </div>
-                ))}
-              </aside>
-
-              <section className="mock-chat" aria-label="Build profile preview">
-                <div className="mock-section-header">
-                  <span>Build profile</span>
-                  <strong>Profile bank</strong>
-                </div>
-                <div className="mock-profile-strip">
-                  <div>
-                    <strong>100%</strong>
-                    <span>complete</span>
-                  </div>
-                  <div>
-                    <strong>7</strong>
-                    <span>sources</span>
-                  </div>
-                  <div>
-                    <strong>8/8</strong>
-                    <span>intake</span>
-                  </div>
-                </div>
-                <div className="mock-message user-message">
-                  Add this job post and tell me what evidence I should use.
-                </div>
-                <div className="mock-message assistant-message">
-                  <p>Matched your profile to the role and found three strong signals.</p>
-                  <div className="mock-tags">
-                    <span>LLM evals</span>
-                    <span>Research</span>
-                    <span>Product judgement</span>
-                  </div>
-                </div>
-              </section>
-
-              <aside className="mock-applications" aria-label="Applications preview">
-                <div className="mock-section-header">
-                  <span>Applications</span>
-                  <strong>3 active</strong>
-                </div>
-                {applicationRows.map(([role, signal, status]) => (
-                  <div className="mock-row" key={role}>
-                    <div>
-                      <strong>{role}</strong>
-                      <span>{signal}</span>
+                  {workspaceNav.map((item, index) => (
+                    <div className={index === 0 ? "active" : ""} key={item}>
+                      {index === 0 && <Database size={15} />}
+                      {index === 1 && <Target size={15} />}
+                      {index === 2 && <LockKeyhole size={15} />}
+                      <span>{item}</span>
                     </div>
-                    <em>{status}</em>
+                  ))}
+                </aside>
+
+                <section className="mock-chat" aria-label="Build profile preview">
+                  <div className="mock-section-header">
+                    <span>Build profile</span>
+                    <strong>Profile bank</strong>
                   </div>
-                ))}
-                <div className="mock-guardrail">
-                  <CheckCircle2 size={16} />
-                  Claims stay tied to saved profile evidence.
-                </div>
-              </aside>
+                  <div className="mock-profile-strip">
+                    <div>
+                      <strong>100%</strong>
+                      <span>complete</span>
+                    </div>
+                    <div>
+                      <strong>7</strong>
+                      <span>sources</span>
+                    </div>
+                    <div>
+                      <strong>8/8</strong>
+                      <span>intake</span>
+                    </div>
+                  </div>
+                  <div className="mock-message user-message">
+                    Add this job post and tell me what evidence I should use.
+                  </div>
+                  <div className="mock-message assistant-message">
+                    <p>Matched your profile to the role and found three strong signals.</p>
+                    <div className="mock-tags">
+                      <span>LLM evals</span>
+                      <span>Research</span>
+                      <span>Product judgement</span>
+                    </div>
+                  </div>
+                </section>
+
+                <aside className="mock-applications" aria-label="Applications preview">
+                  <div className="mock-section-header">
+                    <span>Applications</span>
+                    <strong>3 active</strong>
+                  </div>
+                  {applicationRows.map(([role, signal, status]) => (
+                    <div className="mock-row" key={role}>
+                      <div>
+                        <strong>{role}</strong>
+                        <span>{signal}</span>
+                      </div>
+                      <em>{status}</em>
+                    </div>
+                  ))}
+                  <div className="mock-guardrail">
+                    <CheckCircle2 size={16} />
+                    Claims stay tied to saved profile evidence.
+                  </div>
+                </aside>
+              </div>
             </div>
           </div>
         </section>
@@ -213,6 +211,12 @@ export default async function Home() {
             </div>
           </div>
         </section>
+
+        <footer className="landing-footer">
+          <Link href="/">About</Link>
+          <Link href="mailto:hello@cvhelp.app">Contacts</Link>
+          <span>Copyright Hatim Shaherawala</span>
+        </footer>
       </main>
     </LandingThemeShell>
   );

@@ -5503,3 +5503,192 @@ body {
     border-radius: 18px;
   }
 }
+
+/* Final landing flow: section 1 intro, section 2 product, sections 3/4 support, footer. */
+.landing-theme-shell::after {
+  background:
+    linear-gradient(180deg, rgba(2, 7, 12, 0.72), rgba(2, 7, 12, 0.62) 38%, rgba(2, 7, 12, 0.92)),
+    radial-gradient(circle at 72% 12%, rgba(255, 255, 255, 0.1), transparent 34%);
+}
+
+.landing-theme-shell .landing-page {
+  min-height: 100vh;
+  overflow-x: clip;
+  background: transparent;
+}
+
+.landing-theme-shell .aside-hero {
+  display: flex;
+  width: min(100%, 1120px);
+  min-height: min(100svh, 760px);
+  padding: clamp(24px, 4vh, 42px) clamp(18px, 5vw, 64px) clamp(72px, 12vh, 132px);
+}
+
+.landing-theme-shell .aside-hero-copy {
+  width: 100%;
+  max-width: 760px;
+}
+
+.landing-theme-shell .hero-topline {
+  align-items: center;
+  margin-bottom: clamp(72px, 14vh, 132px);
+}
+
+.landing-theme-shell .hero-kicker {
+  color: rgba(255, 255, 255, 0.74);
+}
+
+.landing-theme-shell .aside-hero h1 {
+  max-width: 720px;
+  color: #ffffff;
+  font-size: clamp(48px, 5.8vw, 86px);
+  line-height: 1;
+}
+
+.landing-theme-shell .hero-lead {
+  max-width: 620px;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: clamp(18px, 1.55vw, 23px);
+}
+
+.landing-theme-shell .product-section {
+  padding: 0 clamp(18px, 5vw, 64px) clamp(72px, 10vh, 118px);
+  background: transparent;
+}
+
+.landing-theme-shell .product-frame {
+  display: grid;
+  gap: clamp(26px, 4vw, 46px);
+  width: min(100%, 1280px);
+  padding: clamp(26px, 4vw, 52px);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 28px;
+  background: rgba(3, 9, 15, 0.62);
+  box-shadow: 0 34px 120px rgba(0, 0, 0, 0.34);
+  backdrop-filter: blur(18px);
+}
+
+.landing-theme-shell .product-heading {
+  max-width: 760px;
+}
+
+.landing-theme-shell .product-heading h2 {
+  color: #ffffff;
+  font-size: clamp(34px, 4vw, 58px);
+  line-height: 1.02;
+}
+
+.landing-theme-shell .product-heading p {
+  max-width: 680px;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: clamp(17px, 1.35vw, 20px);
+  line-height: 1.5;
+}
+
+.landing-theme-shell .product-frame .aside-browser {
+  justify-self: center;
+  width: min(100%, 1040px);
+  max-width: none;
+  margin: 0;
+  border-radius: 22px;
+  transform: none;
+}
+
+.landing-theme-shell .product-frame .workspace-mock,
+.landing-theme-dark .product-frame .workspace-mock {
+  min-height: 500px;
+}
+
+.landing-theme-shell .aside-capabilities,
+.landing-theme-shell .aside-privacy {
+  background: rgba(3, 9, 15, 0.92);
+}
+
+.landing-theme-shell .aside-capabilities .section-frame,
+.landing-theme-shell .aside-privacy .section-frame {
+  padding-block: clamp(72px, 10vw, 120px);
+}
+
+.landing-theme-shell .landing-footer {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 12px 24px;
+  padding: 28px clamp(18px, 5vw, 64px) 34px;
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(3, 9, 15, 0.96);
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 14px;
+  font-weight: 750;
+}
+
+.landing-theme-shell .landing-footer a {
+  color: #ffffff;
+  text-decoration: none;
+}
+
+.landing-theme-shell .landing-footer a:hover,
+.landing-theme-shell .landing-footer a:focus-visible {
+  text-decoration: underline;
+}
+
+@media (max-width: 1180px) {
+  .landing-theme-shell .product-frame .workspace-mock,
+  .landing-theme-dark .product-frame .workspace-mock {
+    min-height: 440px;
+  }
+}
+
+@media (max-width: 860px) {
+  .landing-theme-shell .aside-hero {
+    min-height: auto;
+    padding-bottom: 64px;
+  }
+
+  .landing-theme-shell .hero-topline {
+    margin-bottom: 58px;
+  }
+
+  .landing-theme-shell .product-frame {
+    padding: 18px;
+    border-radius: 22px;
+  }
+
+  .landing-theme-shell .product-frame .aside-browser {
+    overflow-x: auto;
+  }
+
+  .landing-theme-shell .product-frame .workspace-mock {
+    min-width: 820px;
+  }
+}
+
+@media (max-width: 680px) {
+  .landing-theme-shell .hero-topline {
+    align-items: flex-start;
+    margin-bottom: 44px;
+  }
+
+  .landing-theme-shell .aside-hero h1 {
+    font-size: clamp(38px, 11vw, 50px);
+  }
+
+  .landing-theme-shell .hero-account-actions {
+    width: 100%;
+  }
+
+  .landing-theme-shell .nav-link,
+  .landing-theme-shell .nav-primary {
+    flex: 1;
+  }
+
+  .landing-theme-shell .product-section {
+    padding-inline: 12px;
+  }
+
+  .landing-theme-shell .product-frame .workspace-mock {
+    min-width: 760px;
+  }
+}
