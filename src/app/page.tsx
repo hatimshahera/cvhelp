@@ -53,12 +53,12 @@ export default async function Home() {
             </div>
             <p className="hero-kicker">
               <Sparkles size={16} />
-              Private workspace for real applications
+              Custom CVs and job tracking
             </p>
-            <h1>Build applications with the evidence already in place.</h1>
+            <h1>Custom CVs from one career workspace.</h1>
             <p className="hero-lead">
-              Save your real experience once, match it to each role, and draft with
-              grounded evidence.
+              Keep your profile, evidence, and job applications together, then create
+              tailored CVs for each role without losing track of what is true.
             </p>
             <div className="hero-actions">
               <Link className="primary-link" href={session ? "/app" : "/sign-up"}>
@@ -75,8 +75,8 @@ export default async function Home() {
         <section className="landing-section product-section" id="product" aria-label="CVhelp product preview">
           <div className="section-frame product-frame">
             <p className="product-copy">
-              Profile bank, role evidence, drafting chat, and settings stay in clear lanes
-              instead of fighting for the same screen.
+              Add your experience once, compare it against a job post, and keep every
+              tailored CV connected to the application it belongs to.
             </p>
             <div className="hero-preview aside-browser" aria-label="CVhelp workspace preview">
               <div className="aside-browser-top">
@@ -166,18 +166,18 @@ export default async function Home() {
             <div className="feature-grid">
               <article className="feature-card">
                 <Database size={22} />
-                <h3>Profile bank</h3>
-                <p>Save CV details, links, projects, evidence, and preferences as source material.</p>
+                <h3>One profile bank</h3>
+                <p>Store CV details, links, projects, achievements, and evidence in one place.</p>
               </article>
               <article className="feature-card">
                 <Target size={22} />
-                <h3>Role matching</h3>
-                <p>Break down each job post into signals, gaps, and evidence-backed application choices.</p>
+                <h3>Tracked applications</h3>
+                <p>Keep roles, notes, status, and evidence together as each application moves forward.</p>
               </article>
               <article className="feature-card">
                 <MessageSquareText size={22} />
-                <h3>Drafting chat</h3>
-                <p>Shape CV bullets, cover notes, and form answers without drifting away from what is true.</p>
+                <h3>Custom CV drafts</h3>
+                <p>Create role-specific CVs and answers from the experience you have already saved.</p>
               </article>
             </div>
           </div>
@@ -188,13 +188,13 @@ export default async function Home() {
             <div className="privacy-grid">
               <article>
                 <LockKeyhole size={22} />
-                <h3>Your profile is the source of truth</h3>
-                <p>Drafts are generated around saved evidence, not vague memory or invented claims.</p>
+                <h3>Your data stays organised</h3>
+                <p>Profile details, evidence, and drafts stay tied to the role they support.</p>
               </article>
               <article>
                 <CheckCircle2 size={22} />
-                <h3>You stay in control</h3>
-                <p>Applications, profile sections, and account settings stay separated so the workspace feels clear.</p>
+                <h3>Draft with confidence</h3>
+                <p>Use saved facts as the source material for sharper CVs, cover notes, and answers.</p>
               </article>
             </div>
           </div>
