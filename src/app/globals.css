@@ -1822,37 +1822,6 @@ h3 {
     linear-gradient(180deg, rgba(251, 252, 251, 0.92), #fbfcfb);
 }
 
-.command-suggestions {
-  grid-column: 1 / -1;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  max-height: 76px;
-  overflow-y: auto;
-}
-
-.command-suggestions button {
-  max-width: 100%;
-  min-height: 34px;
-  padding: 0 10px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: white;
-  color: #33433a;
-  font-size: 12px;
-  font-weight: 800;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.command-suggestions button:not(:disabled):hover,
-.command-suggestions button:not(:disabled):focus-visible {
-  border-color: #cce4d6;
-  background: #f4faf6;
-  color: var(--accent-dark);
-}
-
 .selected-files {
   grid-column: 1 / -1;
   display: flex;
@@ -2100,10 +2069,6 @@ h3 {
   .composer {
     grid-template-columns: 1fr;
     padding: 14px 18px 18px;
-  }
-
-  .command-suggestions {
-    max-height: 98px;
   }
 
   .composer-row {
@@ -2790,18 +2755,6 @@ body {
   padding: 16px 30px 22px;
   border-top: 2px solid #111318;
   background: var(--paper);
-}
-
-.command-suggestions button {
-  border: 1px solid #111318;
-  border-radius: var(--radius);
-  background: #ffffff;
-  color: #111318;
-}
-
-.command-suggestions button:not(:disabled):hover {
-  background: var(--accent);
-  box-shadow: 3px 3px 0 #111318;
 }
 
 .composer input,
@@ -3575,10 +3528,10 @@ body {
   --workspace-ink: #f7f8f5;
   --workspace-muted: rgba(247, 248, 245, 0.68);
   --workspace-line: rgba(255, 255, 255, 0.16);
-  --workspace-glass: rgba(8, 15, 24, 0.76);
+  --workspace-glass: rgba(8, 15, 24, 0.68);
   --workspace-paper: rgba(248, 250, 247, 0.94);
   --workspace-paper-line: rgba(8, 15, 24, 0.12);
-  grid-template-columns: minmax(248px, 292px) minmax(460px, 1fr) minmax(340px, 420px);
+  grid-template-columns: minmax(248px, 292px) minmax(460px, 1fr) 10px minmax(320px, var(--workspace-side-panel-width, 400px));
   gap: 0;
   background:
     linear-gradient(180deg, rgba(2, 7, 12, 0.7), rgba(2, 7, 12, 0.9)),
@@ -3589,7 +3542,7 @@ body {
 }
 
 .workspace-shell.side-panel-collapsed {
-  grid-template-columns: minmax(248px, 292px) minmax(460px, 1fr) 0;
+  grid-template-columns: minmax(248px, 292px) minmax(460px, 1fr) 0 0;
 }
 
 .workspace-shell.profile-workspace {
@@ -3607,8 +3560,8 @@ body {
 }
 
 .settings-rail {
-  gap: 14px;
-  padding: 16px;
+  gap: 12px;
+  padding: 18px 16px;
   border-right: 1px solid var(--workspace-line);
 }
 
@@ -3629,10 +3582,33 @@ body {
 .nav-subitem,
 .settings-actions .account-link,
 .settings-actions .logout-button {
-  border: 1px solid var(--workspace-line);
-  background: rgba(255, 255, 255, 0.055);
+  border: 1px solid transparent;
+  background: transparent;
   color: var(--workspace-ink);
   box-shadow: none;
+}
+
+.user-tile {
+  margin-top: 22px;
+  padding: 10px 2px;
+}
+
+.rail-nav button,
+.nav-subitem,
+.settings-actions .account-link,
+.settings-actions .logout-button,
+.application-folder-button,
+.application-file-list button {
+  min-height: 38px;
+  padding: 8px 10px;
+  border-radius: 12px;
+}
+
+.add-application-button,
+.application-search,
+.application-filter-tabs button {
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.055);
 }
 
 .user-tile span,
@@ -3655,8 +3631,8 @@ body {
 .application-tree-item.active > .application-folder-button,
 .application-file-list button.active,
 .application-filter-tabs button.active {
-  border-color: rgba(244, 183, 27, 0.7);
-  background: rgba(244, 183, 27, 0.16);
+  border-color: transparent;
+  background: linear-gradient(90deg, rgba(244, 183, 27, 0.24), rgba(244, 183, 27, 0.08));
   color: #ffffff;
   box-shadow: inset 3px 0 0 #f4b71b;
 }
@@ -3678,13 +3654,13 @@ body {
 .applications-heading,
 .source-list-heading,
 .profile-bank-title {
-  border-bottom-color: var(--workspace-line);
+  border-bottom-color: rgba(255, 255, 255, 0.08);
 }
 
 .applications-heading span,
 .source-list-heading span {
-  border-color: var(--workspace-line);
-  background: rgba(255, 255, 255, 0.08);
+  border-color: transparent;
+  background: rgba(255, 255, 255, 0.06);
   color: var(--workspace-ink);
 }
 
@@ -3709,7 +3685,7 @@ body {
 
 .chat-area {
   margin: 0;
-  border-right: 1px solid var(--workspace-line);
+  border-right: 0;
   border-left: 1px solid rgba(255, 255, 255, 0.08);
   background: var(--workspace-paper);
   color: #08111b;
@@ -3761,13 +3737,13 @@ body {
 }
 
 .message.assistant {
-  border-color: rgba(8, 17, 27, 0.1);
+  border-color: transparent;
   background: rgba(255, 255, 255, 0.86);
-  box-shadow: 0 18px 48px rgba(8, 17, 27, 0.06);
+  box-shadow: 0 14px 38px rgba(8, 17, 27, 0.055);
 }
 
 .message.user {
-  border: 1px solid rgba(8, 17, 27, 0.1);
+  border: 0;
   background: #08111b;
   color: #ffffff;
   box-shadow: none;
@@ -3827,7 +3803,22 @@ body {
 .memory-side-panel {
   gap: 14px;
   padding: 16px;
-  border-left: 1px solid var(--workspace-line);
+  border-left: 0;
+}
+
+.side-panel-resizer {
+  width: 10px;
+  height: 100dvh;
+  cursor: col-resize;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.16), transparent);
+  touch-action: none;
+}
+
+.side-panel-resizer:hover,
+.side-panel-resizer:focus-visible,
+.workspace-shell.side-panel-resizing .side-panel-resizer {
+  background: linear-gradient(90deg, transparent, rgba(244, 183, 27, 0.68), transparent);
+  outline: none;
 }
 
 .side-panel-heading h2,
@@ -3900,6 +3891,14 @@ body {
     height: 340px;
     border-top: 1px solid var(--workspace-line);
     border-left: 0;
+  }
+
+  .workspace-shell.side-panel-collapsed .memory-side-panel {
+    display: none;
+  }
+
+  .side-panel-resizer {
+    display: none;
   }
 }
 

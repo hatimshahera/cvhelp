@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { signOut } from "next-auth/react";
 import {
   BriefcaseBusiness,
@@ -293,6 +293,8 @@ export function AppShell({
   const [activeApplicationId, setActiveApplicationId] = useState<string | null>(null);
   const [expandedApplicationId, setExpandedApplicationId] = useState<string | null>(null);
   const [isSidePanelOpen, setIsSidePanelOpen] = useState(true);
+  const [sidePanelWidth, setSidePanelWidth] = useState(400);
+  const [isResizingSidePanel, setIsResizingSidePanel] = useState(false);
   const [applications, setApplications] = useState<ApplicationItem[]>([]);
   const [applicationSearch, setApplicationSearch] = useState("");
   const [applicationListFilter, setApplicationListFilter] = useState<"active" | "archived" | "all">("active");
@@ -507,6 +509,31 @@ export function AppShell({
       behavior: "smooth"
     });
   }, [messages, isSending]);
+
+  useEffect(() => {
+    if (!isResizingSidePanel) return;
+
+    function handlePointerMove(event: PointerEvent) {
+      const nextWidth = window.innerWidth - event.clientX;
+      setSidePanelWidth(Math.min(620, Math.max(320, nextWidth)));
+    }
+
+    function handlePointerUp() {
+      setIsResizingSidePanel(false);
+    }
+
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerUp);
+
+    return () => {
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
+    };
+  }, [isResizingSidePanel]);
 
   async function sendMessage(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -794,11 +821,15 @@ export function AppShell({
 
   const shellClassName = [
     "workspace-shell",
+    isResizingSidePanel ? "side-panel-resizing" : "",
     activeMode === "application" && isSidePanelOpen ? "" : "side-panel-collapsed",
     activeMode === "build_profile" ? "profile-workspace" : ""
   ]
     .filter(Boolean)
     .join(" ");
+  const shellStyle = {
+    "--workspace-side-panel-width": `${sidePanelWidth}px`
+  } as CSSProperties;
   const isProfileEditorActive = activeMode === "build_profile" && profileView === "profile";
 
   function openProfileChat() {
@@ -962,7 +993,7 @@ export function AppShell({
   }
 
   return (
-    <main className={shellClassName}>
+    <main className={shellClassName} style={shellStyle}>
       <aside className="settings-rail">
         <div>
           <p className="brand">CVhelp</p>
@@ -1351,6 +1382,33 @@ export function AppShell({
       </section>
 
       {activeMode === "application" ? (
+      <>
+      {isSidePanelOpen ? (
+        <div
+          className="side-panel-resizer"
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="Resize application file panel"
+          aria-valuemin={320}
+          aria-valuemax={620}
+          aria-valuenow={sidePanelWidth}
+          tabIndex={0}
+          onPointerDown={(event) => {
+            event.preventDefault();
+            setIsResizingSidePanel(true);
+          }}
+          onKeyDown={(event) => {
+            if (event.key === "ArrowLeft") {
+              event.preventDefault();
+              setSidePanelWidth((current) => Math.min(620, current + 24));
+            }
+            if (event.key === "ArrowRight") {
+              event.preventDefault();
+              setSidePanelWidth((current) => Math.max(320, current - 24));
+            }
+          }}
+        />
+      ) : null}
       <aside className="memory-side-panel" aria-label="Application files">
           <>
             <div className="side-panel-heading">
@@ -1418,6 +1476,7 @@ export function AppShell({
             )}
           </>
       </aside>
+      </>
       ) : null}
     </main>
   );
