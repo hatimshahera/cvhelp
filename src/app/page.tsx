@@ -153,14 +153,14 @@ export default async function Home() {
                 <p>Store CV details, links, projects, achievements, and evidence in one place.</p>
               </article>
               <article className="feature-card">
-                <Target size={22} />
-                <h3>Tracked applications</h3>
-                <p>Keep roles, notes, status, and evidence together as each application moves forward.</p>
-              </article>
-              <article className="feature-card">
                 <MessageSquareText size={22} />
                 <h3>Custom CV drafts</h3>
                 <p>Create role-specific CVs and answers from the experience you have already saved.</p>
+              </article>
+              <article className="feature-card">
+                <Target size={22} />
+                <h3>Tracked applications</h3>
+                <p>Keep roles, notes, status, and evidence together as each application moves forward.</p>
               </article>
             </div>
           </div>

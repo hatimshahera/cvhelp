@@ -6528,7 +6528,7 @@ body {
   border-radius: 18px;
   background: rgba(12, 22, 33, 0.62);
   box-shadow: 0 20px 70px rgba(0, 0, 0, 0.22);
-  backdrop-filter: blur(18px);
+  backdrop-filter: blur(24px);
 }
 
 .landing-theme-shell .feature-card svg,
@@ -6548,13 +6548,14 @@ body {
 
 .landing-theme-shell .privacy-frame {
   display: grid;
+  width: min(100%, 980px);
   place-items: center;
 }
 
 .landing-theme-shell .privacy-grid {
-  grid-template-columns: repeat(2, minmax(260px, 420px));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   justify-content: center;
-  width: min(100%, 900px);
+  width: min(100%, 920px);
   margin: 0 auto;
   gap: clamp(18px, 3vw, 28px);
   border: 0;
@@ -6562,8 +6563,19 @@ body {
   background: transparent;
 }
 
+.landing-theme-shell .aside-privacy {
+  min-height: auto;
+  padding-block: clamp(72px, 12vh, 130px);
+}
+
+.landing-theme-shell .aside-privacy .section-frame {
+  width: min(100%, 980px);
+}
+
 .landing-theme-shell .landing-footer {
   justify-content: center;
+  min-height: auto;
+  padding-block: 22px 26px;
 }
 
 @media (max-width: 680px) {
