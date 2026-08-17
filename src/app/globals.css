@@ -4130,7 +4130,7 @@ body {
 
 .landing-theme-shell .aside-capabilities {
   min-height: auto;
-  padding-block: clamp(72px, 10vh, 118px);
+  padding-block: clamp(34px, 4vw, 52px);
 }
 
 .landing-theme-shell .aside-capabilities .section-frame {
@@ -4138,9 +4138,10 @@ body {
 }
 
 .landing-theme-shell .aside-capabilities .feature-grid {
+  --feature-card-gap: clamp(18px, 2.4vw, 28px);
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: clamp(14px, 2vw, 22px);
+  gap: var(--feature-card-gap);
   width: 100%;
   overflow: visible;
   border: 0;
