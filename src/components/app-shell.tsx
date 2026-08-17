@@ -997,13 +997,6 @@ export function AppShell({
       <aside className="settings-rail">
         <div>
           <p className="brand">CVhelp</p>
-          <div className="user-tile">
-            <UserRound size={18} />
-            <div>
-              <strong>{userName}</strong>
-              <span>{userEmail}</span>
-            </div>
-          </div>
         </div>
 
         <nav className="rail-nav" aria-label="Workspace navigation">
@@ -1220,6 +1213,14 @@ export function AppShell({
             </div>
           ) : null}
         </section>
+
+        <div className="user-tile">
+          <UserRound size={18} />
+          <div>
+            <strong>{userName}</strong>
+            <span>{userEmail}</span>
+          </div>
+        </div>
       </aside>
 
       <section className="chat-area">

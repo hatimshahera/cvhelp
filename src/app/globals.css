@@ -3560,8 +3560,8 @@ body {
 }
 
 .settings-rail {
-  gap: 12px;
-  padding: 18px 16px;
+  gap: 10px;
+  padding: 16px 14px;
   border-right: 1px solid var(--workspace-line);
 }
 
@@ -3589,8 +3589,10 @@ body {
 }
 
 .user-tile {
-  margin-top: 22px;
-  padding: 10px 2px;
+  margin-top: 0;
+  padding: 10px 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 0;
 }
 
 .rail-nav button,
@@ -3599,16 +3601,20 @@ body {
 .settings-actions .logout-button,
 .application-folder-button,
 .application-file-list button {
-  min-height: 38px;
-  padding: 8px 10px;
-  border-radius: 12px;
+  min-height: 32px;
+  padding: 5px 8px;
+  border-radius: 8px;
 }
 
 .add-application-button,
 .application-search,
 .application-filter-tabs button {
-  border-radius: 14px;
+  border-radius: 10px;
   background: rgba(255, 255, 255, 0.055);
+}
+
+.add-application-button {
+  margin-top: 2px;
 }
 
 .user-tile span,
@@ -3637,6 +3643,24 @@ body {
   box-shadow: inset 3px 0 0 #f4b71b;
 }
 
+.settings-menu {
+  margin-top: auto;
+}
+
+.settings-menu > .nav-section-toggle {
+  background: transparent;
+}
+
+.settings-menu > .nav-section-toggle:hover,
+.settings-menu > .nav-section-toggle:focus-visible {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.nav-subitems,
+.settings-actions {
+  padding-left: 24px;
+}
+
 .rail-nav button:not(.active):hover,
 .application-folder-button:hover,
 .application-file-list button:hover,
@@ -3657,6 +3681,10 @@ body {
   border-bottom-color: rgba(255, 255, 255, 0.08);
 }
 
+.applications-heading {
+  display: none;
+}
+
 .applications-heading span,
 .source-list-heading span {
   border-color: transparent;
@@ -3673,6 +3701,40 @@ body {
 .application-search input {
   background: transparent;
   color: var(--workspace-ink);
+}
+
+.applications-panel {
+  gap: 9px;
+}
+
+.application-list-controls {
+  gap: 7px;
+}
+
+.application-filter-tabs {
+  gap: 6px;
+}
+
+.applications-list {
+  gap: 3px;
+  padding: 4px 0 0;
+}
+
+.application-tree-item {
+  gap: 0;
+}
+
+.application-folder-button {
+  grid-template-columns: 18px minmax(0, 1fr);
+}
+
+.application-file-list {
+  gap: 0;
+  padding: 0 0 2px 30px;
+}
+
+.application-file-list button {
+  color: rgba(247, 248, 245, 0.54);
 }
 
 .job-description-form button,
