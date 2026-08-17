@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 const themes = [
   { id: "light", label: "Light" },
@@ -9,19 +9,39 @@ const themes = [
 ] as const;
 
 type ThemeId = (typeof themes)[number]["id"];
+const themeStorageKey = "cvhelp-landing-theme";
+
+function isThemeId(value: string | null): value is ThemeId {
+  return themes.some((theme) => theme.id === value);
+}
+
+function getStoredTheme(): ThemeId {
+  if (typeof window === "undefined") return "dark";
+
+  const storedTheme = window.localStorage.getItem(themeStorageKey);
+  return isThemeId(storedTheme) ? storedTheme : "dark";
+}
 
 export function LandingThemeShell({ children }: { children: ReactNode }) {
-  const [theme, setTheme] = useState<ThemeId>("dark");
+  const [theme, setTheme] = useState<ThemeId>(getStoredTheme);
 
   const activeIndex = themes.findIndex((item) => item.id === theme);
+
+  useEffect(() => {
+    const storedTheme = window.localStorage.getItem(themeStorageKey);
+    if (isThemeId(storedTheme)) {
+      setTheme(storedTheme);
+    }
+  }, []);
 
   function cycleTheme() {
     const next = themes[(activeIndex + 1) % themes.length];
     setTheme(next.id);
+    window.localStorage.setItem(themeStorageKey, next.id);
   }
 
   return (
-    <div className={`landing-theme-shell landing-theme-${theme}`}>
+    <div className={`landing-theme-shell landing-theme-${theme}`} suppressHydrationWarning>
       <div className="theme-wallpapers" aria-hidden="true">
         <span className="theme-wallpaper theme-wallpaper-light" />
         <span className="theme-wallpaper theme-wallpaper-warm" />
