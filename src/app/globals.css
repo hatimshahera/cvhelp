@@ -4129,8 +4129,7 @@ body {
 }
 
 .landing-theme-shell .aside-capabilities {
-  min-height: auto;
-  padding-block: clamp(22px, 3vw, 36px);
+  padding-block: clamp(32px, 5vh, 56px);
 }
 
 .landing-theme-shell .aside-capabilities .section-frame {
@@ -4138,7 +4137,7 @@ body {
 }
 
 .landing-theme-shell .aside-capabilities .feature-grid {
-  --feature-card-gap: clamp(14px, 1.7vw, 22px);
+  --feature-card-gap: clamp(12px, 1.5vw, 20px);
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: var(--feature-card-gap);
@@ -4151,8 +4150,8 @@ body {
 
 .landing-theme-shell .aside-capabilities .feature-card {
   grid-column: span 2;
-  min-height: clamp(168px, 15vw, 220px);
-  padding: clamp(18px, 2.2vw, 30px);
+  min-height: clamp(150px, 13vw, 200px);
+  padding: clamp(16px, 1.9vw, 26px);
   border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 18px;
   background: var(--home-panel);
@@ -4176,18 +4175,18 @@ body {
 }
 
 .landing-theme-shell .feature-card h3 {
-  margin-top: clamp(22px, 3.2vw, 38px);
+  margin-top: clamp(18px, 2.5vw, 30px);
   color: #ffffff;
-  font-size: clamp(20px, 1.55vw, 26px);
+  font-size: clamp(18px, 1.35vw, 23px);
   line-height: 1.1;
 }
 
 .landing-theme-shell .feature-card p {
   max-width: 36rem;
-  margin-top: 10px;
+  margin-top: 8px;
   color: rgba(255, 255, 255, 0.78);
-  font-size: clamp(14px, 1vw, 17px);
-  line-height: 1.42;
+  font-size: clamp(13px, 0.9vw, 16px);
+  line-height: 1.38;
 }
 
 .landing-theme-shell .landing-footer {
