@@ -1189,7 +1189,6 @@ export function AppShell({
             <Settings size={18} />
             <span>
               <strong>Settings</strong>
-              <small>Account and session</small>
             </span>
             {isSettingsOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
           </button>

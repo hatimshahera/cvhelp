@@ -3328,8 +3328,36 @@ body {
 }
 
 .nav-section-toggle {
+  display: grid;
+  align-items: center;
+  gap: 10px;
   width: 100%;
   grid-template-columns: auto minmax(0, 1fr) auto;
+}
+
+.nav-section-toggle span {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.nav-section-toggle strong,
+.nav-section-toggle small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nav-section-toggle strong {
+  font-size: 15px;
+}
+
+.nav-section-toggle small {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.25;
 }
 
 .nav-section-toggle > svg:last-child {
