@@ -3589,10 +3589,28 @@ body {
 }
 
 .user-tile {
+  display: grid;
+  width: 100%;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
   margin-top: 0;
   padding: 10px 8px;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 0;
+  text-align: left;
+}
+
+.user-tile div {
+  min-width: 0;
+}
+
+.user-tile strong,
+.user-tile span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .rail-nav button,
@@ -3647,18 +3665,36 @@ body {
   margin-top: auto;
 }
 
-.settings-menu > .nav-section-toggle {
+.settings-menu > .user-tile {
+  border-right: 0;
+  border-bottom: 0;
+  border-left: 0;
   background: transparent;
 }
 
-.settings-menu > .nav-section-toggle:hover,
-.settings-menu > .nav-section-toggle:focus-visible {
+.settings-menu > .user-tile:hover,
+.settings-menu > .user-tile:focus-visible {
   background: rgba(255, 255, 255, 0.07);
+  outline: none;
 }
 
 .nav-subitems,
 .settings-actions {
   padding-left: 24px;
+}
+
+.settings-actions {
+  padding-top: 6px;
+  padding-bottom: 0;
+}
+
+.settings-actions .account-link,
+.settings-actions .logout-button {
+  min-height: 30px;
+  padding: 4px 8px;
+  border-color: transparent;
+  background: transparent;
+  color: var(--workspace-muted);
 }
 
 .rail-nav button:not(.active):hover,

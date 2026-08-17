@@ -1182,17 +1182,18 @@ export function AppShell({
         </section>
         ) : null}
 
-        <section className="settings-menu" aria-label="Settings">
+        <section className="settings-menu" aria-label="Account menu">
           <button
-            className="nav-section-toggle"
+            className="user-tile"
             type="button"
             onClick={() => setIsSettingsOpen((current) => !current)}
             aria-expanded={isSettingsOpen}
           >
-            <Settings size={18} />
-            <span>
-              <strong>Settings</strong>
-            </span>
+            <UserRound size={18} />
+            <div>
+              <strong>{userName}</strong>
+              <span>{userEmail}</span>
+            </div>
             {isSettingsOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
           </button>
 
@@ -1213,14 +1214,6 @@ export function AppShell({
             </div>
           ) : null}
         </section>
-
-        <div className="user-tile">
-          <UserRound size={18} />
-          <div>
-            <strong>{userName}</strong>
-            <span>{userEmail}</span>
-          </div>
-        </div>
       </aside>
 
       <section className="chat-area">
