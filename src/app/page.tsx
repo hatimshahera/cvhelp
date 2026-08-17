@@ -12,9 +12,17 @@ import {
 import { authOptions } from "@/lib/auth";
 
 const landingMetrics = [
-  ["01", "Profile bank"],
-  ["02", "Role evidence"],
-  ["03", "Grounded drafts"]
+  ["Profile bank", "7 saved sources"],
+  ["Applications", "Role evidence desk"],
+  ["Settings", "Account and privacy"]
+];
+
+const workspaceNav = ["Build profile", "Applications", "Settings"];
+
+const applicationRows = [
+  ["AI generalist", "Evidence matched", "Ready"],
+  ["Product engineer", "Drafting answers", "Active"],
+  ["Research role", "Profile gaps found", "Review"]
 ];
 
 export default async function Home() {
@@ -26,6 +34,11 @@ export default async function Home() {
         <Link className="brand landing-brand" href="/">
           CVhelp
         </Link>
+        <nav className="landing-product-nav" aria-label="Product">
+          <a href="#workspace">Workspace</a>
+          <a href="#workflow">Workflow</a>
+          <a href="#privacy">Privacy</a>
+        </nav>
         <nav className="landing-actions" aria-label="Account">
           {session ? (
             <Link className="nav-primary" href="/app">
@@ -46,17 +59,16 @@ export default async function Home() {
         </nav>
       </header>
 
-      <section className="landing-hero">
-        <div className="hero-copy">
+      <section className="landing-hero aside-hero" id="workspace">
+        <div className="hero-copy aside-hero-copy">
           <p className="hero-kicker">
             <Sparkles size={16} />
-            Private CV and application workspace
+            Private workspace for real applications
           </p>
-          <h1>Turn job posts into stronger applications.</h1>
+          <h1>The application workspace that keeps every draft grounded.</h1>
           <p className="hero-lead">
-            CVhelp helps you keep your experience in one place, compare it against a role,
-            and shape focused CVs, cover notes, and application answers without losing track
-            of what is true.
+            Build your profile once, compare it against each role, then draft CVs,
+            cover notes, and application answers with the evidence still attached.
           </p>
           <div className="hero-actions">
             <Link className="primary-link" href={session ? "/app" : "/sign-up"}>
@@ -67,81 +79,137 @@ export default async function Home() {
               {session ? "Continue" : "Login"}
             </Link>
           </div>
-          <div className="hero-proof" aria-label="CVhelp workflow steps">
-            {landingMetrics.map(([number, label]) => (
-              <div key={label}>
-                <span>{number}</span>
-                <strong>{label}</strong>
+          <div className="hero-proof aside-proof" aria-label="CVhelp workspace areas">
+            {landingMetrics.map(([title, detail]) => (
+              <div key={title}>
+                <span>{title}</span>
+                <strong>{detail}</strong>
               </div>
             ))}
           </div>
         </div>
 
-        <div className="hero-preview" aria-label="CVhelp workflow preview">
-          <div className="preview-toolbar">
-            <span>Sample role / AI generalist</span>
+        <div className="hero-preview aside-browser" aria-label="CVhelp workspace preview">
+          <div className="aside-browser-top">
+            <div className="browser-dots" aria-hidden="true">
+              <span />
+              <span />
+              <span />
+            </div>
+            <span>cvhelp.app/workspace</span>
             <strong>Evidence desk</strong>
           </div>
-          <div className="preview-content">
-            <div className="preview-column preview-column-primary">
-              <p className="preview-label">Signal pulled from role</p>
-              <h2>Agents, evaluation, product judgement, written communication.</h2>
-              <div className="preview-tags" aria-label="Role keywords">
-                <span>LLM evals</span>
-                <span>Research</span>
-                <span>Shipping taste</span>
+
+          <div className="workspace-mock">
+            <aside className="mock-sidebar" aria-label="Workspace navigation preview">
+              <div className="mock-user">
+                <span>YOU</span>
+                <strong>Your profile</strong>
               </div>
-            </div>
-            <div className="preview-column highlighted">
-              <p className="preview-label">Drafting guardrails</p>
-              <ul>
-                <li>
-                  <CheckCircle2 size={16} />
-                  Match evidence to role requirements
-                </li>
-                <li>
-                  <CheckCircle2 size={16} />
-                  Rewrite bullets with measurable context
-                </li>
-                <li>
-                  <CheckCircle2 size={16} />
-                  Keep claims grounded in your profile
-                </li>
-              </ul>
-            </div>
-            <div className="preview-column preview-column-footer">
-              <p className="preview-label">Next action</p>
-              <p>Generate a tailored CV PDF and keep the reasoning attached to this application.</p>
-            </div>
+              {workspaceNav.map((item, index) => (
+                <div className={index === 0 ? "active" : ""} key={item}>
+                  {index === 0 && <Database size={15} />}
+                  {index === 1 && <Target size={15} />}
+                  {index === 2 && <LockKeyhole size={15} />}
+                  <span>{item}</span>
+                </div>
+              ))}
+            </aside>
+
+            <section className="mock-chat" aria-label="Build profile preview">
+              <div className="mock-section-header">
+                <span>Build profile</span>
+                <strong>Profile bank</strong>
+              </div>
+              <div className="mock-profile-strip">
+                <div>
+                  <strong>100%</strong>
+                  <span>complete</span>
+                </div>
+                <div>
+                  <strong>7</strong>
+                  <span>sources</span>
+                </div>
+                <div>
+                  <strong>8/8</strong>
+                  <span>intake</span>
+                </div>
+              </div>
+              <div className="mock-message user-message">
+                Add this job post and tell me what evidence I should use.
+              </div>
+              <div className="mock-message assistant-message">
+                <p>Matched your profile to the role and found three strong signals.</p>
+                <div className="mock-tags">
+                  <span>LLM evals</span>
+                  <span>Research</span>
+                  <span>Product judgement</span>
+                </div>
+              </div>
+            </section>
+
+            <aside className="mock-applications" aria-label="Applications preview">
+              <div className="mock-section-header">
+                <span>Applications</span>
+                <strong>3 active</strong>
+              </div>
+              {applicationRows.map(([role, signal, status]) => (
+                <div className="mock-row" key={role}>
+                  <div>
+                    <strong>{role}</strong>
+                    <span>{signal}</span>
+                  </div>
+                  <em>{status}</em>
+                </div>
+              ))}
+              <div className="mock-guardrail">
+                <CheckCircle2 size={16} />
+                Claims stay tied to saved profile evidence.
+              </div>
+            </aside>
           </div>
         </div>
       </section>
 
-      <section className="landing-section" aria-labelledby="helps-with">
+      <section className="landing-section aside-capabilities" id="workflow" aria-labelledby="helps-with">
         <div className="section-heading">
-          <p className="eyebrow">What it helps with</p>
-          <h2 id="helps-with">A focused workflow for job applications.</h2>
+          <p className="eyebrow">How it works</p>
+          <h2 id="helps-with">One workspace for profile, roles, drafts, and decisions.</h2>
         </div>
         <div className="feature-grid">
           <article className="feature-card">
+            <Database size={22} />
+            <h3>Profile bank</h3>
+            <p>Save CV details, links, projects, evidence, and preferences as source material.</p>
+          </article>
+          <article className="feature-card">
             <Target size={22} />
-            <h3>Understand the role</h3>
-            <p>Paste a job post and break it into the skills, evidence, and priorities that matter.</p>
+            <h3>Role matching</h3>
+            <p>Break down each job post into signals, gaps, and evidence-backed application choices.</p>
           </article>
           <article className="feature-card">
             <MessageSquareText size={22} />
-            <h3>Draft with context</h3>
-            <p>Use chat to shape CV bullets, cover notes, and application answers around your real work.</p>
+            <h3>Drafting chat</h3>
+            <p>Shape CV bullets, cover notes, and form answers without drifting away from what is true.</p>
           </article>
-          <article className="feature-card">
-            <Database size={22} />
-            <h3>Build a source bank</h3>
-            <p>Keep source notes, profile sections, saved artifacts, and application files in one workspace.</p>
-          </article>
-          <article className="feature-card feature-card-dark">
+        </div>
+      </section>
+
+      <section className="landing-section aside-privacy" id="privacy" aria-labelledby="privacy-title">
+        <div>
+          <p className="eyebrow">Private by design</p>
+          <h2 id="privacy-title">A focused place for sensitive career data.</h2>
+        </div>
+        <div className="privacy-grid">
+          <article>
             <LockKeyhole size={22} />
-            <h3>Stay grounded</h3>
-            <p>Draft stronger applications without inventing claims or losing the evidence trail.</p>
+            <h3>Your profile is the source of truth</h3>
+            <p>Drafts are generated around saved evidence, not vague memory or invented claims.</p>
+          </article>
+          <article>
+            <CheckCircle2 size={22} />
+            <h3>You stay in control</h3>
+            <p>Applications, profile sections, and account settings stay separated so the workspace feels clear.</p>
           </article>
         </div>
       </section>
