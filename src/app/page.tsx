@@ -162,19 +162,12 @@ export default async function Home() {
                 <h3>Tracked applications</h3>
                 <p>Keep roles, notes, status, and evidence together as each application moves forward.</p>
               </article>
-            </div>
-          </div>
-        </section>
-
-        <section className="landing-section aside-privacy" id="privacy" aria-label="CVhelp privacy and control">
-          <div className="section-frame privacy-frame">
-            <div className="privacy-grid">
-              <article>
+              <article className="feature-card">
                 <LockKeyhole size={22} />
                 <h3>Your data stays organised</h3>
                 <p>Profile details, evidence, and drafts stay tied to the role they support.</p>
               </article>
-              <article>
+              <article className="feature-card">
                 <CheckCircle2 size={22} />
                 <h3>Draft with confidence</h3>
                 <p>Use saved facts as the source material for sharper CVs, cover notes, and answers.</p>
