@@ -61,7 +61,7 @@ export default async function Home() {
               <Sparkles size={16} />
               Private workspace for real applications
             </p>
-            <h1>The application workspace that keeps every draft grounded.</h1>
+            <h1>Build applications with the evidence already in place.</h1>
             <p className="hero-lead">
               Build your profile once, compare it against each role, then draft CVs,
               cover notes, and application answers with the evidence still attached.

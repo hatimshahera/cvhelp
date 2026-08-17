@@ -11,7 +11,7 @@ const themes = [
 type ThemeId = (typeof themes)[number]["id"];
 
 export function LandingThemeShell({ children }: { children: ReactNode }) {
-  const [theme, setTheme] = useState<ThemeId>("light");
+  const [theme, setTheme] = useState<ThemeId>("dark");
 
   const activeIndex = themes.findIndex((item) => item.id === theme);
 
