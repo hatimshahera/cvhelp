@@ -3674,6 +3674,10 @@ body {
   display: none;
 }
 
+.landing-theme-shell .landing-page {
+  animation: landing-page-enter 300ms ease-out both;
+}
+
 .landing-theme-shell .landing-site-header {
   position: absolute;
   top: 0;
@@ -4338,6 +4342,18 @@ body {
   }
 }
 
+@keyframes landing-page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .background-switcher {
   position: fixed;
   right: clamp(18px, 3vw, 30px);
@@ -4455,7 +4471,8 @@ body {
 
   .landing-theme-shell .auth-shell,
   .landing-theme-shell .auth-panel,
-  .landing-theme-shell .auth-card {
+  .landing-theme-shell .auth-card,
+  .landing-theme-shell .landing-page {
     animation: none;
   }
 }
