@@ -6530,11 +6530,14 @@ body {
 
 .landing-theme-shell .feature-card,
 .landing-theme-light .aside-capabilities .feature-card,
-.landing-theme-warm .aside-capabilities .feature-card {
+.landing-theme-warm .aside-capabilities .feature-card,
+.landing-theme-dark .aside-capabilities .feature-card {
   border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 18px;
   background: rgba(12, 22, 33, 0.62);
   box-shadow: 0 20px 70px rgba(0, 0, 0, 0.22);
+  overflow: hidden;
+  -webkit-backdrop-filter: blur(24px);
   backdrop-filter: blur(24px);
 }
 
