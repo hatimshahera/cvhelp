@@ -6034,3 +6034,165 @@ body {
     min-width: 680px;
   }
 }
+
+/* Landing alignment pass: one centered axis, smaller hero, closer product, compact cards. */
+.landing-theme-shell::after {
+  background:
+    linear-gradient(180deg, rgba(2, 7, 12, 0.3), rgba(2, 7, 12, 0.24) 34%, rgba(2, 7, 12, 0.62)),
+    radial-gradient(ellipse at 50% 46%, rgba(2, 7, 12, 0.48), rgba(2, 7, 12, 0.22) 42%, transparent 68%),
+    linear-gradient(90deg, rgba(2, 7, 12, 0.44), rgba(2, 7, 12, 0.1) 48%, rgba(2, 7, 12, 0.44));
+}
+
+.landing-theme-shell .aside-hero {
+  width: min(100%, 980px);
+  min-height: min(100svh, 620px);
+  margin-inline: auto;
+  padding: clamp(18px, 3vh, 28px) clamp(18px, 5vw, 44px) clamp(30px, 5vh, 52px);
+}
+
+.landing-theme-shell .aside-hero-copy {
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  width: 100%;
+  max-width: 680px;
+  margin-inline: auto;
+  gap: 14px;
+  text-align: center;
+}
+
+.landing-theme-shell .hero-topline {
+  display: grid;
+  width: auto;
+  justify-items: center;
+  margin: 0 0 clamp(58px, 10vh, 92px);
+}
+
+.landing-theme-shell .landing-brand {
+  font-size: clamp(22px, 2vw, 30px);
+}
+
+.landing-theme-shell .hero-kicker {
+  font-size: 11px;
+  letter-spacing: 0.13em;
+}
+
+.landing-theme-shell .aside-hero h1 {
+  max-width: 660px;
+  font-size: clamp(36px, 4.25vw, 58px);
+  line-height: 1.04;
+}
+
+.landing-theme-shell .hero-lead {
+  max-width: 560px;
+  font-size: clamp(15px, 1.15vw, 18px);
+  line-height: 1.5;
+}
+
+.landing-theme-shell .hero-actions {
+  width: auto;
+  justify-content: center;
+  padding-top: 8px;
+}
+
+.landing-theme-shell .primary-link,
+.landing-theme-shell .secondary-link {
+  min-height: 38px;
+  padding-inline: 16px;
+  font-size: 13px;
+}
+
+.landing-theme-shell .product-section {
+  padding: 0 clamp(14px, 4vw, 40px) clamp(36px, 6vh, 58px);
+}
+
+.landing-theme-shell .product-frame {
+  width: min(100%, 1040px);
+  gap: 18px;
+  padding: clamp(16px, 2.4vw, 24px);
+  border-radius: 18px;
+  background: rgba(6, 14, 22, 0.5);
+}
+
+.landing-theme-shell .product-copy {
+  max-width: 620px;
+  font-size: clamp(14px, 1.05vw, 16px);
+}
+
+.landing-theme-shell .product-frame .aside-browser {
+  width: min(100%, 860px);
+}
+
+.landing-theme-shell .product-frame .workspace-mock,
+.landing-theme-dark .product-frame .workspace-mock {
+  min-height: 340px;
+}
+
+.landing-theme-shell .aside-capabilities .section-frame,
+.landing-theme-shell .aside-privacy .section-frame {
+  width: min(100%, 1040px);
+  padding-block: clamp(30px, 5vw, 48px);
+}
+
+.landing-theme-shell .feature-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.landing-theme-shell .feature-card,
+.landing-theme-shell .privacy-grid article {
+  padding: clamp(18px, 2.4vw, 24px);
+  border-radius: 14px;
+}
+
+.landing-theme-shell .feature-card h3,
+.landing-theme-shell .privacy-grid h3 {
+  margin-top: 30px;
+  font-size: clamp(18px, 1.55vw, 22px);
+}
+
+.landing-theme-shell .feature-card p,
+.landing-theme-shell .privacy-grid p {
+  font-size: clamp(14px, 1.05vw, 16px);
+  line-height: 1.48;
+}
+
+.landing-theme-shell .aside-privacy .section-frame {
+  padding-top: 0;
+}
+
+.landing-theme-shell .landing-footer {
+  padding-block: 22px 26px;
+}
+
+@media (max-width: 860px) {
+  .landing-theme-shell .feature-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .landing-theme-shell .product-frame .workspace-mock {
+    min-width: 680px;
+  }
+}
+
+@media (max-width: 680px) {
+  .landing-theme-shell .aside-hero {
+    min-height: auto;
+    padding-bottom: 36px;
+  }
+
+  .landing-theme-shell .hero-topline {
+    margin-bottom: 44px;
+  }
+
+  .landing-theme-shell .aside-hero h1 {
+    font-size: clamp(32px, 9vw, 42px);
+  }
+
+  .landing-theme-shell .hero-actions {
+    width: 100%;
+  }
+
+  .landing-theme-shell .product-frame .workspace-mock {
+    min-width: 640px;
+  }
+}

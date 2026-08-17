@@ -32,33 +32,15 @@ export default async function Home() {
               <Link className="brand landing-brand" href="/">
                 CVhelp
               </Link>
-              <div className="hero-account-actions" aria-label="Account">
-                {session ? (
-                  <Link className="nav-primary" href="/app">
-                    Open workspace
-                    <ArrowRight size={17} />
-                  </Link>
-                ) : (
-                  <>
-                    <Link className="nav-link" href="/sign-in">
-                      Login
-                    </Link>
-                    <Link className="nav-primary" href="/sign-up">
-                      Signup
-                      <ArrowRight size={17} />
-                    </Link>
-                  </>
-                )}
-              </div>
             </div>
             <p className="hero-kicker">
               <Sparkles size={16} />
               Custom CVs and job tracking
             </p>
-            <h1>Custom CVs from one career workspace.</h1>
+            <h1>Create tailored CVs and track every application.</h1>
             <p className="hero-lead">
-              Keep your profile, evidence, and job applications together, then create
-              tailored CVs for each role without losing track of what is true.
+              Keep your profile, evidence, and job applications in one workspace, then
+              turn saved experience into role-specific CVs.
             </p>
             <div className="hero-actions">
               <Link className="primary-link" href={session ? "/app" : "/sign-up"}>
@@ -66,7 +48,7 @@ export default async function Home() {
                 <ArrowRight size={18} />
               </Link>
               <Link className="secondary-link" href={session ? "/app" : "/sign-in"}>
-                {session ? "Continue" : "Login"}
+                {session ? "View workspace" : "Login"}
               </Link>
             </div>
           </div>
