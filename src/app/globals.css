@@ -6445,3 +6445,129 @@ body {
     min-width: 680px;
   }
 }
+
+/* Landing section finish: smooth wallpaper crossfades, transparent sections, centered glass cards. */
+.landing-theme-shell {
+  background-color: transparent;
+}
+
+.landing-theme-shell::before {
+  display: none;
+}
+
+.theme-wallpapers {
+  position: fixed;
+  inset: 0;
+  z-index: -3;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.theme-wallpaper {
+  position: absolute;
+  inset: 0;
+  background-position: center;
+  background-size: cover;
+  opacity: 0;
+  transform: scale(1.01);
+  transition: opacity 0.7s ease;
+}
+
+.theme-wallpaper-light {
+  background-image: url("/landing/backgrounds/light.jpg");
+}
+
+.theme-wallpaper-warm {
+  background-image: url("/landing/backgrounds/warm.jpg");
+}
+
+.theme-wallpaper-dark {
+  background-image: url("/landing/backgrounds/dark.jpg");
+}
+
+.landing-theme-light .theme-wallpaper-light,
+.landing-theme-warm .theme-wallpaper-warm,
+.landing-theme-dark .theme-wallpaper-dark {
+  opacity: 1;
+}
+
+.landing-theme-shell .landing-section,
+.landing-theme-shell .aside-capabilities,
+.landing-theme-shell .aside-privacy,
+.landing-theme-shell .landing-footer {
+  background: transparent;
+}
+
+.landing-theme-shell .product-section,
+.landing-theme-shell .aside-capabilities,
+.landing-theme-shell .aside-privacy,
+.landing-theme-shell .landing-footer {
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.landing-theme-shell .aside-capabilities .section-frame,
+.landing-theme-shell .aside-privacy .section-frame {
+  border-top: 0;
+}
+
+.landing-theme-shell .aside-capabilities .feature-grid {
+  gap: clamp(14px, 2vw, 22px);
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.landing-theme-shell .feature-card,
+.landing-theme-shell .privacy-grid article,
+.landing-theme-light .aside-capabilities .feature-card,
+.landing-theme-light .privacy-grid article,
+.landing-theme-warm .aside-capabilities .feature-card,
+.landing-theme-warm .privacy-grid article {
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 18px;
+  background: rgba(12, 22, 33, 0.62);
+  box-shadow: 0 20px 70px rgba(0, 0, 0, 0.22);
+  backdrop-filter: blur(18px);
+}
+
+.landing-theme-shell .feature-card svg,
+.landing-theme-shell .privacy-grid svg {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.landing-theme-shell .feature-card h3,
+.landing-theme-shell .privacy-grid h3 {
+  color: #ffffff;
+}
+
+.landing-theme-shell .feature-card p,
+.landing-theme-shell .privacy-grid p {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.landing-theme-shell .privacy-frame {
+  display: grid;
+  place-items: center;
+}
+
+.landing-theme-shell .privacy-grid {
+  grid-template-columns: repeat(2, minmax(260px, 420px));
+  justify-content: center;
+  width: min(100%, 900px);
+  margin: 0 auto;
+  gap: clamp(18px, 3vw, 28px);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.landing-theme-shell .landing-footer {
+  justify-content: center;
+}
+
+@media (max-width: 680px) {
+  .landing-theme-shell .privacy-grid {
+    grid-template-columns: 1fr;
+  }
+}

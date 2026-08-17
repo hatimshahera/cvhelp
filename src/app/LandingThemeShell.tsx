@@ -22,6 +22,11 @@ export function LandingThemeShell({ children }: { children: ReactNode }) {
 
   return (
     <div className={`landing-theme-shell landing-theme-${theme}`}>
+      <div className="theme-wallpapers" aria-hidden="true">
+        <span className="theme-wallpaper theme-wallpaper-light" />
+        <span className="theme-wallpaper theme-wallpaper-warm" />
+        <span className="theme-wallpaper theme-wallpaper-dark" />
+      </div>
       {children}
       <button
         className="background-switcher"
