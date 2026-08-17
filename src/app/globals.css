@@ -5324,3 +5324,182 @@ body {
     padding: 58px 16px;
   }
 }
+
+/* Landing readability correction: dark image cover, white type, restrained hero scale. */
+.landing-theme-shell {
+  --home-ink: #ffffff;
+  --home-muted: rgba(255, 255, 255, 0.76);
+  --home-line: rgba(255, 255, 255, 0.18);
+  --home-blue: #ffffff;
+  --home-blue-soft: rgba(255, 255, 255, 0.1);
+  --home-gold: #ffffff;
+  color: #ffffff;
+}
+
+.landing-theme-light,
+.landing-theme-warm,
+.landing-theme-dark {
+  --home-ink: #ffffff;
+  --home-muted: rgba(255, 255, 255, 0.76);
+  --home-line: rgba(255, 255, 255, 0.18);
+  --home-blue: #ffffff;
+  --home-blue-soft: rgba(255, 255, 255, 0.1);
+  --home-gold: #ffffff;
+}
+
+.landing-theme-shell::after {
+  background:
+    linear-gradient(90deg, rgba(2, 7, 12, 0.78), rgba(2, 7, 12, 0.56) 46%, rgba(2, 7, 12, 0.72)),
+    linear-gradient(180deg, rgba(2, 7, 12, 0.44), rgba(2, 7, 12, 0.72) 68%, rgba(2, 7, 12, 0.94));
+}
+
+.landing-theme-shell .aside-hero {
+  grid-template-columns: minmax(0, 0.92fr) minmax(420px, 0.88fr);
+  gap: clamp(28px, 4.5vw, 64px);
+  width: min(100%, 1320px);
+  min-height: 100svh;
+  padding: clamp(24px, 4vh, 44px) clamp(18px, 5vw, 64px) clamp(44px, 6vh, 72px);
+}
+
+.landing-theme-shell .aside-hero-copy {
+  max-width: 610px;
+  gap: clamp(16px, 2.6vh, 24px);
+}
+
+.landing-theme-shell .hero-topline {
+  margin-bottom: clamp(36px, 8vh, 82px);
+}
+
+.landing-theme-shell .landing-brand,
+.landing-theme-shell .hero-kicker,
+.landing-theme-shell .aside-hero h1,
+.landing-theme-shell .hero-lead,
+.landing-theme-shell .nav-link,
+.landing-theme-shell .secondary-link {
+  color: #ffffff;
+}
+
+.landing-theme-shell .landing-brand {
+  text-shadow: 0 12px 46px rgba(0, 0, 0, 0.48);
+}
+
+.landing-theme-shell .hero-kicker {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.landing-theme-shell .aside-hero h1 {
+  max-width: 590px;
+  font-size: clamp(52px, 5.2vw, 82px);
+  line-height: 0.99;
+  text-shadow: 0 18px 70px rgba(0, 0, 0, 0.42);
+}
+
+.landing-theme-shell .hero-lead {
+  max-width: 570px;
+  color: rgba(255, 255, 255, 0.78);
+  font-size: clamp(18px, 1.55vw, 22px);
+  line-height: 1.5;
+}
+
+.landing-theme-shell .nav-primary,
+.landing-theme-shell .primary-link,
+.landing-theme-light .nav-primary,
+.landing-theme-light .primary-link,
+.landing-theme-warm .nav-primary,
+.landing-theme-warm .primary-link {
+  background: #ffffff;
+  color: #08111b;
+}
+
+.landing-theme-shell .nav-link,
+.landing-theme-shell .secondary-link,
+.landing-theme-light .nav-link,
+.landing-theme-light .secondary-link,
+.landing-theme-warm .nav-link,
+.landing-theme-warm .secondary-link {
+  border-color: rgba(255, 255, 255, 0.26);
+  background: rgba(255, 255, 255, 0.09);
+  color: #ffffff;
+}
+
+.landing-theme-shell .aside-proof {
+  display: none;
+}
+
+.landing-theme-shell .aside-browser {
+  max-width: 640px;
+  border-radius: 22px;
+  background: rgba(5, 12, 19, 0.66);
+  box-shadow: 0 28px 90px rgba(0, 0, 0, 0.38);
+}
+
+.landing-theme-shell .workspace-mock,
+.landing-theme-dark .workspace-mock {
+  min-height: 390px;
+}
+
+.landing-theme-shell .mock-sidebar {
+  width: 182px;
+}
+
+.landing-theme-shell .mock-chat,
+.landing-theme-shell .mock-applications {
+  padding: 24px;
+}
+
+.landing-theme-shell .mock-profile-strip {
+  grid-template-columns: repeat(3, minmax(84px, 1fr));
+}
+
+.landing-theme-shell .mock-profile-strip strong {
+  font-size: 34px;
+}
+
+.landing-theme-shell .mock-section-header strong {
+  font-size: 32px;
+  line-height: 1.02;
+}
+
+.landing-theme-shell .mock-message {
+  font-size: 17px;
+  line-height: 1.42;
+}
+
+.landing-theme-shell .mock-row strong {
+  font-size: 18px;
+}
+
+@media (max-width: 1180px) {
+  .landing-theme-shell .aside-hero {
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+
+  .landing-theme-shell .aside-browser {
+    max-width: 760px;
+  }
+}
+
+@media (max-width: 680px) {
+  .landing-theme-shell .aside-hero {
+    min-height: auto;
+    padding-top: 18px;
+  }
+
+  .landing-theme-shell .hero-topline {
+    margin-bottom: 36px;
+  }
+
+  .landing-theme-shell .aside-hero h1 {
+    font-size: clamp(40px, 12vw, 56px);
+    line-height: 1.02;
+  }
+
+  .landing-theme-shell .hero-lead {
+    font-size: 17px;
+  }
+
+  .landing-theme-shell .aside-browser {
+    border-radius: 18px;
+  }
+}
