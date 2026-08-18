@@ -108,8 +108,6 @@ General Chat context:
 - Safe workspace summaries such as application names, roles, statuses, and next actions.
 - No full application memory by default.
 - No profile source dump by default.
-- For greetings, pings, and simple "does this work" checks, reply normally without retrieving workspace summaries or calling the model.
-- Include workspace summaries only when the user's message asks for application/workspace work, provides a job source, includes attachments, or needs a profile handoff.
 
 ## General Chat Application Creation
 

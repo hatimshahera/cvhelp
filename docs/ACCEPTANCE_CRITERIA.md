@@ -105,7 +105,6 @@ Acceptance criteria:
 - General Chat has its own durable conversation.
 - General Chat can answer broader career and cross-application questions without requiring an application.
 - General Chat uses safe workspace summaries by default, not full unrelated application memories.
-- General Chat does not include workspace summaries or call the model for simple greetings, pings, or "does this work" checks.
 - General Chat can propose application creation from a job description or URL.
 - Application creation is executed by deterministic backend code, not direct model state mutation.
 - Successful application creation returns an action button to open the new application chat.
@@ -121,7 +120,6 @@ Tests:
 - General Chat creates an application through the deterministic action.
 - New application from General Chat is scoped to the signed-in user.
 - General Chat does not include full unrelated application memory in default context.
-- General Chat health-check messages skip workspace context and model calls.
 - Returned `open_application_chat` action contains a user-owned application ID.
 - Returned `continue_in_profile_chat` action creates or targets the signed-in user's profile conversation.
 - General Chat profile handoff does not call profile-bank update directly.

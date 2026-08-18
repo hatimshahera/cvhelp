@@ -29,11 +29,6 @@ import {
 } from "@/lib/chat/summaries";
 import type { ChatAction } from "@/lib/chat/actions";
 import { createProfileHandoff, looksLikeProfileHandoffRequest } from "@/lib/chat/handoffs";
-import {
-  getLightweightGeneralReply,
-  isLightweightGeneralMessage,
-  shouldIncludeGeneralWorkspaceContext
-} from "@/lib/chat/intent";
 import { chatModeSchema, conversationApplicationIdForMode } from "@/lib/chat/types";
 import { prisma } from "@/lib/prisma";
 import { checkRequestLimit, getIntegerEnv } from "@/lib/rate-limit";
@@ -223,6 +218,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Sign in to use chat." }, { status: 401 });
   }
 
+  if (!process.env.OPENAI_API_KEY) {
+    return NextResponse.json(
+      { error: "OPENAI_API_KEY is not configured on the server." },
+      { status: 500 }
+    );
+  }
+
   const parsed = chatSchema.safeParse(await request.json().catch(() => null));
 
   if (!parsed.success) {
@@ -295,18 +297,6 @@ export async function POST(request: Request) {
     );
   }
 
-  const isDeterministicLightweightGeneral =
-    mode === "general" &&
-    attachedSources.length === 0 &&
-    isLightweightGeneralMessage(parsed.data.message);
-
-  if (!process.env.OPENAI_API_KEY && !isDeterministicLightweightGeneral) {
-    return NextResponse.json(
-      { error: "OPENAI_API_KEY is not configured on the server." },
-      { status: 500 }
-    );
-  }
-
   const userMessage = await prisma.chatMessage.create({
     data: {
       conversationId: conversation.id,
@@ -327,35 +317,8 @@ export async function POST(request: Request) {
           userId: user.id,
           message: parsed.data.message,
           existing: profileBank
-      })
+        })
       : profileBank;
-
-  if (isDeterministicLightweightGeneral) {
-    await prisma.chatMessage.create({
-      data: {
-        conversationId: conversation.id,
-        userId: user.id,
-        role: "assistant",
-        content: getLightweightGeneralReply(parsed.data.message, user.name)
-      }
-    });
-    await prisma.conversation.update({
-      where: { id: conversation.id },
-      data: { updatedAt: new Date() }
-    });
-
-    const conversationMessages = await listConversationMessages({
-      conversationId: conversation.id,
-      userId: user.id
-    });
-
-    return NextResponse.json({
-      conversationId: conversation.id,
-      messages: conversationMessages,
-      profileBank: summarizeProfileBank(updatedProfileBank),
-      application
-    });
-  }
 
   const chatContextMessages = await getConversationContextMessages({
     conversationId: conversation.id,
@@ -368,12 +331,8 @@ export async function POST(request: Request) {
     const openai = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY
     });
-    const includeWorkspaceContext = shouldIncludeGeneralWorkspaceContext({
-      message: parsed.data.message,
-      hasAttachedSources: attachedSources.length > 0
-    });
     const workspaceApplications =
-      mode === "general" && includeWorkspaceContext
+      mode === "general"
         ? await prisma.application.findMany({
             where: { userId: user.id },
             orderBy: { updatedAt: "desc" },
