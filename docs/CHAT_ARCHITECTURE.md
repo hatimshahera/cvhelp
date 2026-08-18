@@ -234,6 +234,19 @@ Target state:
 - Keep prompt/context budgets explicit.
 - Cache stable job parsing and application summaries.
 
+## Conversation Summaries and Retrieval
+
+Implemented policy:
+
+- `Conversation.summary` stores a concise rolling summary as JSON.
+- `Conversation.lastSummarizedMessageId` records the latest older message folded into that summary.
+- The main chat context uses recent messages first, then a rolling summary and relevant older messages when available.
+- Relevant older-message retrieval is deterministic keyword matching scoped by `conversationId` and `userId`.
+- Older-message retrieval runs only when the recent window is full.
+- Summary generation is skipped below `CVHELP_CONVERSATION_SUMMARY_THRESHOLD`.
+- Summary writes use scoped backend updates and preserve full raw chat messages.
+- Model-assisted relevance selection is intentionally deferred until deterministic retrieval proves insufficient.
+
 ## Backwards Compatibility
 
 Must preserve:

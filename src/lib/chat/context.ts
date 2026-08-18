@@ -1,5 +1,6 @@
 import { getRecentSourceContext, summarizeProfileBank } from "@/lib/memory";
 import type { ChatMessageForContext } from "@/lib/chat/conversations";
+import type { ConversationSummary } from "@/lib/chat/summaries";
 import type { ChatMode } from "@/lib/chat/types";
 
 const defaultContextBudget = 60_000;
@@ -45,6 +46,8 @@ export function buildChatPromptContext({
   mode,
   userName,
   recentMessages,
+  conversationSummary,
+  relevantOlderMessages = [],
   profileBank,
   application,
   workspaceApplications = [],
@@ -54,6 +57,8 @@ export function buildChatPromptContext({
   mode: ChatMode;
   userName: string | null;
   recentMessages: ChatMessageForContext[];
+  conversationSummary?: ConversationSummary | null;
+  relevantOlderMessages?: ChatMessageForContext[];
   profileBank?: ProfileBankContext | null;
   application?: ApplicationContext | null;
   workspaceApplications?: WorkspaceApplicationSummary[];
@@ -61,6 +66,12 @@ export function buildChatPromptContext({
   contextBudget?: number;
 }) {
   const transcript = buildTranscript(recentMessages);
+  const summaryContext = conversationSummary?.text
+    ? `\n\nConversation summary:\n${conversationSummary.text}`
+    : "";
+  const relevantOlderContext = relevantOlderMessages.length
+    ? `\n\nRelevant older messages:\n${buildTranscript(relevantOlderMessages)}`
+    : "";
   const profileContext =
     mode === "build_profile" || mode === "application"
       ? `\n\nCurrent profile bank summary:\n${JSON.stringify(
@@ -108,7 +119,7 @@ export function buildChatPromptContext({
     : "";
   const prefix = `The signed-in user's name is ${userName}. Continue this private conversation.`;
   const context = truncateSection(
-    `${profileContext}${applicationContext}${generalContext}${attachedSourceContext}`,
+    `${summaryContext}${relevantOlderContext}${profileContext}${applicationContext}${generalContext}${attachedSourceContext}`,
     Math.max(0, contextBudget - prefix.length - transcript.length - 4)
   );
 

@@ -19,10 +19,14 @@ import {
   clearConversationMessages,
   getLatestConversationWithMessages,
   getOrCreateConversation,
-  getRecentConversationMessages,
   listConversationMessages
 } from "@/lib/chat/conversations";
 import { buildChatPromptContext } from "@/lib/chat/context";
+import {
+  getConversationContextMessages,
+  maybeSummarizeConversation,
+  shouldConsiderConversationSummary
+} from "@/lib/chat/summaries";
 import type { ChatAction } from "@/lib/chat/actions";
 import { createProfileHandoff, looksLikeProfileHandoffRequest } from "@/lib/chat/handoffs";
 import { chatModeSchema, conversationApplicationIdForMode } from "@/lib/chat/types";
@@ -316,9 +320,11 @@ export async function POST(request: Request) {
         })
       : profileBank;
 
-  const recentMessages = await getRecentConversationMessages({
+  const chatContextMessages = await getConversationContextMessages({
     conversationId: conversation.id,
-    userId: user.id
+    userId: user.id,
+    currentMessage: parsed.data.message,
+    conversationSummary: conversation.summary
   });
 
   try {
@@ -350,7 +356,9 @@ export async function POST(request: Request) {
       input: buildChatPromptContext({
         mode,
         userName: user.name,
-        recentMessages,
+        recentMessages: chatContextMessages.recentMessages,
+        conversationSummary: chatContextMessages.summary,
+        relevantOlderMessages: chatContextMessages.relevantOlderMessages,
         profileBank: updatedProfileBank,
         application,
         workspaceApplications,
@@ -523,6 +531,16 @@ export async function POST(request: Request) {
             ].slice(-80)
           } as Prisma.InputJsonValue
         }
+      });
+    }
+
+    if (shouldConsiderConversationSummary({ recentMessageCount: chatContextMessages.recentMessages.length })) {
+      await maybeSummarizeConversation({
+        openai,
+        userId: user.id,
+        conversationId: conversation.id,
+        conversationSummary: conversation.summary,
+        lastSummarizedMessageId: conversation.lastSummarizedMessageId
       });
     }
 

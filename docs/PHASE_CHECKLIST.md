@@ -134,23 +134,25 @@ Tests:
 
 ## Phase 6: Conversation Summaries and Relevant Retrieval
 
-- [ ] Add Prisma migration for `Conversation.summary`.
-- [ ] Add Prisma migration for `Conversation.lastSummarizedMessageId`.
-- [ ] Add `src/lib/chat/summaries.ts`.
-- [ ] Summarize only after configured message threshold.
-- [ ] Retrieve recent messages plus summary plus relevant older messages.
-- [ ] Start with deterministic scoped keyword retrieval.
-- [ ] Add model-assisted relevance only if needed.
-- [ ] Add context budget tests.
+- [x] Add Prisma migration for `Conversation.summary`.
+- [x] Add Prisma migration for `Conversation.lastSummarizedMessageId`.
+- [x] Add `src/lib/chat/summaries.ts`.
+- [x] Summarize only after configured message threshold.
+- [x] Retrieve recent messages plus summary plus relevant older messages.
+- [x] Start with deterministic scoped keyword retrieval.
+- [x] Add model-assisted relevance only if needed.
+- [x] Add context budget tests.
 
 Tests:
 
-- [ ] Summary is skipped below threshold.
-- [ ] Summary update is scoped to the same conversation.
-- [ ] Older-message retrieval is scoped to the same conversation.
-- [ ] Context budget preserves current turn.
-- [ ] `npm run typecheck`.
-- [ ] `npm test`.
+- [x] Summary is skipped below threshold.
+- [x] Summary update is scoped to the same conversation.
+- [x] Older-message retrieval is scoped to the same conversation.
+- [x] Context budget preserves current turn.
+- [x] `npm run typecheck`.
+- [x] `npm test`.
+- [x] `npm run build`.
+- [x] `npx prisma validate`.
 
 ## Phase 7: Memory Write Discipline
 

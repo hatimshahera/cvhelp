@@ -84,4 +84,30 @@ describe("chat context builder", () => {
     expect(context).toContain("[Context truncated]");
     expect(context).toContain("This current question must remain.");
   });
+
+  it("includes rolling summary and relevant older messages before recent transcript", () => {
+    const context = buildChatPromptContext({
+      mode: "general",
+      userName: "Hatim",
+      conversationSummary: {
+        version: 1,
+        text: "The user previously compared backend AI roles.",
+        updatedAt: "2026-08-13T00:00:00.000Z",
+        summarizedMessageCount: 40
+      },
+      relevantOlderMessages: [
+        {
+          role: "user",
+          content: "Earlier note about RAG evaluation roles."
+        }
+      ],
+      recentMessages: [{ role: "user", content: "Compare this to the RAG role." }]
+    });
+
+    expect(context).toContain("Conversation summary");
+    expect(context).toContain("previously compared backend AI roles");
+    expect(context).toContain("Relevant older messages");
+    expect(context).toContain("Earlier note about RAG evaluation roles.");
+    expect(context).toContain("Compare this to the RAG role.");
+  });
 });

@@ -90,12 +90,14 @@ Current `/api/chat` behavior:
 - Supports `build_profile`, `application`, and `general` modes in API.
 - Persists user and assistant messages.
 - Uses OpenAI Responses API.
-- Builds prompt context from recent messages, profile bank, and selected application.
+- Builds prompt context from recent messages, conversation summaries, scoped relevant older messages, profile bank, selected application, workspace summaries, and attached source snippets.
 - Updates profile raw sources/checklist from profile-builder messages.
 - Updates `masterProfile` with a second AI call in profile-builder mode.
 - Updates application-specific memory and notes after application chat turns.
-- Does not yet expose General Chat in the UI.
-- Still contains most AI coordination logic inline.
+- Exposes General Chat in the UI.
+- Creates applications from General Chat through deterministic backend code.
+- Creates explicit Profile Chat handoffs from General Chat.
+- Uses extracted agent, context, source, handoff, application-action, and memory-update helpers.
 
 Current `/api/profile-sources` behavior:
 
@@ -104,8 +106,9 @@ Current `/api/profile-sources` behavior:
 - Limits each file to 5 MB.
 - Extracts text from text-like files.
 - Attempts PDF text extraction.
-- Saves uploaded source content to the profile bank.
-- Updates checklist for CV, LinkedIn, and GitHub based on filenames.
+- Saves uploaded source content as scoped `Source` rows.
+- Preserves profile uploads in the profile bank for backwards-compatible source display.
+- Updates checklist for CV, LinkedIn, and GitHub based on filenames for profile-scope uploads.
 
 Current `/api/applications` behavior:
 
@@ -140,14 +143,15 @@ Done:
 - User identity and logout are shown.
 - Profile builder navigation exists.
 - Application list exists.
-- Application creation form currently exists under the Applications sidebar.
+- General Chat navigation exists.
+- Application creation is routed through General Chat.
 - Profile bank summary panel exists.
 - Chat area exists.
 - File attach control exists.
 - Clear profile conversation action exists.
 - Application selection loads separate chat history.
 - Application side panel can show job post, artifacts, and CV PDF previews.
-- General Chat is not yet visible in the workspace UI.
+- Assistant action buttons can open a newly created application chat or continue in Profile Chat.
 
 ## ProofCV Reference System
 
@@ -172,16 +176,9 @@ ProofCV application data shape currently includes:
 ## Known Gaps
 
 - The README and older docs may understate current implementation and need updating as part of architecture work.
-- `/api/chat` is too large and contains agent definitions, context building, model calls, and memory sidecars inline.
-- General Chat is accepted by the backend but not exposed in the UI.
-- New application creation currently lives in the Applications sidebar; target behavior is creation from General Chat.
-- There is no typed assistant action/button flow yet.
 - There is no deterministic chat action registry yet.
-- There is no explicit Profile Chat handoff flow from General Chat.
 - Application memory remains JSON-based and should be protected by stricter context and write boundaries.
-- Attachments are not first-class scoped records; uploads currently go into profile raw sources.
-- Conversation summaries and relevant older-message retrieval are not implemented yet.
-- Source retrieval is based on recent raw profile sources rather than scoped source records/chunks.
+- Source retrieval uses scoped source records but does not yet chunk large files independently.
 - Browser smoke tests are still missing.
 - No end-to-end tests exist.
 - No production smoke test has been performed in this planning pass.

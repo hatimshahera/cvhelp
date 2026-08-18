@@ -74,6 +74,16 @@ Reasoning:
 
 The user needs different chats for each application. A chat for one role should not leak notes or drafts into another role.
 
+### Conversation Summaries
+
+Decision:
+
+Store rolling summaries on `Conversation` and retrieve relevant older messages deterministically inside the same conversation scope.
+
+Reasoning:
+
+Long chats need bounded prompt cost without sacrificing continuity. Keeping summaries on the conversation preserves application/profile/general isolation, while deterministic keyword retrieval avoids an extra model call on every message. Model-assisted relevance can be added later behind the same helper if deterministic retrieval becomes insufficient.
+
 ### Three-Agent Chat Model
 
 Decision:

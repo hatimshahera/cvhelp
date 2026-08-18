@@ -68,6 +68,8 @@ model Conversation {
   title     String        @default("New chat")
   mode      String        @default("general")
   threadKey String        @default("default")
+  summary   Json?
+  lastSummarizedMessageId String?
   userId    String
   applicationId String?
   createdAt DateTime      @default(now())
