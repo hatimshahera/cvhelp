@@ -6,6 +6,8 @@ import { checkFeatureLimit, getBillingStatus } from "@/lib/billing";
 import { createInitialApplicationMemory, type ApplicationMemory, parseApplicationMemory } from "@/lib/memory";
 import { proofCvDataFromApplicationMemory } from "@/lib/proofcv";
 import { prisma } from "@/lib/prisma";
+import { parseJsonObject } from "@/lib/ai/json";
+import { getOpenAIModel } from "@/lib/ai/models";
 import { checkRequestLimit, getIntegerEnv } from "@/lib/rate-limit";
 import { logError } from "@/lib/server-log";
 import { getCurrentUser } from "@/lib/session";
@@ -60,24 +62,6 @@ async function nextArtifactVersion(applicationId: string, type: string) {
   });
 
   return (latest?.version ?? 0) + 1;
-}
-
-function getOpenAIModel() {
-  const configured = process.env.OPENAI_MODEL?.trim();
-  if (!configured || configured === "gpt-5.6-luna") return "gpt-5-mini";
-  return configured;
-}
-
-function parseJsonObject(text: string) {
-  const cleaned = text
-    .trim()
-    .replace(/^```json\s*/i, "")
-    .replace(/^```\s*/i, "")
-    .replace(/\s*```$/i, "");
-  const parsed = JSON.parse(cleaned);
-  return parsed && typeof parsed === "object" && !Array.isArray(parsed)
-    ? (parsed as Record<string, unknown>)
-    : null;
 }
 
 function artifactInstructions(type: string) {
@@ -148,7 +132,7 @@ async function generateAiArtifact(input: {
     apiKey: process.env.OPENAI_API_KEY
   });
   const response = await openai.responses.create({
-    model: getOpenAIModel(),
+    model: getOpenAIModel("artifact"),
     instructions: artifactInstructions(input.type),
     input: JSON.stringify({
       artifactType: input.type,
@@ -346,7 +330,7 @@ export async function POST(request: Request, context: RouteParams) {
       content: content as Prisma.InputJsonValue,
       metadata: {
         source: parsed.data.type === "proofcv_data" ? "application_memory" : "openai",
-        model: parsed.data.type === "proofcv_data" ? null : getOpenAIModel(),
+        model: parsed.data.type === "proofcv_data" ? null : getOpenAIModel("artifact"),
         generatedAt: new Date().toISOString(),
         prompt: parsed.data.prompt || null,
         refineFromArtifactId: refineFromArtifact?.id ?? null,

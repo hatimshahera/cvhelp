@@ -23,30 +23,31 @@ Tests:
 
 ## Phase 2: Refactor Foundations Without Behavior Change
 
-- [ ] Add `src/lib/chat/types.ts`.
-- [ ] Add `src/lib/ai/models.ts`.
-- [ ] Add `src/lib/ai/json.ts`.
-- [ ] Add `src/lib/ai/agents.ts`.
-- [ ] Add `src/lib/ai/memory-updates.ts`.
-- [ ] Move model selection out of `/api/chat`.
-- [ ] Move JSON parsing out of `/api/chat`.
-- [ ] Move agent instructions out of `/api/chat`.
-- [ ] Move profile memory update sidecar out of `/api/chat`.
-- [ ] Move application memory update sidecar out of `/api/chat`.
-- [ ] Preserve current `/api/chat` request body shape.
-- [ ] Preserve current `/api/chat` response body shape.
-- [ ] Preserve public `build_profile` mode.
-- [ ] Keep application chat and profile chat behavior unchanged.
+- [x] Add `src/lib/chat/types.ts`.
+- [x] Add `src/lib/ai/models.ts`.
+- [x] Add `src/lib/ai/json.ts`.
+- [x] Add `src/lib/ai/agents.ts`.
+- [x] Add `src/lib/ai/memory-updates.ts`.
+- [x] Move model selection out of `/api/chat`.
+- [x] Move JSON parsing out of `/api/chat`.
+- [x] Move agent instructions out of `/api/chat`.
+- [x] Move profile memory update sidecar out of `/api/chat`.
+- [x] Move application memory update sidecar out of `/api/chat`.
+- [x] Preserve current `/api/chat` request body shape.
+- [x] Preserve current `/api/chat` response body shape.
+- [x] Preserve public `build_profile` mode.
+- [x] Keep application chat and profile chat behavior unchanged.
 
 Tests:
 
-- [ ] Add unit tests for agent selection.
-- [ ] Add unit tests for global/user/agent instruction ordering.
-- [ ] Existing `/api/chat` tests pass.
-- [ ] Profile chat still updates profile bank.
-- [ ] Application chat still updates only selected application memory.
-- [ ] `npm run typecheck`.
-- [ ] `npm test`.
+- [x] Add unit tests for agent selection.
+- [x] Add unit tests for global/user/agent instruction ordering.
+- [x] Existing `/api/chat` tests pass.
+- [x] Profile chat still updates profile bank.
+- [x] Application chat still updates only selected application memory.
+- [x] `npm run typecheck`.
+- [x] `npm test`.
+- [x] `npm run build`.
 
 ## Phase 3: Scoped Context Builder
 

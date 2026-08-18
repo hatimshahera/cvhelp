@@ -4,7 +4,6 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import {
   appendApplicationMemoryNote,
-  type ApplicationMemory,
   appendRawSource,
   createDefaultProfileBankData,
   createInitialApplicationMemory,
@@ -13,6 +12,10 @@ import {
   parseApplicationMemory,
   summarizeProfileBank
 } from "@/lib/memory";
+import { buildAgentInstructions } from "@/lib/ai/agents";
+import { getOpenAIModel } from "@/lib/ai/models";
+import { updateApplicationMemory, updateMasterProfile } from "@/lib/ai/memory-updates";
+import { chatModeSchema } from "@/lib/chat/types";
 import { prisma } from "@/lib/prisma";
 import { checkRequestLimit, getIntegerEnv } from "@/lib/rate-limit";
 import { logError } from "@/lib/server-log";
@@ -21,22 +24,15 @@ import { getCurrentUser } from "@/lib/session";
 const chatSchema = z.object({
   message: z.string().trim().min(1, "Enter a message.").max(8000),
   conversationId: z.string().nullable().optional(),
-  mode: z.enum(["build_profile", "application", "general"]).default("build_profile"),
+  mode: chatModeSchema.default("build_profile"),
   applicationId: z.string().nullable().optional()
 });
 
-const modeSchema = z.enum(["build_profile", "application", "general"]).default("build_profile");
-const DEFAULT_OPENAI_MODEL = "gpt-5-mini";
+const modeSchema = chatModeSchema.default("build_profile");
 
 function toTitle(message: string) {
   const compact = message.replace(/\s+/g, " ").trim();
   return compact.length > 58 ? `${compact.slice(0, 58)}...` : compact || "New chat";
-}
-
-function getOpenAIModel() {
-  const configured = process.env.OPENAI_MODEL?.trim();
-  if (!configured || configured === "gpt-5.6-luna") return DEFAULT_OPENAI_MODEL;
-  return configured;
 }
 
 async function getOrCreateProfileBank(userId: string) {
@@ -81,146 +77,6 @@ async function updateProfileBankFromMessage({
       checklist: nextChecklist as Prisma.InputJsonValue
     }
   });
-}
-
-function getInstructions(mode: "build_profile" | "application" | "general") {
-  if (mode === "build_profile") {
-    return [
-      "You are CVhelp's profile-building agent.",
-      "Your only job is to help the user build, clean, delete, and maintain their reusable career profile bank.",
-      "Treat the profile bank as structured memory with sections: identity, links, education, experience, projects, research, skills, achievements, preferences, constraints, evidence, and openQuestions.",
-      "Follow a guided intake sequence: current CV, LinkedIn/background, GitHub/projects, work experience, education, evidence/metrics, role preferences, then final review.",
-      "Ask one focused question at a time unless the user gives a large source such as a CV, LinkedIn text, GitHub/project list, or multiple corrections.",
-      "Extract projects, experience, education, skills, achievements, metrics, links, preferences, and evidence.",
-      "When a claim needs proof, ask for the source, metric, date, link, or context instead of filling it in yourself.",
-      "Keep claims grounded in what the user provides. Never invent credentials, employers, dates, metrics, or project facts.",
-      "When useful, summarize what you added to the profile bank and what is still missing.",
-      "If the user asks to remove or correct something, acknowledge the correction clearly and ask for the exact replacement if needed.",
-      "Be concise and practical."
-    ].join(" ");
-  }
-
-  if (mode === "application") {
-    return [
-      "You are CVhelp's application agent.",
-      "Your job is to help with one specific job application, using the selected job post and the user's profile bank.",
-      "Keep application-specific notes, analysis, CV tailoring, cover letters, and answers focused on this role only.",
-      "Do not pollute or rewrite the user's global profile unless they explicitly ask to update reusable profile facts.",
-      "Compare the job requirements against the profile bank, identify best evidence, gaps, risks, and concrete next steps.",
-      "Help draft tailored CV bullets, cover notes, recruiter messages, and application answers.",
-      "Never invent experience, metrics, dates, employers, links, or credentials. If evidence is missing, ask for it.",
-      "Be practical, concise, and specific to this application."
-    ].join(" ");
-  }
-
-  return "You are CVhelp, a concise assistant for CVs, job applications, career evidence, and software project positioning. Be practical, ask for missing context when needed, and never invent user experience, credentials, or project facts.";
-}
-
-function parseJsonObject(text: string) {
-  const cleaned = text
-    .trim()
-    .replace(/^```json\s*/i, "")
-    .replace(/^```\s*/i, "")
-    .replace(/\s*```$/i, "");
-  const parsed = JSON.parse(cleaned);
-  return parsed && typeof parsed === "object" && !Array.isArray(parsed)
-    ? (parsed as Record<string, unknown>)
-    : null;
-}
-
-async function updateMasterProfile({
-  openai,
-  userId,
-  userName,
-  profileBank,
-  userMessage,
-  assistantText
-}: {
-  openai: OpenAI;
-  userId: string;
-  userName: string;
-  profileBank: Awaited<ReturnType<typeof getOrCreateProfileBank>>;
-  userMessage: string;
-  assistantText: string;
-}) {
-  try {
-    const response = await openai.responses.create({
-      model: getOpenAIModel(),
-      instructions: [
-        "Update a user's private career master profile JSON from the latest chat turn.",
-        "Return only valid JSON. No markdown. No prose.",
-        "Keep only facts grounded in user-provided information.",
-        "If the user corrects or deletes information, apply that correction.",
-        "Use stable sections such as summary, links, experience, projects, education, skills, achievements, preferences, evidence, openQuestions.",
-        "Prefer the canonical sections identity, links, education, experience, projects, research, skills, achievements, preferences, constraints, evidence, openQuestions.",
-        "Prefer arrays of concise objects for experience, projects, skills, achievements, and evidence.",
-        "When adding or updating profile fact objects, include a provenance array with sourceType, quote, confidence, and createdAt when available.",
-        "Do not invent dates, metrics, employers, credentials, links, or technologies."
-      ].join(" "),
-      input: JSON.stringify({
-        userName,
-        currentMasterProfile: profileBank.masterProfile ?? {},
-        latestUserMessage: userMessage,
-        latestAssistantResponse: assistantText
-      })
-    });
-
-    const nextMasterProfile = parseJsonObject(response.output_text ?? "");
-    if (!nextMasterProfile) return profileBank;
-
-    return prisma.profileBank.update({
-      where: { userId },
-      data: { masterProfile: nextMasterProfile as Prisma.InputJsonValue }
-    });
-  } catch (error) {
-    logError("Profile bank update failed", error, { userId });
-    return profileBank;
-  }
-}
-
-async function updateApplicationMemory({
-  openai,
-  memory,
-  profileSummary,
-  userMessage,
-  assistantText
-}: {
-  openai: OpenAI;
-  memory: ApplicationMemory;
-  profileSummary: unknown;
-  userMessage: string;
-  assistantText: string;
-}) {
-  try {
-    const response = await openai.responses.create({
-      model: getOpenAIModel(),
-      instructions: [
-        "Update application-specific memory JSON for one job application.",
-        "Return only valid JSON. No markdown. No prose.",
-        "Keep information scoped to this application unless the user explicitly asks to update reusable profile facts.",
-        "Do not invent dates, employers, metrics, credentials, links, project facts, or submitted status.",
-        "Preserve existing useful memory unless the latest turn corrects or removes it.",
-        "Use this exact JSON shape: candidateSnapshot, target, jobPost, requirements, responsibilities, keywords, selectedEvidence, profileSummary, honestyNotes, risks, gaps, notes, drafts, nextActions.",
-        "Preserve and update claimProvenance as a map from claim groups to provenance arrays with sourceType, quote, confidence, and createdAt.",
-        "selectedEvidence must contain arrays for projects, research, experience, and skills.",
-        "Use short strings in requirements, responsibilities, keywords, honestyNotes, risks, gaps, and nextActions."
-      ].join(" "),
-      input: JSON.stringify({
-        currentApplicationMemory: memory,
-        profileBankSummary: profileSummary,
-        latestUserMessage: userMessage,
-        latestAssistantResponse: assistantText
-      })
-    });
-
-    const parsed = parseJsonObject(response.output_text ?? "");
-    if (!parsed) return memory;
-
-    return parseApplicationMemory(parsed, memory);
-  } catch (error) {
-    logError("Application memory update failed", error);
-    return memory;
-  }
 }
 
 export async function GET(request: Request) {
@@ -484,8 +340,11 @@ export async function POST(request: Request) {
         : "";
 
     const response = await openai.responses.create({
-      model: getOpenAIModel(),
-      instructions: getInstructions(mode),
+      model: getOpenAIModel("chat"),
+      instructions: buildAgentInstructions({
+        mode,
+        profileBank: updatedProfileBank
+      }),
       input: `The signed-in user's name is ${user.name}. Continue this private conversation.${profileContext}${applicationContext}\n\n${transcript}`
     });
 
