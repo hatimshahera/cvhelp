@@ -124,6 +124,16 @@ Reasoning:
 
 Reusable profile memory has higher trust requirements than general discussion. A visible handoff note gives the user and Profile Agent enough context to confirm and save supported facts without polluting the profile with ambiguous comments.
 
+### Profile Promotion from Application Chat
+
+Decision:
+
+Application Chat does not directly promote reusable facts or global CV preferences into the profile bank. It creates an explicit Profile Chat handoff when the user asks for a global profile update from inside an application chat.
+
+Reasoning:
+
+Application work often contains role-specific positioning. Routing reusable updates through Profile Chat keeps the global profile auditable and lets the Profile Agent confirm whether the information should become reusable career memory.
+
 ### Application Chat Threads
 
 Decision:

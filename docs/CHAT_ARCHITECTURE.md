@@ -197,12 +197,15 @@ Profile memory:
 - Written by Profile Agent sidecar updates or direct profile editor routes.
 - Validated against canonical profile schemas.
 - Must preserve provenance where available.
+- Malformed or schema-invalid sidecar JSON is ignored and the existing profile bank is preserved.
 
 Application memory:
 
 - Written by Application Agent sidecar updates for the selected application.
 - Validated against application memory schema.
 - Must preserve existing useful memory unless corrected.
+- Malformed sidecar JSON falls back to the existing parsed application memory.
+- If reusable profile facts or global preferences are discussed in Application Chat, the app creates a Profile Chat handoff instead of directly writing global profile memory.
 
 General memory:
 

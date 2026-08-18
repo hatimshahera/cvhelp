@@ -428,6 +428,24 @@ export async function POST(request: Request) {
         assistantText,
         "I added a short handoff note to your Profile Chat so reusable facts or preferences can be confirmed there."
       ].join("\n\n");
+    } else if (mode === "application" && application && looksLikeProfileHandoffRequest(parsed.data.message)) {
+      const profileConversation = await createProfileHandoff({
+        userId: user.id,
+        context: [
+          `Application Chat handoff from ${application.company} - ${application.role}:`,
+          parsed.data.message
+        ].join(" ")
+      });
+
+      actions.push({
+        type: "continue_in_profile_chat",
+        label: "Continue in Profile Chat",
+        conversationId: profileConversation.id
+      });
+      assistantText = [
+        assistantText,
+        "I added a short handoff note to your Profile Chat so reusable facts or preferences can be confirmed there before changing the global profile."
+      ].join("\n\n");
     }
 
     const assistantMessage = await prisma.chatMessage.create({
@@ -502,7 +520,9 @@ export async function POST(request: Request) {
         memory: noteUpdatedMemory,
         profileSummary: summarizeProfileBank(finalProfileBank),
         userMessage: parsed.data.message,
-        assistantText
+        assistantText,
+        userId: user.id,
+        applicationId: application.id
       });
       const existingNotes =
         application.notes && typeof application.notes === "object" && !Array.isArray(application.notes)

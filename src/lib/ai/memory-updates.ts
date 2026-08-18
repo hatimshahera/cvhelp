@@ -2,6 +2,7 @@ import OpenAI from "openai";
 import type { Prisma } from "@prisma/client";
 import {
   type ApplicationMemory,
+  canonicalProfileSchema,
   parseApplicationMemory
 } from "@/lib/memory";
 import { prisma } from "@/lib/prisma";
@@ -52,6 +53,8 @@ export async function updateMasterProfile({
 
     const nextMasterProfile = parseJsonObject(response.output_text ?? "");
     if (!nextMasterProfile) return profileBank;
+    const validatedProfile = canonicalProfileSchema.safeParse(nextMasterProfile);
+    if (!validatedProfile.success) return profileBank;
 
     return prisma.profileBank.update({
       where: { userId },
@@ -68,13 +71,17 @@ export async function updateApplicationMemory({
   memory,
   profileSummary,
   userMessage,
-  assistantText
+  assistantText,
+  userId,
+  applicationId
 }: {
   openai: OpenAI;
   memory: ApplicationMemory;
   profileSummary: unknown;
   userMessage: string;
   assistantText: string;
+  userId?: string;
+  applicationId?: string;
 }) {
   try {
     const response = await openai.responses.create({
@@ -103,7 +110,7 @@ export async function updateApplicationMemory({
 
     return parseApplicationMemory(parsed, memory);
   } catch (error) {
-    logError("Application memory update failed", error);
+    logError("Application memory update failed", error, { userId, applicationId });
     return memory;
   }
 }

@@ -156,23 +156,24 @@ Tests:
 
 ## Phase 7: Memory Write Discipline
 
-- [ ] Profile Agent updates global profile facts/preferences.
-- [ ] Application Agent updates only selected application memory by default.
-- [ ] General Agent proposes actions/handoffs but does not directly write profile facts.
-- [ ] Add explicit deterministic promotion flow for reusable facts discovered during application work.
-- [ ] Validate all sidecar memory JSON before saving.
-- [ ] Preserve existing memory on malformed sidecar output.
-- [ ] Log memory update failures without sensitive source text.
+- [x] Profile Agent updates global profile facts/preferences.
+- [x] Application Agent updates only selected application memory by default.
+- [x] General Agent proposes actions/handoffs but does not directly write profile facts.
+- [x] Add explicit deterministic promotion flow for reusable facts discovered during application work.
+- [x] Validate all sidecar memory JSON before saving.
+- [x] Preserve existing memory on malformed sidecar output.
+- [x] Log memory update failures without sensitive source text.
 
 Tests:
 
-- [ ] Application chat does not call `profileBank.update` without explicit promotion.
-- [ ] Profile chat does not update application memory.
-- [ ] General chat does not directly update profile facts.
-- [ ] Malformed memory JSON preserves existing state.
-- [ ] Profile corrections replace conflicting facts.
-- [ ] `npm run typecheck`.
-- [ ] `npm test`.
+- [x] Application chat does not call `profileBank.update` without explicit promotion.
+- [x] Profile chat does not update application memory.
+- [x] General chat does not directly update profile facts.
+- [x] Malformed memory JSON preserves existing state.
+- [x] Profile corrections replace conflicting facts.
+- [x] `npm run typecheck`.
+- [x] `npm test`.
+- [x] `npm run build`.
 
 ## Phase 8: Deterministic Platform Tools
 

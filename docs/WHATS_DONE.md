@@ -94,9 +94,11 @@ Current `/api/chat` behavior:
 - Updates profile raw sources/checklist from profile-builder messages.
 - Updates `masterProfile` with a second AI call in profile-builder mode.
 - Updates application-specific memory and notes after application chat turns.
+- Preserves existing profile/application memory when sidecar model JSON is malformed or fails validation.
 - Exposes General Chat in the UI.
 - Creates applications from General Chat through deterministic backend code.
 - Creates explicit Profile Chat handoffs from General Chat.
+- Creates explicit Profile Chat handoffs from Application Chat when the user asks to update reusable/global profile facts.
 - Uses extracted agent, context, source, handoff, application-action, and memory-update helpers.
 
 Current `/api/profile-sources` behavior:

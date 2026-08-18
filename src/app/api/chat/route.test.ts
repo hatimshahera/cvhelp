@@ -996,4 +996,141 @@ describe("chat API application scoping", () => {
       })
     );
   });
+
+  it("routes reusable profile updates from application chat through a profile handoff", async () => {
+    applicationFindFirst.mockResolvedValueOnce(application);
+    conversationCreate.mockResolvedValueOnce({
+      id: "conversation-application",
+      mode: "application",
+      applicationId: "app-1",
+      summary: null,
+      lastSummarizedMessageId: null
+    });
+    conversationFindFirst.mockResolvedValueOnce({
+      id: "conversation-profile",
+      mode: "build_profile",
+      applicationId: null
+    });
+    chatMessageCreate
+      .mockResolvedValueOnce({
+        id: "message-user",
+        role: "user",
+        content: "Update my global profile: I prefer one-page CVs."
+      })
+      .mockResolvedValueOnce({
+        id: "message-profile-handoff",
+        role: "assistant",
+        content: "Application Chat handoff: confirm the preference."
+      })
+      .mockResolvedValueOnce({
+        id: "message-assistant",
+        role: "assistant",
+        content: "I added a short handoff note to your Profile Chat.",
+        metadata: {
+          actions: [
+            {
+              type: "continue_in_profile_chat",
+              label: "Continue in Profile Chat",
+              conversationId: "conversation-profile"
+            }
+          ]
+        }
+      });
+    chatMessageFindMany
+      .mockResolvedValueOnce([
+        {
+          role: "user",
+          content: "Update my global profile: I prefer one-page CVs."
+        }
+      ])
+      .mockResolvedValueOnce([
+        {
+          id: "message-user",
+          role: "user",
+          content: "Update my global profile: I prefer one-page CVs.",
+          metadata: null,
+          createdAt: new Date("2026-08-13T00:00:00.000Z")
+        },
+        {
+          id: "message-assistant",
+          role: "assistant",
+          content: "I added a short handoff note to your Profile Chat.",
+          metadata: {
+            actions: [
+              {
+                type: "continue_in_profile_chat",
+                label: "Continue in Profile Chat",
+                conversationId: "conversation-profile"
+              }
+            ]
+          },
+          createdAt: new Date("2026-08-13T00:00:01.000Z")
+        }
+      ]);
+    responsesCreate
+      .mockResolvedValueOnce({
+        output_text: "That reusable preference belongs in Profile Chat."
+      })
+      .mockResolvedValueOnce({
+        output_text: JSON.stringify({
+          target: {
+            company: "Example AI",
+            role: "AI Engineer",
+            fit: []
+          },
+          jobPost: application.jobPost,
+          requirements: [],
+          responsibilities: [],
+          keywords: [],
+          selectedEvidence: {
+            projects: [],
+            research: [],
+            experience: [],
+            skills: []
+          },
+          profileSummary: "",
+          honestyNotes: [],
+          risks: [],
+          gaps: [],
+          notes: [],
+          drafts: {},
+          claimProvenance: {},
+          nextActions: []
+        })
+      });
+    conversationUpdate
+      .mockResolvedValueOnce({ id: "conversation-profile" })
+      .mockResolvedValueOnce({ id: "conversation-application" });
+    applicationUpdate.mockResolvedValueOnce(application);
+    const { POST } = await import("./route");
+    const response = await POST(
+      new Request("http://localhost/api/chat", {
+        method: "POST",
+        body: JSON.stringify({
+          mode: "application",
+          applicationId: "app-1",
+          message: "Update my global profile: I prefer one-page CVs."
+        })
+      })
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(profileBankUpdate).not.toHaveBeenCalled();
+    expect(chatMessageCreate).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        data: expect.objectContaining({
+          conversationId: "conversation-profile",
+          content: expect.stringContaining("Application Chat handoff from Example AI - AI Engineer")
+        })
+      })
+    );
+    expect(body.messages[1].metadata.actions[0]).toEqual(
+      expect.objectContaining({
+        type: "continue_in_profile_chat",
+        conversationId: "conversation-profile"
+      })
+    );
+  });
 });
