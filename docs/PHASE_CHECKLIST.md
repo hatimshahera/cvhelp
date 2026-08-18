@@ -204,26 +204,27 @@ Tests:
 - [x] Convert Applications sidebar to navigation/search/status.
 - [x] Add consistent assistant action button styling.
 - [x] Add General Chat empty state.
-- [ ] Add Profile Chat handoff empty/notice state if useful.
+- [x] Add Profile Chat handoff empty/notice state if useful.
 - [x] Add Application Chat creation-success transition.
-- [ ] Check desktop layout.
-- [ ] Check mobile layout.
-- [ ] Check keyboard accessibility.
-- [ ] Check text overflow and overlap.
+- [x] Check desktop layout.
+- [x] Check mobile layout.
+- [x] Check keyboard accessibility.
+- [x] Check text overflow and overlap.
 
 Tests:
 
-- [ ] Browser smoke test for General Chat.
-- [ ] Browser smoke test for Profile Chat handoff.
-- [ ] Browser smoke test for application creation from General Chat.
-- [ ] Browser smoke test for switching to new application chat.
-- [ ] No client console errors in core flows.
+- [x] Browser smoke test for General Chat.
+- [x] Browser smoke test for Profile Chat handoff.
+- [x] Browser smoke test for application creation from General Chat.
+- [x] Browser smoke test for switching to new application chat.
+- [x] No client console errors in core flows.
 - [x] Production server HTTP smoke: `/` returns 200.
 - [x] Production server HTTP smoke: `/app` redirects signed-out users to `/sign-in`.
 - [x] Production server HTTP smoke: signed-out `POST /api/chat/actions` returns 401.
 - [x] `npm run typecheck`.
 - [x] `npm test`.
 - [x] `npm run build`.
+- [x] `npm run test:e2e`.
 
 ## Phase 10: Production Readiness
 
