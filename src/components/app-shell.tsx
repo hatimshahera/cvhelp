@@ -1311,10 +1311,12 @@ export function AppShell({
                 <div className="message-body">{renderMessageContent(item.content)}</div>
                 {item.role === "assistant" && item.metadata?.actions?.length ? (
                   <div className="message-actions" aria-label="Suggested actions">
-                    {item.metadata.actions.map((action) => (
+                    {item.metadata.actions.map((action, actionIndex) => (
                       <button
-                        key={`${action.type}-${action.label}`}
+                        key={`${action.type}-${action.label}-${actionIndex}`}
                         type="button"
+                        title={action.label}
+                        aria-label={action.label}
                         onClick={() => handleChatAction(action)}
                         disabled={isSending || isLoadingHistory}
                       >
@@ -1338,7 +1340,7 @@ export function AppShell({
                 ? "Start by pasting your CV, LinkedIn summary, GitHub/project list, or tell me what you want added to your profile."
                 : activeApplication
                   ? "Ask about this role, tailor your CV, draft a cover letter, or paste application questions."
-                  : "Add a job description from the sidebar to create a separate chat for that application."}
+                  : "Use General Chat to create an application from a job description or URL."}
             </div>
           )}
           {isSending ? (

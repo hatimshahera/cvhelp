@@ -199,13 +199,13 @@ Tests:
 
 ## Phase 9: UI Flow and Regression Polish
 
-- [ ] Keep existing profile chat/editor UX recognizable.
-- [ ] Keep existing application chat/workspace UX recognizable.
-- [ ] Convert Applications sidebar to navigation/search/status.
-- [ ] Add consistent assistant action button styling.
-- [ ] Add General Chat empty state.
+- [x] Keep existing profile chat/editor UX recognizable.
+- [x] Keep existing application chat/workspace UX recognizable.
+- [x] Convert Applications sidebar to navigation/search/status.
+- [x] Add consistent assistant action button styling.
+- [x] Add General Chat empty state.
 - [ ] Add Profile Chat handoff empty/notice state if useful.
-- [ ] Add Application Chat creation-success transition.
+- [x] Add Application Chat creation-success transition.
 - [ ] Check desktop layout.
 - [ ] Check mobile layout.
 - [ ] Check keyboard accessibility.
@@ -218,9 +218,12 @@ Tests:
 - [ ] Browser smoke test for application creation from General Chat.
 - [ ] Browser smoke test for switching to new application chat.
 - [ ] No client console errors in core flows.
-- [ ] `npm run typecheck`.
-- [ ] `npm test`.
-- [ ] `npm run build`.
+- [x] Production server HTTP smoke: `/` returns 200.
+- [x] Production server HTTP smoke: `/app` redirects signed-out users to `/sign-in`.
+- [x] Production server HTTP smoke: signed-out `POST /api/chat/actions` returns 401.
+- [x] `npm run typecheck`.
+- [x] `npm test`.
+- [x] `npm run build`.
 
 ## Phase 10: Production Readiness
 
