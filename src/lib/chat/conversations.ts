@@ -25,6 +25,7 @@ export async function getLatestConversationWithMessages({
           id: true,
           role: true,
           content: true,
+          metadata: true,
           createdAt: true
         }
       }
@@ -145,6 +146,7 @@ export async function listConversationMessages({
       id: true,
       role: true,
       content: true,
+      metadata: true,
       createdAt: true
     }
   });

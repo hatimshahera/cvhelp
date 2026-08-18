@@ -2,6 +2,7 @@ import OpenAI from "openai";
 import type { Prisma } from "@prisma/client";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { checkFeatureLimit, getBillingStatus } from "@/lib/billing";
 import {
   appendApplicationMemoryNote,
   appendRawSource,
@@ -22,11 +23,17 @@ import {
   listConversationMessages
 } from "@/lib/chat/conversations";
 import { buildChatPromptContext } from "@/lib/chat/context";
+import type { ChatAction } from "@/lib/chat/actions";
+import { createProfileHandoff, looksLikeProfileHandoffRequest } from "@/lib/chat/handoffs";
 import { chatModeSchema, conversationApplicationIdForMode } from "@/lib/chat/types";
 import { prisma } from "@/lib/prisma";
 import { checkRequestLimit, getIntegerEnv } from "@/lib/rate-limit";
 import { logError } from "@/lib/server-log";
 import { getCurrentUser } from "@/lib/session";
+import {
+  createApplicationFromJobSource,
+  looksLikeJobSource
+} from "@/lib/tools/application-actions";
 
 const chatSchema = z.object({
   message: z.string().trim().min(1, "Enter a message.").max(8000),
@@ -40,6 +47,27 @@ const modeSchema = chatModeSchema.default("build_profile");
 function toTitle(message: string) {
   const compact = message.replace(/\s+/g, " ").trim();
   return compact.length > 58 ? `${compact.slice(0, 58)}...` : compact || "New chat";
+}
+
+async function checkApplicationCreationLimit(userId: string) {
+  const [subscription, applicationCount] = await Promise.all([
+    prisma.subscription.findUnique({
+      where: { userId }
+    }),
+    prisma.application.count({
+      where: { userId, archivedAt: null }
+    })
+  ]);
+  const billing = getBillingStatus(subscription);
+  const applicationLimit = checkFeatureLimit({
+    plan: billing.plan,
+    feature: "applications",
+    used: applicationCount
+  });
+
+  if (!applicationLimit.allowed) {
+    throw new Error(`You have reached the ${applicationLimit.limit} application limit for the ${billing.plan} plan.`);
+  }
 }
 
 async function getOrCreateProfileBank(userId: string) {
@@ -297,16 +325,62 @@ export async function POST(request: Request) {
       })
     });
 
-    const assistantText =
+    let assistantText =
       response.output_text?.trim() ||
       "I could not produce a response. Try again with a little more context.";
+    const actions: ChatAction[] = [];
+
+    if (mode === "general" && looksLikeJobSource(parsed.data.message)) {
+      try {
+        await checkApplicationCreationLimit(user.id);
+        const createdApplication = await createApplicationFromJobSource({
+          userId: user.id,
+          input: {
+            jobSource: parsed.data.message
+          }
+        });
+
+        assistantText = [
+          assistantText,
+          `Created a new application for ${createdApplication.company} - ${createdApplication.role}.`
+        ].join("\n\n");
+        actions.push({
+          type: "open_application_chat",
+          label: "Open application chat",
+          applicationId: createdApplication.id
+        });
+      } catch (creationError) {
+        assistantText = [
+          assistantText,
+          creationError instanceof Error
+            ? `I could not create the application: ${creationError.message}`
+            : "I could not create the application from that job source."
+        ].join("\n\n");
+      }
+    } else if (mode === "general" && looksLikeProfileHandoffRequest(parsed.data.message)) {
+      const profileConversation = await createProfileHandoff({
+        userId: user.id,
+        context: parsed.data.message
+      });
+
+      actions.push({
+        type: "continue_in_profile_chat",
+        label: "Continue in Profile Chat",
+        conversationId: profileConversation.id
+      });
+      assistantText = [
+        assistantText,
+        "I added a short handoff note to your Profile Chat so reusable facts or preferences can be confirmed there."
+      ].join("\n\n");
+    }
 
     const assistantMessage = await prisma.chatMessage.create({
       data: {
         conversationId: conversation.id,
         userId: user.id,
         role: "assistant",
-        content: assistantText
+        content: assistantText,
+        metadata: actions.length ? { actions } : undefined
       }
     });
 

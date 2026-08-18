@@ -48,6 +48,7 @@ Tests:
 - [x] `npm run typecheck`.
 - [x] `npm test`.
 - [x] `npm run build`.
+- [x] `npx prisma validate`.
 
 ## Phase 3: Scoped Context Builder
 
@@ -75,34 +76,35 @@ Tests:
 
 ## Phase 4: General Chat Router and Handoffs
 
-- [ ] Add visible General Chat rail entry.
-- [ ] Extend frontend `ChatMode` to include `general`.
-- [ ] Add General Chat title, description, empty state, and composer placeholder.
-- [ ] Add typed assistant action payload support.
-- [ ] Render assistant action buttons under chat messages.
-- [ ] Add deterministic action `create_application_from_job_source`.
-- [ ] Reuse current job source resolution, metadata inference, summary extraction, memory initialization, and conversation creation.
-- [ ] Return `open_application_chat` action after application creation.
-- [ ] Wire `open_application_chat` action to switch UI to the new application chat.
-- [ ] Add deterministic action `handoff_to_profile_chat`.
-- [ ] Create a concise destination Profile Chat handoff note.
-- [ ] Return `continue_in_profile_chat` action after profile handoff.
-- [ ] Wire `continue_in_profile_chat` action to open Profile Chat.
-- [ ] Keep `/api/applications` POST working for backwards compatibility during transition.
-- [ ] De-emphasize or remove the sidebar job-description form only after General creation works.
+- [x] Add visible General Chat rail entry.
+- [x] Extend frontend `ChatMode` to include `general`.
+- [x] Add General Chat title, description, empty state, and composer placeholder.
+- [x] Add typed assistant action payload support.
+- [x] Render assistant action buttons under chat messages.
+- [x] Add deterministic action `create_application_from_job_source`.
+- [x] Reuse current job source resolution, metadata inference, summary extraction, memory initialization, and conversation creation.
+- [x] Return `open_application_chat` action after application creation.
+- [x] Wire `open_application_chat` action to switch UI to the new application chat.
+- [x] Add deterministic action `handoff_to_profile_chat`.
+- [x] Create a concise destination Profile Chat handoff note.
+- [x] Return `continue_in_profile_chat` action after profile handoff.
+- [x] Wire `continue_in_profile_chat` action to open Profile Chat.
+- [x] Keep `/api/applications` POST working for backwards compatibility during transition.
+- [x] De-emphasize or remove the sidebar job-description form only after General creation works.
 
 Tests:
 
-- [ ] General Chat can create an application from pasted job text through deterministic backend code.
-- [ ] General Chat can create an application from a readable job URL with mocked fetch.
-- [ ] New application includes job post, job summary, memory, and scoped application conversation.
-- [ ] Returned action contains the new user-owned application ID.
-- [ ] General Chat cannot create an application for another user.
-- [ ] General Chat profile handoff does not update profile bank directly.
-- [ ] Profile handoff creates an auditable note in the profile conversation.
-- [ ] Existing application creation API still works.
-- [ ] `npm run typecheck`.
-- [ ] `npm test`.
+- [x] General Chat can create an application from pasted job text through deterministic backend code.
+- [x] General Chat can create an application from a readable job URL with mocked fetch.
+- [x] New application includes job post, job summary, memory, and scoped application conversation.
+- [x] Returned action contains the new user-owned application ID.
+- [x] General Chat cannot create an application for another user.
+- [x] General Chat profile handoff does not update profile bank directly.
+- [x] Profile handoff creates an auditable note in the profile conversation.
+- [x] Existing application creation API still works.
+- [x] `npm run typecheck`.
+- [x] `npm test`.
+- [x] `npm run build`.
 
 ## Phase 5: First-Class Sources and Attachments
 

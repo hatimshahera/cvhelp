@@ -1770,6 +1770,33 @@ h3 {
   padding-left: 2px;
 }
 
+.message-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.message-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 36px;
+  padding: 8px 11px;
+  border: 1px solid rgba(8, 17, 27, 0.16);
+  border-radius: var(--radius);
+  background: #ffffff;
+  color: #08111b;
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.message-actions button:not(:disabled):hover {
+  border-color: #08111b;
+  box-shadow: 3px 3px 0 #08111b;
+}
+
 .message.assistant {
   align-self: flex-start;
   background: white;

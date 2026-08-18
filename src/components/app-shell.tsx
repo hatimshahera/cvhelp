@@ -29,10 +29,27 @@ type Message = {
   id?: string;
   role: "assistant" | "user";
   content: string;
+  metadata?: ChatMessageMetadata | null;
 };
 
-type ChatMode = "build_profile" | "application";
+type ChatMode = "build_profile" | "application" | "general";
 type ProfileWorkspaceView = "chat" | "profile";
+
+type ChatAction =
+  | {
+      type: "open_application_chat";
+      label: string;
+      applicationId: string;
+    }
+  | {
+      type: "continue_in_profile_chat";
+      label: string;
+      conversationId?: string | null;
+    };
+
+type ChatMessageMetadata = {
+  actions?: ChatAction[];
+};
 
 type ProfileBankSummary = {
   sourceCount: number;
@@ -298,9 +315,6 @@ export function AppShell({
   const [applications, setApplications] = useState<ApplicationItem[]>([]);
   const [applicationSearch, setApplicationSearch] = useState("");
   const [applicationListFilter, setApplicationListFilter] = useState<"active" | "archived" | "all">("active");
-  const [isAddingApplication, setIsAddingApplication] = useState(false);
-  const [jobSource, setJobSource] = useState("");
-  const [isCreatingApplication, setIsCreatingApplication] = useState(false);
   const [applicationDetail, setApplicationDetail] = useState<ApplicationDetail | null>(null);
   const [isLoadingApplicationDetail, setIsLoadingApplicationDetail] = useState(false);
   const [selectedWorkspaceFile, setSelectedWorkspaceFile] = useState<WorkspaceFile>({ kind: "empty", label: "Workspace" });
@@ -340,7 +354,9 @@ export function AppShell({
     return matchesFilter && matchesSearch;
   });
   const activeTitle =
-    activeMode === "build_profile"
+    activeMode === "general"
+      ? "General"
+      : activeMode === "build_profile"
       ? profileView === "profile"
         ? "Profile"
         : "Build profile"
@@ -348,7 +364,9 @@ export function AppShell({
         ? `${activeApplication.company} - ${activeApplication.role}`
         : "Applications";
   const activeDescription =
-    activeMode === "build_profile"
+    activeMode === "general"
+      ? "Create applications, compare roles, and route profile changes"
+      : activeMode === "build_profile"
       ? profileView === "profile"
         ? "Review and edit your saved profile sections."
         : "Add CV, LinkedIn, GitHub, projects, evidence."
@@ -649,45 +667,6 @@ export function AppShell({
     }
   }
 
-  async function createApplication(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const trimmed = jobSource.trim();
-    if (!trimmed || isCreatingApplication) return;
-
-    setError("");
-    setIsCreatingApplication(true);
-
-    try {
-      const response = await fetch("/api/applications", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ jobSource: trimmed })
-      });
-      const data = await readJsonResponse(response);
-
-      if (!response.ok) {
-        throw new Error(data.error || "Could not create the application.");
-      }
-
-      await loadApplications();
-      setJobSource("");
-      setIsAddingApplication(false);
-      setActiveMode("application");
-      setActiveApplicationId(data.application.id);
-      setExpandedApplicationId(data.application.id);
-      setApplicationDetail(data.application);
-      setSelectedWorkspaceFile(buildWorkspaceFiles(data.application)[0] ?? { kind: "empty", label: "Workspace" });
-      setConversationId(null);
-      setMessages([]);
-      setMessage("");
-      setSelectedFiles([]);
-    } catch (createError) {
-      setError(createError instanceof Error ? createError.message : "Could not create the application.");
-    } finally {
-      setIsCreatingApplication(false);
-    }
-  }
-
   async function clearConversation() {
     if (activeMode !== "build_profile" || isClearingConversation || isSending || isLoadingHistory) return;
     if (!conversationId && !messages.length) return;
@@ -843,12 +822,49 @@ export function AppShell({
     setSelectedFiles([]);
   }
 
+  function openGeneralChat() {
+    setActiveMode("general");
+    setProfileView("chat");
+    setActiveApplicationId(null);
+    setExpandedApplicationId(null);
+    setConversationId(null);
+    setMessages([]);
+    setMessage("");
+    setSelectedFiles([]);
+  }
+
   function openProfileEditor() {
     setActiveMode("build_profile");
     setProfileView("profile");
     setActiveApplicationId(null);
     setExpandedApplicationId(null);
     setConversationId(null);
+    setMessages([]);
+    setMessage("");
+    setSelectedFiles([]);
+  }
+
+  async function handleChatAction(action: ChatAction) {
+    if (action.type === "open_application_chat") {
+      await loadApplications();
+      setActiveMode("application");
+      setProfileView("chat");
+      setActiveApplicationId(action.applicationId);
+      setExpandedApplicationId(action.applicationId);
+      setSelectedWorkspaceFile({ kind: "empty", label: "Workspace" });
+      setIsSidePanelOpen(true);
+      setConversationId(null);
+      setMessages([]);
+      setMessage("");
+      setSelectedFiles([]);
+      return;
+    }
+
+    setActiveMode("build_profile");
+    setProfileView("chat");
+    setActiveApplicationId(null);
+    setExpandedApplicationId(null);
+    setConversationId(action.conversationId ?? null);
     setMessages([]);
     setMessage("");
     setSelectedFiles([]);
@@ -1001,6 +1017,19 @@ export function AppShell({
 
         <nav className="rail-nav" aria-label="Workspace navigation">
           <button
+            className={activeMode === "general" ? "active nav-section-toggle" : "nav-section-toggle"}
+            type="button"
+            onClick={openGeneralChat}
+          >
+            <MessageSquareText size={18} />
+            <span>
+              <strong>General</strong>
+              <small>Intake and routing</small>
+            </span>
+            <ChevronRight size={16} />
+          </button>
+
+          <button
             className="nav-section-toggle"
             type="button"
             onClick={() => setIsBuildProfileOpen((current) => !current)}
@@ -1062,26 +1091,11 @@ export function AppShell({
           <button
             className="add-application-button"
             type="button"
-            onClick={() => setIsAddingApplication((current) => !current)}
+            onClick={openGeneralChat}
           >
             <FilePlus2 size={16} />
-            Add job description
+            Create from General Chat
           </button>
-
-          {isAddingApplication ? (
-            <form className="job-description-form" onSubmit={createApplication}>
-              <textarea
-                value={jobSource}
-                onChange={(event) => setJobSource(event.target.value)}
-                placeholder="Paste a job post link or the full job description..."
-                disabled={isCreatingApplication}
-              />
-              <button type="submit" disabled={isCreatingApplication || jobSource.trim().length < 10}>
-                {isCreatingApplication ? <Loader2 className="spin" size={15} /> : null}
-                Create application
-              </button>
-            </form>
-          ) : null}
 
           <div className="application-list-controls">
             <div className="application-search">
@@ -1285,11 +1299,32 @@ export function AppShell({
               <article className={`message ${item.role}`} key={item.id ?? `${item.role}-${index}`}>
                 <div className="message-meta">{item.role === "assistant" ? "CVhelp" : "You"}</div>
                 <div className="message-body">{renderMessageContent(item.content)}</div>
+                {item.role === "assistant" && item.metadata?.actions?.length ? (
+                  <div className="message-actions" aria-label="Suggested actions">
+                    {item.metadata.actions.map((action) => (
+                      <button
+                        key={`${action.type}-${action.label}`}
+                        type="button"
+                        onClick={() => handleChatAction(action)}
+                        disabled={isSending || isLoadingHistory}
+                      >
+                        {action.type === "open_application_chat" ? (
+                          <BriefcaseBusiness size={15} />
+                        ) : (
+                          <UserRound size={15} />
+                        )}
+                        {action.label}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
               </article>
             ))
           ) : (
             <div className="empty-state">
-              {activeMode === "build_profile"
+              {activeMode === "general"
+                ? "Paste a job description, compare saved applications, or ask a broader career question."
+                : activeMode === "build_profile"
                 ? "Start by pasting your CV, LinkedIn summary, GitHub/project list, or tell me what you want added to your profile."
                 : activeApplication
                   ? "Ask about this role, tailor your CV, draft a cover letter, or paste application questions."
@@ -1350,7 +1385,9 @@ export function AppShell({
               value={message}
               onChange={(event) => setMessage(event.target.value)}
               placeholder={
-                activeMode === "build_profile"
+                activeMode === "general"
+                  ? "Paste a job, ask about applications, or route a profile update..."
+                  : activeMode === "build_profile"
                   ? "Add to your profile..."
                   : activeApplication
                     ? "Ask about this application..."

@@ -4,6 +4,9 @@ import { resetRequestLimits } from "@/lib/rate-limit";
 const profileBankUpsert = vi.fn();
 const profileBankUpdate = vi.fn();
 const applicationFindFirst = vi.fn();
+const applicationFindMany = vi.fn();
+const applicationFindUnique = vi.fn();
+const applicationCount = vi.fn();
 const conversationFindFirst = vi.fn();
 const conversationCreate = vi.fn();
 const conversationUpdate = vi.fn();
@@ -11,7 +14,9 @@ const chatMessageCreate = vi.fn();
 const chatMessageDelete = vi.fn();
 const chatMessageDeleteMany = vi.fn();
 const chatMessageFindMany = vi.fn();
+const subscriptionFindUnique = vi.fn();
 const applicationUpdate = vi.fn();
+const applicationCreate = vi.fn();
 const responsesCreate = vi.fn();
 
 vi.mock("next-auth", () => ({
@@ -30,7 +35,14 @@ vi.mock("@/lib/prisma", () => ({
     },
     application: {
       findFirst: applicationFindFirst,
+      findMany: applicationFindMany,
+      findUnique: applicationFindUnique,
+      count: applicationCount,
+      create: applicationCreate,
       update: applicationUpdate
+    },
+    subscription: {
+      findUnique: subscriptionFindUnique
     },
     conversation: {
       findFirst: conversationFindFirst,
@@ -96,6 +108,7 @@ describe("chat API application scoping", () => {
     delete process.env.CVHELP_CHAT_RATE_WINDOW_MS;
     profileBankUpsert.mockResolvedValue(profileBank);
     profileBankUpdate.mockResolvedValue(profileBank);
+    applicationFindMany.mockResolvedValue([]);
     const { getServerSession } = await import("next-auth");
     vi.mocked(getServerSession).mockResolvedValue({
       user: {
@@ -389,6 +402,366 @@ describe("chat API application scoping", () => {
       2,
       expect.objectContaining({
         instructions: expect.stringContaining("Do not invent dates, metrics, employers, credentials, links, or technologies.")
+      })
+    );
+  });
+
+  it("creates a new application from a job description in general chat and returns an open action", async () => {
+    const createdApplication = {
+      id: "app-general-1",
+      company: "Example AI",
+      role: "AI Engineer",
+      slug: "example-ai-ai-engineer",
+      status: "draft",
+      createdAt: new Date("2026-08-13T00:00:00.000Z"),
+      updatedAt: new Date("2026-08-13T00:00:00.000Z")
+    };
+    conversationCreate
+      .mockResolvedValueOnce({
+        id: "conversation-general",
+        mode: "general",
+        applicationId: null
+      })
+      .mockResolvedValueOnce({
+        id: "conversation-application",
+        mode: "application",
+        applicationId: "app-general-1"
+      });
+    chatMessageCreate
+      .mockResolvedValueOnce({
+        id: "message-user",
+        role: "user",
+        content:
+          "Example AI is hiring an AI Engineer. Requirements include Python, RAG, LLM evaluation, and backend agent workflows."
+      })
+      .mockResolvedValueOnce({
+        id: "message-assistant",
+        role: "assistant",
+        content: "Created a new application for Example AI - AI Engineer.",
+        metadata: {
+          actions: [
+            {
+              type: "open_application_chat",
+              label: "Open application chat",
+              applicationId: "app-general-1"
+            }
+          ]
+        }
+      });
+    chatMessageFindMany
+      .mockResolvedValueOnce([
+        {
+          role: "user",
+          content:
+            "Example AI is hiring an AI Engineer. Requirements include Python, RAG, LLM evaluation, and backend agent workflows."
+        }
+      ])
+      .mockResolvedValueOnce([
+        {
+          id: "message-user",
+          role: "user",
+          content:
+            "Example AI is hiring an AI Engineer. Requirements include Python, RAG, LLM evaluation, and backend agent workflows.",
+          metadata: null,
+          createdAt: new Date("2026-08-13T00:00:00.000Z")
+        },
+        {
+          id: "message-assistant",
+          role: "assistant",
+          content: "Created a new application for Example AI - AI Engineer.",
+          metadata: {
+            actions: [
+              {
+                type: "open_application_chat",
+                label: "Open application chat",
+                applicationId: "app-general-1"
+              }
+            ]
+          },
+          createdAt: new Date("2026-08-13T00:00:01.000Z")
+        }
+      ]);
+    responsesCreate.mockResolvedValueOnce({
+      output_text: "I can turn that into an application workspace."
+    });
+    subscriptionFindUnique.mockResolvedValueOnce(null);
+    applicationCount.mockResolvedValueOnce(1);
+    applicationFindUnique.mockResolvedValueOnce(null);
+    applicationCreate.mockResolvedValueOnce(createdApplication);
+    conversationUpdate.mockResolvedValueOnce({ id: "conversation-general" });
+    const { POST } = await import("./route");
+    const response = await POST(
+      new Request("http://localhost/api/chat", {
+        method: "POST",
+        body: JSON.stringify({
+          mode: "general",
+          message:
+            "Example AI is hiring an AI Engineer. Requirements include Python, RAG, LLM evaluation, and backend agent workflows."
+        })
+      })
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(applicationCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          userId: "user-1",
+          jobPost: expect.objectContaining({
+            content: expect.stringContaining("Example AI is hiring")
+          })
+        })
+      })
+    );
+    expect(chatMessageCreate).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        data: expect.objectContaining({
+          role: "assistant",
+          metadata: {
+            actions: [
+              {
+                type: "open_application_chat",
+                label: "Open application chat",
+                applicationId: "app-general-1"
+              }
+            ]
+          }
+        })
+      })
+    );
+    expect(body.messages[1].metadata.actions[0]).toEqual(
+      expect.objectContaining({
+        type: "open_application_chat",
+        applicationId: "app-general-1"
+      })
+    );
+  });
+
+  it("creates a new application from a readable job URL in general chat", async () => {
+    const createdApplication = {
+      id: "app-general-url",
+      company: "Example AI",
+      role: "Senior Full-Stack Engineer",
+      slug: "example-ai-senior-full-stack-engineer",
+      status: "draft",
+      createdAt: new Date("2026-08-13T00:00:00.000Z"),
+      updatedAt: new Date("2026-08-13T00:00:00.000Z")
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        headers: new Headers({ "content-type": "text/html" }),
+        text: vi.fn().mockResolvedValue(`
+          <html>
+            <body>
+              <h1>Senior Full-stack Engineer</h1>
+              <p>Example AI is hiring a Senior Full-stack Engineer.</p>
+              <p>Must have experience with TypeScript, React, Next.js, Postgres, APIs, LLMs, and RAG.</p>
+              <p>Build AI agent workflows, evaluation systems, and backend services for production users.</p>
+              <p>Collaborate with product and design teams to deliver customer-facing tools.</p>
+            </body>
+          </html>
+        `)
+      })
+    );
+    conversationCreate
+      .mockResolvedValueOnce({
+        id: "conversation-general",
+        mode: "general",
+        applicationId: null
+      })
+      .mockResolvedValueOnce({
+        id: "conversation-application",
+        mode: "application",
+        applicationId: "app-general-url"
+      });
+    chatMessageCreate
+      .mockResolvedValueOnce({
+        id: "message-user",
+        role: "user",
+        content: "https://example.com/jobs/senior-full-stack-engineer"
+      })
+      .mockResolvedValueOnce({
+        id: "message-assistant",
+        role: "assistant",
+        content: "Created a new application for Example AI - Senior Full-Stack Engineer.",
+        metadata: {
+          actions: [
+            {
+              type: "open_application_chat",
+              label: "Open application chat",
+              applicationId: "app-general-url"
+            }
+          ]
+        }
+      });
+    chatMessageFindMany
+      .mockResolvedValueOnce([
+        {
+          role: "user",
+          content: "https://example.com/jobs/senior-full-stack-engineer"
+        }
+      ])
+      .mockResolvedValueOnce([
+        {
+          id: "message-user",
+          role: "user",
+          content: "https://example.com/jobs/senior-full-stack-engineer",
+          metadata: null,
+          createdAt: new Date("2026-08-13T00:00:00.000Z")
+        },
+        {
+          id: "message-assistant",
+          role: "assistant",
+          content: "Created a new application for Example AI - Senior Full-Stack Engineer.",
+          metadata: {
+            actions: [
+              {
+                type: "open_application_chat",
+                label: "Open application chat",
+                applicationId: "app-general-url"
+              }
+            ]
+          },
+          createdAt: new Date("2026-08-13T00:00:01.000Z")
+        }
+      ]);
+    responsesCreate.mockResolvedValueOnce({
+      output_text: "I can create an application workspace from that job URL."
+    });
+    subscriptionFindUnique.mockResolvedValueOnce(null);
+    applicationCount.mockResolvedValueOnce(1);
+    applicationFindUnique.mockResolvedValueOnce(null);
+    applicationCreate.mockResolvedValueOnce(createdApplication);
+    conversationUpdate.mockResolvedValueOnce({ id: "conversation-general" });
+    const { POST } = await import("./route");
+    const response = await POST(
+      new Request("http://localhost/api/chat", {
+        method: "POST",
+        body: JSON.stringify({
+          mode: "general",
+          message: "https://example.com/jobs/senior-full-stack-engineer"
+        })
+      })
+    );
+
+    expect(response.status).toBe(200);
+    expect(applicationCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          userId: "user-1",
+          jobPost: expect.objectContaining({
+            source: "job_post_url",
+            sourceUrl: "https://example.com/jobs/senior-full-stack-engineer",
+            content: expect.stringContaining("Senior Full-stack Engineer")
+          })
+        })
+      })
+    );
+  });
+
+  it("creates a profile handoff from general chat without updating the profile bank", async () => {
+    conversationCreate.mockResolvedValueOnce({
+      id: "conversation-general",
+      mode: "general",
+      applicationId: null
+    });
+    conversationFindFirst.mockResolvedValueOnce({
+      id: "conversation-profile",
+      mode: "build_profile",
+      applicationId: null
+    });
+    chatMessageCreate
+      .mockResolvedValueOnce({
+        id: "message-user",
+        role: "user",
+        content: "For my profile, I prefer concise one-page CVs with direct bullet style."
+      })
+      .mockResolvedValueOnce({
+        id: "message-profile-handoff",
+        role: "assistant",
+        content: "General Chat handoff: confirm the preference."
+      })
+      .mockResolvedValueOnce({
+        id: "message-assistant",
+        role: "assistant",
+        content: "I added a short handoff note to your Profile Chat.",
+        metadata: {
+          actions: [
+            {
+              type: "continue_in_profile_chat",
+              label: "Continue in Profile Chat",
+              conversationId: "conversation-profile"
+            }
+          ]
+        }
+      });
+    chatMessageFindMany
+      .mockResolvedValueOnce([
+        {
+          role: "user",
+          content: "For my profile, I prefer concise one-page CVs with direct bullet style."
+        }
+      ])
+      .mockResolvedValueOnce([
+        {
+          id: "message-user",
+          role: "user",
+          content: "For my profile, I prefer concise one-page CVs with direct bullet style.",
+          metadata: null,
+          createdAt: new Date("2026-08-13T00:00:00.000Z")
+        },
+        {
+          id: "message-assistant",
+          role: "assistant",
+          content: "I added a short handoff note to your Profile Chat.",
+          metadata: {
+            actions: [
+              {
+                type: "continue_in_profile_chat",
+                label: "Continue in Profile Chat",
+                conversationId: "conversation-profile"
+              }
+            ]
+          },
+          createdAt: new Date("2026-08-13T00:00:01.000Z")
+        }
+      ]);
+    responsesCreate.mockResolvedValueOnce({
+      output_text: "That belongs in your reusable profile preferences."
+    });
+    conversationUpdate
+      .mockResolvedValueOnce({ id: "conversation-profile" })
+      .mockResolvedValueOnce({ id: "conversation-general" });
+    const { POST } = await import("./route");
+    const response = await POST(
+      new Request("http://localhost/api/chat", {
+        method: "POST",
+        body: JSON.stringify({
+          mode: "general",
+          message: "For my profile, I prefer concise one-page CVs with direct bullet style."
+        })
+      })
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(profileBankUpdate).not.toHaveBeenCalled();
+    expect(chatMessageCreate).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        data: expect.objectContaining({
+          conversationId: "conversation-profile",
+          content: expect.stringContaining("General Chat handoff")
+        })
+      })
+    );
+    expect(body.messages[1].metadata.actions[0]).toEqual(
+      expect.objectContaining({
+        type: "continue_in_profile_chat",
+        conversationId: "conversation-profile"
       })
     );
   });
