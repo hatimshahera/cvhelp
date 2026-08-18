@@ -65,13 +65,27 @@ function toTitle(message: string) {
   return compact.length > 58 ? `${compact.slice(0, 58)}...` : compact || "New chat";
 }
 
-function looksLikeActionableJobSource(message: string) {
-  if (isLikelyUrl(message.trim())) return true;
-  if (!looksLikeJobSource(message)) return false;
-
-  return /\b(about the job|job description|the company|the role|requirements?|responsibilities|is hiring|are hiring|we are hiring|they are hiring|hiring an?|hiring a|apply for)\b/i.test(
+function asksForJobAnalysis(message: string) {
+  return /\b(what do you think|based on my profile|fit|good fit|bad fit|should i apply|worth applying|evaluate|analyse|analyze|review this job|thoughts?|pros and cons|gaps?|match)\b/i.test(
     message
   );
+}
+
+function explicitlyRequestsApplicationCreation(message: string) {
+  return /\b(create|add|save|start|set up|make|open)\b.{0,80}\b(application|app|application chat|job application|job)\b/i.test(
+    message
+  );
+}
+
+function shouldCreateApplicationFromGeneralMessage(message: string, hasAttachedJobSource: boolean) {
+  const trimmed = message.trim();
+  if (isLikelyUrl(trimmed)) return true;
+  if (hasAttachedJobSource) return explicitlyRequestsApplicationCreation(message);
+  if (!looksLikeJobSource(message)) return false;
+  if (asksForJobAnalysis(message)) return false;
+  if (explicitlyRequestsApplicationCreation(message)) return true;
+
+  return !/[?]/.test(message);
 }
 
 async function checkApplicationCreationLimit(userId: string) {
@@ -328,9 +342,14 @@ export async function POST(request: Request) {
     mode === "general"
       ? attachedSources.find((source) => source.textContent && looksLikeJobSource(source.textContent))
       : null;
-  const jobSourceText = looksLikeActionableJobSource(parsed.data.message)
+  const shouldCreateApplicationFromJobSource =
+    mode === "general" &&
+    shouldCreateApplicationFromGeneralMessage(parsed.data.message, Boolean(jobSourceFromAttachment));
+  const jobSourceText = shouldCreateApplicationFromJobSource && looksLikeJobSource(parsed.data.message)
     ? parsed.data.message
-    : jobSourceFromAttachment?.textContent ?? "";
+    : shouldCreateApplicationFromJobSource
+      ? jobSourceFromAttachment?.textContent ?? ""
+      : "";
 
   if (!jobSourceText && !process.env.OPENAI_API_KEY) {
     return NextResponse.json(

@@ -42,6 +42,17 @@ describe("General Chat context planning", () => {
     });
   });
 
+  it("routes job analysis against the user profile instead of treating it as creation", () => {
+    expect(
+      planGeneralChatContext(
+        "About the job The Company My client are a HealthTech using AI. The Role they are hiring an AI Engineer. Requirements include Python and RAG. What do you think about this job based on my profile"
+      )
+    ).toMatchObject({
+      intent: "profile_lookup",
+      workspaceTools: ["search_profile"]
+    });
+  });
+
   it("keeps ambiguous next-step requests context-light", () => {
     expect(planGeneralChatContext("what should I do next?")).toMatchObject({
       intent: "ambiguous",

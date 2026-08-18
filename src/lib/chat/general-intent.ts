@@ -39,6 +39,10 @@ const sourceTerms =
 const readIntentTerms =
   /\b(list|show|find|search|get|pull up|look up|what|which|compare|review|summari[sz]e|open)\b/i;
 const ambiguousWorkspaceTerms = /\b(next|todo|priority|prioriti[sz]e|should i do)\b/i;
+const jobAnalysisTerms =
+  /\b(what do you think|based on my profile|fit|good fit|bad fit|should i apply|worth applying|evaluate|analyse|analyze|review this job|thoughts?|pros and cons|gaps?|match)\b/i;
+const jobCreationTerms =
+  /\b(create|add|save|start|set up|make|open)\b.{0,80}\b(application|app|application chat|job application|job)\b/i;
 
 function uniqueTools(tools: GeneralWorkspaceTool[]) {
   return Array.from(new Set(tools));
@@ -47,7 +51,15 @@ function uniqueTools(tools: GeneralWorkspaceTool[]) {
 export function planGeneralChatContext(message: string): GeneralChatContextPlan {
   const text = message.trim();
 
-  if (looksLikeJobSource(text)) {
+  if (looksLikeJobSource(text) && jobAnalysisTerms.test(text)) {
+    return {
+      intent: "profile_lookup",
+      workspaceTools: ["search_profile"],
+      reason: "The user provided a job source and asked for profile-based analysis."
+    };
+  }
+
+  if (looksLikeJobSource(text) && (jobCreationTerms.test(text) || !/[?]/.test(text))) {
     return {
       intent: "job_source",
       workspaceTools: [],

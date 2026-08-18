@@ -108,15 +108,19 @@ Users naturally paste job descriptions into chat. Keeping application creation i
 
 Decision:
 
-General Chat handles actionable job descriptions and job URLs through deterministic backend creation before the main LLM response call.
+General Chat handles actionable application-creation requests from job descriptions and job URLs through deterministic backend creation before the main LLM response call.
 
 Reasoning:
 
-When the user pastes a job source, the product action is application creation. The previous ordering generated generic CV/cover-letter advice first and only then appended a backend failure such as a plan-limit error. That buried the important state and made the assistant feel confused. Preflighting creation keeps the response aligned with what the backend can actually do and avoids spending tokens on irrelevant templates.
+When the user pastes a job source to create an application, the product action is application creation. The previous ordering generated generic CV/cover-letter advice first and only then appended a backend failure such as a plan-limit error. That buried the important state and made the assistant feel confused. Preflighting creation keeps the response aligned with what the backend can actually do and avoids spending tokens on irrelevant templates.
+
+Follow-up correction:
+
+Job-source detection is not enough on its own. General Chat now distinguishes application creation turns from job-analysis turns. Bare job URLs, explicit create/add/save requests, and pasted job descriptions without a separate question can create applications. Questions such as "what do you think based on my profile" stay in normal chat and retrieve only relevant profile context.
 
 Tradeoff:
 
-The first response to a pasted job source is now intentionally short: create the application, provide the open-chat button, or explain why creation was blocked. Detailed tailoring belongs inside the resulting application chat.
+The first response to an application-creation job source is intentionally short: create the application, provide the open-chat button, or explain why creation was blocked. Detailed tailoring belongs inside the resulting application chat.
 
 ### Temporary Internal Unlimited Plan
 

@@ -313,6 +313,9 @@ Tests:
 - [x] Move General Chat job-source creation before the main chat model call.
 - [x] Return short deterministic creation success/failure messages for job-source turns.
 - [x] Prevent generic tailoring/template output when application creation is blocked.
+- [x] Treat job descriptions plus analysis questions as normal chat, not automatic application creation.
+- [x] Retrieve profile context for job-analysis questions that ask for profile-based fit.
+- [x] Improve recruiter-style company/role inference so anonymized job posts do not create huge malformed titles.
 - [x] Keep successful job-source responses returning `open_application_chat`.
 - [x] Keep attached job-source conversion behavior.
 - [x] Add temporary `internal` billing plan for unlimited internal accounts.
@@ -323,6 +326,8 @@ Tests:
 Tests:
 
 - [x] Over-limit job-source General Chat path does not call the model.
+- [x] Job-analysis General Chat path does not create an application and does retrieve profile context.
+- [x] Recruiter-style job metadata extraction returns usable company/role labels.
 - [x] Direct application creation allows `internal` accounts above the free cap.
 - [x] Billing helper covers `internal` unlimited limits.
 - [x] `npm run typecheck`.

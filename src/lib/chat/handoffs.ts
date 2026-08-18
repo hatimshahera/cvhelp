@@ -1,9 +1,17 @@
 import { prisma } from "@/lib/prisma";
 
 export function looksLikeProfileHandoffRequest(message: string) {
-  return /(?:profile|profile bank|global preference|cv preference|resume preference|one[- ]page|bullet style|tone|formatting|things to avoid|avoid claiming|do not claim)/i.test(
-    message
-  );
+  const text = message.trim();
+  const updateIntent =
+    /\b(update|change|save|remember|add|remove|delete|correct|set|prefer|preference|always|never|avoid|do not|don't)\b/i.test(
+      text
+    );
+  const profileScope =
+    /\b(profile|profile bank|global preference|cv preference|resume preference|one[- ]page|bullet style|tone|formatting|things to avoid|avoid claiming|do not claim)\b/i.test(
+      text
+    );
+
+  return updateIntent && profileScope;
 }
 
 export async function createProfileHandoff({

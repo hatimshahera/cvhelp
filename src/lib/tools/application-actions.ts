@@ -189,6 +189,14 @@ function cleanCompanyCandidate(value: string) {
   return words.join(" ").trim();
 }
 
+function cleanRoleCandidate(value: string) {
+  return value
+    .replace(/\s+(?:to|for|with|who|that|and)\b.*$/i, "")
+    .replace(/[.,:;]+$/g, "")
+    .replace(/^(?:as\s+)?(?:an?|the)\s+/i, "")
+    .trim();
+}
+
 export function inferJobMetadata(jobDescription: string) {
   const lines = jobDescription
     .split(/\r?\n/)
@@ -197,25 +205,41 @@ export function inferJobMetadata(jobDescription: string) {
     .slice(0, 25);
   const joined = lines.join(" ");
   const hiringMatch = joined.match(
-    /(.{0,120}?)\bis hiring\s+(?:an?|the)?\s*([^.,]+?)(?:\s+to\b|\.|,|$)/i
+    /(.{0,120}?)\b(?:is|are|we are|they are)\s+hiring\s+(?:an?|the)?\s*([^.,]+?)(?:\s+to\b|\.|,|$)/i
   );
   const hiringCompany = hiringMatch?.[1]
     ? cleanCompanyCandidate(hiringMatch[1].split(/\s+/).slice(-4).join(" "))
     : "";
-  const hiringRole = hiringMatch?.[2] ? titleCase(hiringMatch[2]).slice(0, 120) : "";
+  const hiringRole = hiringMatch?.[2] ? titleCase(cleanRoleCandidate(hiringMatch[2])).slice(0, 120) : "";
+  const anonymizedClientMatch = joined.match(
+    /\bmy client (?:is|are)\s+(?:an?|the)?\s*([A-Z][A-Za-z0-9&.' -]{2,60}?)(?:,|\s+using|\s+who|\s+with|\s+that|\.|$)/i
+  );
   const companyMatch =
     joined.match(/\b(?:at|company|employer)[:\s]+([A-Z][A-Za-z0-9&.,' -]{2,80})/) ??
-    joined.match(/\b([A-Z][A-Za-z0-9&.' -]{2,60})\s+is hiring\b/);
+    joined.match(/\b([A-Z][A-Za-z0-9&.' -]{2,60})\s+(?:is|are)\s+hiring\b/);
+  const roleHeadingIndex = lines.findIndex((line) => /^the role\b|^role\b/i.test(line));
+  const roleSectionMatch =
+    roleHeadingIndex >= 0
+      ? lines.slice(roleHeadingIndex, roleHeadingIndex + 4).join(" ").match(
+          /\b(?:is|are|we are|they are)\s+hiring\s+(?:an?|the)?\s*([^.,]+?)(?:\s+to\b|\.|,|$)/i
+        )
+      : null;
   const roleMatch =
     lines.find((line) => /engineer|developer|designer|manager|analyst|research|fellow|consultant/i.test(line)) ??
     lines[0];
+  const inferredCompany = hiringCompany && !/\b(?:they|we|this|result|growth|role)\b/i.test(hiringCompany)
+    ? hiringCompany
+    : anonymizedClientMatch?.[1]?.trim() ||
+      companyMatch?.[1]?.replace(/\s+(is|are|for|role).*$/i, "").trim() ||
+      "Unknown company";
+  const inferredRole =
+    hiringRole ||
+    (roleSectionMatch?.[1] ? titleCase(cleanRoleCandidate(roleSectionMatch[1])).slice(0, 120) : "") ||
+    (roleMatch ? titleCase(cleanRoleCandidate(roleMatch)).slice(0, 120) : "Untitled role");
 
   return {
-    company:
-      hiringCompany ||
-      companyMatch?.[1]?.replace(/\s+(is|for|role).*$/i, "").trim() ||
-      "Unknown company",
-    role: hiringRole || (roleMatch ? titleCase(roleMatch).slice(0, 120) : "Untitled role")
+    company: inferredCompany,
+    role: inferredRole || "Untitled role"
   };
 }
 

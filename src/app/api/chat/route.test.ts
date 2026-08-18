@@ -1091,6 +1091,86 @@ describe("chat API application scoping", () => {
     expect(body.messages[1].content).not.toContain("Example achievement bullets");
   });
 
+  it("answers job analysis questions from General Chat without creating an application", async () => {
+    const jobAnalysisMessage =
+      "About the job The Company My client are a HealthTech, using AI to optimise recruitment for clinical trials. The Role they are hiring an AI Engineer, to build multi-agent systems and RAG. Requirements include Python, Node.js, Rust, LLM apps, messy data, and startup experience. What do you think about this job based on my profile";
+    conversationCreate.mockResolvedValueOnce({
+      id: "conversation-general",
+      mode: "general",
+      applicationId: null,
+      summary: null,
+      lastSummarizedMessageId: null
+    });
+    chatMessageCreate
+      .mockResolvedValueOnce({
+        id: "message-user",
+        role: "user",
+        content: jobAnalysisMessage
+      })
+      .mockResolvedValueOnce({
+        id: "message-assistant",
+        role: "assistant",
+        content: "This looks relevant based on your Python and AI profile evidence."
+      });
+    chatMessageFindMany
+      .mockResolvedValueOnce([
+        {
+          role: "user",
+          content: jobAnalysisMessage
+        }
+      ])
+      .mockResolvedValueOnce([
+        {
+          id: "message-user",
+          role: "user",
+          content: jobAnalysisMessage,
+          metadata: null,
+          createdAt: new Date("2026-08-13T00:00:00.000Z")
+        },
+        {
+          id: "message-assistant",
+          role: "assistant",
+          content: "This looks relevant based on your Python and AI profile evidence.",
+          metadata: null,
+          createdAt: new Date("2026-08-13T00:00:01.000Z")
+        }
+      ]);
+    responsesCreate.mockResolvedValueOnce({
+      output_text: "This looks relevant based on your Python and AI profile evidence."
+    });
+    conversationUpdate.mockResolvedValueOnce({ id: "conversation-general" });
+
+    const { POST } = await import("./route");
+    const response = await POST(
+      new Request("http://localhost/api/chat", {
+        method: "POST",
+        body: JSON.stringify({
+          mode: "general",
+          message: jobAnalysisMessage
+        })
+      })
+    );
+
+    expect(response.status).toBe(200);
+    expect(applicationCreate).not.toHaveBeenCalled();
+    expect(subscriptionFindUnique).not.toHaveBeenCalled();
+    expect(profileBankFindUnique).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { userId: "user-1" }
+      })
+    );
+    expect(responsesCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        input: expect.stringContaining("On-demand workspace context")
+      })
+    );
+    expect(responsesCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        input: expect.stringContaining("search_profile")
+      })
+    );
+  });
+
   it("creates a new application from a readable job URL in general chat", async () => {
     const createdApplication = {
       id: "app-general-url",

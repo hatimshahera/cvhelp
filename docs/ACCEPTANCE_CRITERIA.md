@@ -113,6 +113,8 @@ Acceptance criteria:
 - General Chat can propose application creation from a job description or URL.
 - General Chat job-source creation is preflighted before the main model call.
 - If job-source creation is blocked by billing/limits, the response is short and does not include generic CV/cover-letter templates.
+- General Chat does not create an application when the user pastes a job description and asks an analysis question such as fit, gaps, or comparison against their profile.
+- Profile-based job-analysis questions retrieve only relevant profile context and stay in the current General Chat.
 - Application creation is executed by deterministic backend code, not direct model state mutation.
 - Successful application creation returns an action button to open the new application chat.
 - Opening the new application chat loads the created application and its saved job context.

@@ -102,6 +102,8 @@ Current `/api/chat` behavior:
 - Creates applications from General Chat through deterministic backend code.
 - Preflights General Chat job-source creation before calling the chat model.
 - Returns short deterministic creation-blocked responses instead of generic tailoring content when application creation fails.
+- Separates job-source creation intent from job-analysis intent, so pasted job descriptions with profile-fit questions stay in General Chat and retrieve profile context.
+- Improves recruiter-style job metadata extraction for anonymized "The Company / The Role" posts.
 - Creates explicit Profile Chat handoffs from General Chat.
 - Creates explicit Profile Chat handoffs from Application Chat when the user asks to update reusable/global profile facts.
 - Provides `POST /api/chat/actions` for deterministic platform actions.

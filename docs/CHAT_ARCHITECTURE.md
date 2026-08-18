@@ -137,8 +137,12 @@ General Chat may ask a clarifying question more often when the request is ambigu
 
 Expected flow:
 
-1. User pastes a job description or URL in General Chat.
-2. Backend detects an actionable job source before the main LLM call.
+1. User pastes a job description, job URL, or attached job source in General Chat.
+2. Backend classifies the turn before the main LLM call:
+   - bare URLs create applications;
+   - explicit create/add/save application requests create applications;
+   - pasted job descriptions without a separate question create applications;
+   - job-analysis questions such as fit, gaps, or "based on my profile" stay in normal chat and retrieve only the needed profile context.
 3. Backend preflights deterministic constraints such as billing/application limits.
 4. If creation is allowed, backend resolves the job source, extracts/infer company and role, stores `jobPost`, stores `jobSummary`, initializes `Application.memory`, and creates the default application conversation.
 5. Chat response includes an `open_application_chat` action button.
@@ -169,7 +173,7 @@ The existing `/api/applications` creation route should remain available for back
 
 Product rule:
 
-Job-source creation runs before response generation. The model should not spend tokens drafting cover-letter/CV templates for a role that the backend is unable to create as an application.
+Job-source creation runs before response generation only when the current turn is actually a creation turn. Job text plus an analysis question is not a creation turn. The model should not spend tokens drafting cover-letter/CV templates for a role that the backend is unable to create as an application.
 
 ## General Chat Threads
 
