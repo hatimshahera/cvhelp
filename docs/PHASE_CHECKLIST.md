@@ -48,6 +48,7 @@ Tests:
 - [x] `npm run typecheck`.
 - [x] `npm test`.
 - [x] `npm run build`.
+- [x] `npm run test:e2e`.
 - [x] `npx prisma validate`.
 
 ## Phase 3: Scoped Context Builder
@@ -238,6 +239,32 @@ Tests:
 - [x] Confirm Vercel `OPENAI_API_KEY`.
 - [x] Confirm Vercel `OPENAI_MODEL` fallback behavior.
 - [x] Confirm billing behavior after chat refactor.
+
+## Product Correction: General Chat Context Routing
+
+- [x] Redesign General Chat so casual conversation starts context-light.
+- [x] Add deterministic General Chat context planner.
+- [x] Prevent application summaries, profile data, sources, and files from loading by default.
+- [x] Add on-demand read-only workspace tools for applications, profile, and sources.
+- [x] Keep deterministic backend validation and confirmation boundaries for state-changing actions.
+- [x] Preserve General Chat job-source to application creation.
+- [x] Preserve General Chat to Profile Chat handoff.
+- [x] Preserve current UI/UX.
+- [x] Separate conversation handling, context retrieval, tool retrieval, and response generation concerns.
+- [x] Document the product decision and tradeoffs.
+
+Tests:
+
+- [x] Casual General Chat stays context-light.
+- [x] Application workspace retrieval triggers only for explicit application/workspace requests.
+- [x] Profile/source retrieval triggers only for relevant requests.
+- [x] Ambiguous next-step requests stay context-light.
+- [x] Workspace tools enforce user-owned bounded reads.
+- [x] Existing job-source application creation regression tests pass.
+- [x] Existing profile handoff regression tests pass.
+- [x] `npm run typecheck`.
+- [x] `npm test`.
+- [x] `npm run build`.
 - [x] Run production build.
 - [x] Deploy.
 - [x] Smoke test auth in production.

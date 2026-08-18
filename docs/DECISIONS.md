@@ -114,6 +114,29 @@ Reasoning:
 
 Application creation, archive/delete/status updates, profile handoffs, and other platform actions require ownership checks, schema validation, billing/rate gates, and predictable storage behavior. The model must not directly manipulate database state.
 
+### General Chat Context Routing
+
+Decision:
+
+General Chat starts context-light. It receives recent General Chat messages, the General conversation summary, shared/global rules, and backend tool definitions. It does not load applications, profile data, sources, files, or other workspace context unless a deterministic context planner decides the current message needs a specific read-only workspace tool.
+
+Reasoning:
+
+The previous eager workspace-summary behavior made casual messages feel like product operations. A user saying "hi" or "yo yo yo" should get a normal chatbot response, not a summary of unrelated applications. Scoped chats already provide strong context boundaries, so General Chat should treat workspace access as a tool invocation, not as default prompt baggage.
+
+Tradeoffs:
+
+- Ambiguous requests such as "what should I do next?" stay context-light and should ask a clarifying question instead of silently reading workspace state.
+- The first implementation uses deterministic heuristics rather than an extra model classifier to keep latency and cost low.
+- Read-only tool results are bounded summaries/snippets, not full records, so the assistant may need a follow-up before deep analysis.
+
+Implementation boundary:
+
+- `src/lib/chat/general-intent.ts` owns General Chat context planning.
+- `src/lib/chat/workspace-tools.ts` owns bounded read-only workspace retrieval and tool-definition text.
+- `src/lib/chat/response-generation.ts` owns the main model response call.
+- `/api/chat` coordinates persistence, planning, context retrieval, response generation, deterministic actions, and sidecar memory updates.
+
 ### Platform Action Confirmation
 
 Decision:

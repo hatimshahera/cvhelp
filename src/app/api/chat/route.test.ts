@@ -3,6 +3,7 @@ import { resetRequestLimits } from "@/lib/rate-limit";
 
 const profileBankUpsert = vi.fn();
 const profileBankUpdate = vi.fn();
+const profileBankFindUnique = vi.fn();
 const applicationFindFirst = vi.fn();
 const applicationFindMany = vi.fn();
 const applicationFindUnique = vi.fn();
@@ -34,7 +35,8 @@ vi.mock("@/lib/prisma", () => ({
   prisma: {
     profileBank: {
       upsert: profileBankUpsert,
-      update: profileBankUpdate
+      update: profileBankUpdate,
+      findUnique: profileBankFindUnique
     },
     application: {
       findFirst: applicationFindFirst,
@@ -118,6 +120,7 @@ describe("chat API application scoping", () => {
     delete process.env.CVHELP_CHAT_RATE_WINDOW_MS;
     profileBankUpsert.mockResolvedValue(profileBank);
     profileBankUpdate.mockResolvedValue(profileBank);
+    profileBankFindUnique.mockResolvedValue(profileBank);
     applicationFindMany.mockResolvedValue([]);
     sourceFindMany.mockResolvedValue([]);
     sourceUpdateMany.mockResolvedValue({ count: 0 });
@@ -329,6 +332,157 @@ describe("chat API application scoping", () => {
     expect(responsesCreate).toHaveBeenCalledWith(
       expect.objectContaining({
         input: expect.stringContaining("Attached source snippets")
+      })
+    );
+  });
+
+  it("keeps casual general chat context-light", async () => {
+    conversationCreate.mockResolvedValueOnce({
+      id: "conversation-general",
+      mode: "general",
+      applicationId: null,
+      summary: null,
+      lastSummarizedMessageId: null
+    });
+    chatMessageCreate
+      .mockResolvedValueOnce({
+        id: "message-user",
+        role: "user",
+        content: "yo yo yo"
+      })
+      .mockResolvedValueOnce({
+        id: "message-assistant",
+        role: "assistant",
+        content: "Hey - yes, this works."
+      });
+    chatMessageFindMany
+      .mockResolvedValueOnce([
+        {
+          role: "user",
+          content: "yo yo yo"
+        }
+      ])
+      .mockResolvedValueOnce([
+        {
+          id: "message-user",
+          role: "user",
+          content: "yo yo yo",
+          metadata: null,
+          createdAt: new Date("2026-08-13T00:00:00.000Z")
+        },
+        {
+          id: "message-assistant",
+          role: "assistant",
+          content: "Hey - yes, this works.",
+          metadata: null,
+          createdAt: new Date("2026-08-13T00:00:01.000Z")
+        }
+      ]);
+    responsesCreate.mockResolvedValueOnce({
+      output_text: "Hey - yes, this works."
+    });
+    conversationUpdate.mockResolvedValueOnce({ id: "conversation-general" });
+
+    const { POST } = await import("./route");
+    const response = await POST(
+      new Request("http://localhost/api/chat", {
+        method: "POST",
+        body: JSON.stringify({
+          mode: "general",
+          message: "yo yo yo"
+        })
+      })
+    );
+
+    expect(response.status).toBe(200);
+    expect(applicationFindMany).not.toHaveBeenCalled();
+    expect(profileBankFindUnique).not.toHaveBeenCalled();
+    expect(responsesCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        instructions: expect.stringContaining("Behave like a normal chatbot by default"),
+        input: expect.stringContaining("General Chat backend tool definitions")
+      })
+    );
+    expect(responsesCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        input: expect.not.stringContaining("Workspace application summaries")
+      })
+    );
+    expect(responsesCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        input: expect.not.stringContaining("On-demand workspace context")
+      })
+    );
+  });
+
+  it("loads application workspace context only for explicit general workspace requests", async () => {
+    conversationCreate.mockResolvedValueOnce({
+      id: "conversation-general",
+      mode: "general",
+      applicationId: null,
+      summary: null,
+      lastSummarizedMessageId: null
+    });
+    applicationFindMany.mockResolvedValueOnce([
+      {
+        id: "app-1",
+        company: "Example AI",
+        role: "AI Engineer",
+        status: "draft",
+        nextAction: "Tailor CV",
+        archivedAt: null,
+        updatedAt: new Date("2026-08-13T00:00:00.000Z")
+      }
+    ]);
+    chatMessageCreate
+      .mockResolvedValueOnce({
+        id: "message-user",
+        role: "user",
+        content: "show my applications"
+      })
+      .mockResolvedValueOnce({
+        id: "message-assistant",
+        role: "assistant",
+        content: "You have one draft application."
+      });
+    chatMessageFindMany
+      .mockResolvedValueOnce([
+        {
+          role: "user",
+          content: "show my applications"
+        }
+      ])
+      .mockResolvedValueOnce([]);
+    responsesCreate.mockResolvedValueOnce({
+      output_text: "You have one draft application."
+    });
+    conversationUpdate.mockResolvedValueOnce({ id: "conversation-general" });
+
+    const { POST } = await import("./route");
+    const response = await POST(
+      new Request("http://localhost/api/chat", {
+        method: "POST",
+        body: JSON.stringify({
+          mode: "general",
+          message: "show my applications"
+        })
+      })
+    );
+
+    expect(response.status).toBe(200);
+    expect(applicationFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { userId: "user-1" }
+      })
+    );
+    expect(responsesCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        input: expect.stringContaining("On-demand workspace context")
+      })
+    );
+    expect(responsesCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        input: expect.stringContaining("Example AI")
       })
     );
   });

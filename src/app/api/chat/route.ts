@@ -12,8 +12,6 @@ import {
   parseApplicationMemory,
   summarizeProfileBank
 } from "@/lib/memory";
-import { buildAgentInstructions } from "@/lib/ai/agents";
-import { getOpenAIModel } from "@/lib/ai/models";
 import { updateApplicationMemory, updateMasterProfile } from "@/lib/ai/memory-updates";
 import {
   clearConversationMessages,
@@ -22,14 +20,17 @@ import {
   listConversationMessages
 } from "@/lib/chat/conversations";
 import { buildChatPromptContext } from "@/lib/chat/context";
+import { planGeneralChatContext } from "@/lib/chat/general-intent";
 import {
   getConversationContextMessages,
   maybeSummarizeConversation,
   shouldConsiderConversationSummary
 } from "@/lib/chat/summaries";
+import { generateChatResponse } from "@/lib/chat/response-generation";
 import type { ChatAction } from "@/lib/chat/actions";
 import { createProfileHandoff, looksLikeProfileHandoffRequest } from "@/lib/chat/handoffs";
 import { chatModeSchema, conversationApplicationIdForMode } from "@/lib/chat/types";
+import { resolveGeneralWorkspaceContext } from "@/lib/chat/workspace-tools";
 import { prisma } from "@/lib/prisma";
 import { checkRequestLimit, getIntegerEnv } from "@/lib/rate-limit";
 import { logError } from "@/lib/server-log";
@@ -324,35 +325,29 @@ export async function POST(request: Request) {
     conversationId: conversation.id,
     userId: user.id,
     currentMessage: parsed.data.message,
-    conversationSummary: conversation.summary
+    conversationSummary: conversation.summary,
+    olderLimit: mode === "general" ? 0 : undefined
   });
 
   try {
     const openai = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY
     });
-    const workspaceApplications =
-      mode === "general"
-        ? await prisma.application.findMany({
-            where: { userId: user.id },
-            orderBy: { updatedAt: "desc" },
-            take: 20,
-            select: {
-              id: true,
-              company: true,
-              role: true,
-              status: true,
-              nextAction: true
-            }
+    const generalContextPlan =
+      mode === "general" ? planGeneralChatContext(parsed.data.message) : null;
+    const generalWorkspaceContext =
+      generalContextPlan
+        ? await resolveGeneralWorkspaceContext({
+            userId: user.id,
+            message: parsed.data.message,
+            plan: generalContextPlan
           })
-        : [];
+        : null;
 
-    const response = await openai.responses.create({
-      model: getOpenAIModel("chat"),
-      instructions: buildAgentInstructions({
-        mode,
-        profileBank: updatedProfileBank
-      }),
+    const response = await generateChatResponse({
+      openai,
+      mode,
+      profileBank: updatedProfileBank,
       input: buildChatPromptContext({
         mode,
         userName: user.name,
@@ -361,7 +356,8 @@ export async function POST(request: Request) {
         relevantOlderMessages: chatContextMessages.relevantOlderMessages,
         profileBank: updatedProfileBank,
         application,
-        workspaceApplications,
+        generalToolDefinitions: generalWorkspaceContext?.toolDefinitions,
+        generalWorkspaceContext: generalWorkspaceContext?.toolResultsContext,
         sourceSnippetContext: buildSourceSnippetContext(attachedSources)
       })
     });

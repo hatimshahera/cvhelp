@@ -35,7 +35,7 @@ describe("chat context builder", () => {
     expect(context).not.toContain("Other AI");
   });
 
-  it("keeps profile context out of general chat by default", () => {
+  it("keeps profile context out of general chat by default while allowing explicit workspace context", () => {
     const context = buildChatPromptContext({
       mode: "general",
       userName: "Hatim",
@@ -53,13 +53,30 @@ describe("chat context builder", () => {
           status: "draft",
           nextAction: "Review fit"
         }
-      ]
+      ],
+      generalToolDefinitions: "list_applications",
+      generalWorkspaceContext: "Tool result: Example AI"
     });
 
     expect(context).toContain("Example AI");
+    expect(context).toContain("General Chat backend tool definitions");
+    expect(context).toContain("On-demand workspace context");
     expect(context).toContain("Review fit");
     expect(context).not.toContain("privateDetail");
     expect(context).not.toContain("private source");
+  });
+
+  it("does not add workspace tool results to general chat unless provided", () => {
+    const context = buildChatPromptContext({
+      mode: "general",
+      userName: "Hatim",
+      recentMessages: [{ role: "user", content: "hi" }],
+      generalToolDefinitions: "list_applications"
+    });
+
+    expect(context).toContain("General Chat backend tool definitions");
+    expect(context).not.toContain("On-demand workspace context");
+    expect(context).not.toContain("Workspace application summaries");
   });
 
   it("preserves the current turn when context is truncated", () => {

@@ -90,7 +90,10 @@ Current `/api/chat` behavior:
 - Supports `build_profile`, `application`, and `general` modes in API.
 - Persists user and assistant messages.
 - Uses OpenAI Responses API.
-- Builds prompt context from recent messages, conversation summaries, scoped relevant older messages, profile bank, selected application, workspace summaries, and attached source snippets.
+- Builds prompt context from recent messages, conversation summaries, scoped relevant older messages, profile bank, selected application, and attached source snippets.
+- Keeps General Chat context-light by default: recent General Chat messages, summary, shared rules, and backend tool definitions only.
+- Uses a deterministic General Chat context planner before loading application, profile, or source context.
+- Uses bounded read-only workspace tools for explicit General Chat application/profile/source lookup requests.
 - Updates profile raw sources/checklist from profile-builder messages.
 - Updates `masterProfile` with a second AI call in profile-builder mode.
 - Updates application-specific memory and notes after application chat turns.
@@ -102,6 +105,7 @@ Current `/api/chat` behavior:
 - Provides `POST /api/chat/actions` for deterministic platform actions.
 - Supports confirmed archive, restore, status update, rename, and read-only comparison actions with ownership checks.
 - Uses extracted agent, context, source, handoff, application-action, and memory-update helpers.
+- Uses extracted General Chat context planning, workspace tool retrieval, and response-generation helpers.
 
 Current `/api/profile-sources` behavior:
 

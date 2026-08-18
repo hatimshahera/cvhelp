@@ -103,8 +103,11 @@ Acceptance criteria:
 
 - General Chat is visible in the workspace navigation.
 - General Chat has its own durable conversation.
+- General Chat answers casual messages like a normal chatbot without loading workspace context.
 - General Chat can answer broader career and cross-application questions without requiring an application.
-- General Chat uses safe workspace summaries by default, not full unrelated application memories.
+- General Chat does not load application summaries, profile data, sources, or files by default.
+- General Chat uses bounded on-demand workspace tools only when the current request clearly needs them.
+- General Chat asks a brief clarifying question for ambiguous workspace requests instead of guessing.
 - General Chat can propose application creation from a job description or URL.
 - Application creation is executed by deterministic backend code, not direct model state mutation.
 - Successful application creation returns an action button to open the new application chat.
@@ -117,6 +120,10 @@ Tests:
 
 - General Chat loads for a signed-in user.
 - General Chat rejects signed-out requests.
+- Casual General Chat messages do not query applications, profile bank reads, or source search.
+- Explicit application/workspace requests trigger bounded application retrieval.
+- Explicit profile/source requests trigger scoped profile/source retrieval.
+- Ambiguous next-step requests stay context-light.
 - General Chat creates an application through the deterministic action.
 - New application from General Chat is scoped to the signed-in user.
 - General Chat does not include full unrelated application memory in default context.

@@ -104,10 +104,34 @@ Application Chat context:
 General Chat context:
 
 - General conversation summary and recent messages.
-- Relevant older messages from the same general conversation.
-- Safe workspace summaries such as application names, roles, statuses, and next actions.
-- No full application memory by default.
-- No profile source dump by default.
+- Backend workspace tool definitions.
+- No application summaries, profile data, files, sources, or other workspace state by default.
+- A deterministic context planner classifies the current user turn before any workspace read.
+- Casual messages, greetings, thanks, and ambiguous small talk stay context-light.
+- Read-only workspace tools may load bounded context only when the current request clearly needs it.
+- State-changing tools remain deterministic backend actions with validation, ownership checks, and confirmation where appropriate.
+
+General Chat must never mention workspace, profile, application, or source information unless the current request clearly requires it or that context is explicitly present in the prompt.
+
+Read-only General Chat tools:
+
+- `list_applications`: recent user-owned application summaries only.
+- `search_applications`: bounded user-owned application summary search.
+- `get_profile`: profile-bank summary for direct profile questions.
+- `search_profile`: bounded profile fact/preference search for specific profile questions.
+- `search_sources`: bounded user-owned source metadata and snippets.
+
+Write/action tools:
+
+- `create_application_from_job_source`.
+- `archive_application`.
+- `restore_application`.
+- `update_application_status`.
+- `rename_application`.
+
+Tradeoff:
+
+General Chat may ask a clarifying question more often when the request is ambiguous. This is intentional because showing old applications or profile facts during casual chat is a worse product failure than requiring one extra clarification.
 
 ## General Chat Application Creation
 
@@ -239,6 +263,7 @@ Target state:
 
 - Do not run every possible sidecar on every message.
 - Use one main LLM call where practical.
+- General Chat uses deterministic context planning before workspace retrieval, so casual turns avoid application/profile/source reads.
 - Run memory updates only for modes where memory can change.
 - Run summaries only after thresholds.
 - Use cheaper/smaller configured models for background summarization or extraction when suitable.

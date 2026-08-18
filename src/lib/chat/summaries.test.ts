@@ -97,6 +97,24 @@ describe("conversation summaries and retrieval", () => {
     ]);
   });
 
+  it("can skip older-message retrieval for context-light chat modes", async () => {
+    const recentDesc = Array.from({ length: 3 }, (_, index) =>
+      message(`recent-${index}`, `Recent ${index}`, 20 + index)
+    ).reverse();
+    chatMessageFindMany.mockResolvedValueOnce(recentDesc);
+
+    const result = await getConversationContextMessages({
+      conversationId: "conversation-general",
+      userId: "user-1",
+      currentMessage: "hi",
+      recentLimit: 3,
+      olderLimit: 0
+    });
+
+    expect(chatMessageFindMany).toHaveBeenCalledTimes(1);
+    expect(result.relevantOlderMessages).toEqual([]);
+  });
+
   it("selects older messages by deterministic keyword relevance", () => {
     const selected = selectRelevantOlderMessages({
       query: "Need RAG Python evidence",

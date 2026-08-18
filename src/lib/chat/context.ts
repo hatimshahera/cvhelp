@@ -51,6 +51,8 @@ export function buildChatPromptContext({
   profileBank,
   application,
   workspaceApplications = [],
+  generalToolDefinitions = "",
+  generalWorkspaceContext = "",
   sourceSnippetContext = "",
   contextBudget = defaultContextBudget
 }: {
@@ -62,6 +64,8 @@ export function buildChatPromptContext({
   profileBank?: ProfileBankContext | null;
   application?: ApplicationContext | null;
   workspaceApplications?: WorkspaceApplicationSummary[];
+  generalToolDefinitions?: string;
+  generalWorkspaceContext?: string;
   sourceSnippetContext?: string;
   contextBudget?: number;
 }) {
@@ -114,12 +118,20 @@ export function buildChatPromptContext({
           2
         )}`
       : "";
+  const generalToolsContext =
+    mode === "general" && generalToolDefinitions
+      ? `\n\nGeneral Chat backend tool definitions:\n${generalToolDefinitions}`
+      : "";
+  const generalWorkspaceToolContext =
+    mode === "general" && generalWorkspaceContext
+      ? `\n\nOn-demand workspace context:\n${generalWorkspaceContext}`
+      : "";
   const attachedSourceContext = sourceSnippetContext
     ? `\n\nAttached source snippets:\n${sourceSnippetContext}`
     : "";
   const prefix = `The signed-in user's name is ${userName}. Continue this private conversation.`;
   const context = truncateSection(
-    `${summaryContext}${relevantOlderContext}${profileContext}${applicationContext}${generalContext}${attachedSourceContext}`,
+    `${summaryContext}${relevantOlderContext}${profileContext}${applicationContext}${generalContext}${generalToolsContext}${generalWorkspaceToolContext}${attachedSourceContext}`,
     Math.max(0, contextBudget - prefix.length - transcript.length - 4)
   );
 

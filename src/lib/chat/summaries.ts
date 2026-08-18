@@ -159,6 +159,14 @@ export async function getConversationContextMessages({
     };
   }
 
+  if (olderLimit <= 0) {
+    return {
+      recentMessages: recent.map(({ role, content }) => ({ role, content })),
+      relevantOlderMessages: [],
+      summary: normalizeSummary(conversationSummary)
+    };
+  }
+
   const oldestRecent = recent[0];
   const olderMessages = await prisma.chatMessage.findMany({
     where: {
