@@ -111,6 +111,8 @@ Acceptance criteria:
 - General Chat uses bounded on-demand workspace tools only when the current request clearly needs them.
 - General Chat asks a brief clarifying question for ambiguous workspace requests instead of guessing.
 - General Chat can propose application creation from a job description or URL.
+- General Chat job-source creation is preflighted before the main model call.
+- If job-source creation is blocked by billing/limits, the response is short and does not include generic CV/cover-letter templates.
 - Application creation is executed by deterministic backend code, not direct model state mutation.
 - Successful application creation returns an action button to open the new application chat.
 - Opening the new application chat loads the created application and its saved job context.
@@ -129,6 +131,7 @@ Tests:
 - Explicit profile/source requests trigger scoped profile/source retrieval.
 - Ambiguous next-step requests stay context-light.
 - General Chat creates an application through the deterministic action.
+- Job-source creation failures do not call the main chat model.
 - New application from General Chat is scoped to the signed-in user.
 - General Chat does not include full unrelated application memory in default context.
 - Returned `open_application_chat` action contains a user-owned application ID.
@@ -219,6 +222,7 @@ Acceptance criteria:
 - Stripe route code is isolated from business logic.
 - Feature gates can limit applications, chats, generations, exports, and uploads.
 - Over-limit users get clear messages.
+- Temporary internal accounts can bypass feature caps through `Subscription.plan = "internal"`.
 - Pricing can be changed without rewriting the whole app.
 
 Tests:

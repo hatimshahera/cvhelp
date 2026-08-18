@@ -647,16 +647,7 @@ describe("chat API application scoping", () => {
         }
       });
     chatMessageFindMany
-      .mockResolvedValueOnce([
-        {
-          role: "user",
-          content: "Create an application from this uploaded job source."
-        }
-      ])
       .mockResolvedValueOnce([]);
-    responsesCreate.mockResolvedValueOnce({
-      output_text: "I can create an application from the attached job source."
-    });
     subscriptionFindUnique.mockResolvedValueOnce(null);
     applicationCount.mockResolvedValueOnce(1);
     applicationFindUnique.mockResolvedValueOnce(null);
@@ -707,6 +698,7 @@ describe("chat API application scoping", () => {
         applicationId: "app-from-source"
       }
     });
+    expect(responsesCreate).not.toHaveBeenCalled();
   });
 
   it("extracts chat-provided profile facts into the profile bank", async () => {
@@ -949,13 +941,6 @@ describe("chat API application scoping", () => {
     chatMessageFindMany
       .mockResolvedValueOnce([
         {
-          role: "user",
-          content:
-            "Example AI is hiring an AI Engineer. Requirements include Python, RAG, LLM evaluation, and backend agent workflows."
-        }
-      ])
-      .mockResolvedValueOnce([
-        {
           id: "message-user",
           role: "user",
           content:
@@ -979,9 +964,6 @@ describe("chat API application scoping", () => {
           createdAt: new Date("2026-08-13T00:00:01.000Z")
         }
       ]);
-    responsesCreate.mockResolvedValueOnce({
-      output_text: "I can turn that into an application workspace."
-    });
     subscriptionFindUnique.mockResolvedValueOnce(null);
     applicationCount.mockResolvedValueOnce(1);
     applicationFindUnique.mockResolvedValueOnce(null);
@@ -1034,6 +1016,79 @@ describe("chat API application scoping", () => {
         applicationId: "app-general-1"
       })
     );
+    expect(responsesCreate).not.toHaveBeenCalled();
+  });
+
+  it("does not ask the model to draft generic content when job-source creation is over limit", async () => {
+    conversationCreate.mockResolvedValueOnce({
+      id: "conversation-general",
+      mode: "general",
+      applicationId: null,
+      summary: null,
+      lastSummarizedMessageId: null
+    });
+    chatMessageCreate
+      .mockResolvedValueOnce({
+        id: "message-user",
+        role: "user",
+        content:
+          "Example AI is hiring an AI Engineer. Requirements include Python, RAG, LLM evaluation, and backend agent workflows."
+      })
+      .mockResolvedValueOnce({
+        id: "message-assistant",
+        role: "assistant",
+        content:
+          "I found a job description, but I could not create the application: You have reached the 5 application limit for the free plan."
+      });
+    chatMessageFindMany.mockResolvedValueOnce([
+      {
+        id: "message-user",
+        role: "user",
+        content:
+          "Example AI is hiring an AI Engineer. Requirements include Python, RAG, LLM evaluation, and backend agent workflows.",
+        metadata: null,
+        createdAt: new Date("2026-08-13T00:00:00.000Z")
+      },
+      {
+        id: "message-assistant",
+        role: "assistant",
+        content:
+          "I found a job description, but I could not create the application: You have reached the 5 application limit for the free plan.",
+        metadata: null,
+        createdAt: new Date("2026-08-13T00:00:01.000Z")
+      }
+    ]);
+    subscriptionFindUnique.mockResolvedValueOnce(null);
+    applicationCount.mockResolvedValueOnce(5);
+    conversationUpdate.mockResolvedValueOnce({ id: "conversation-general" });
+
+    const { POST } = await import("./route");
+    const response = await POST(
+      new Request("http://localhost/api/chat", {
+        method: "POST",
+        body: JSON.stringify({
+          mode: "general",
+          message:
+            "Example AI is hiring an AI Engineer. Requirements include Python, RAG, LLM evaluation, and backend agent workflows."
+        })
+      })
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(applicationCreate).not.toHaveBeenCalled();
+    expect(responsesCreate).not.toHaveBeenCalled();
+    expect(chatMessageCreate).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        data: expect.objectContaining({
+          role: "assistant",
+          content: expect.stringContaining("I found a job description, but I could not create")
+        })
+      })
+    );
+    expect(body.messages[1].content).not.toContain("Quick priorities");
+    expect(body.messages[1].content).not.toContain("Example achievement bullets");
   });
 
   it("creates a new application from a readable job URL in general chat", async () => {
@@ -1098,12 +1153,6 @@ describe("chat API application scoping", () => {
     chatMessageFindMany
       .mockResolvedValueOnce([
         {
-          role: "user",
-          content: "https://example.com/jobs/senior-full-stack-engineer"
-        }
-      ])
-      .mockResolvedValueOnce([
-        {
           id: "message-user",
           role: "user",
           content: "https://example.com/jobs/senior-full-stack-engineer",
@@ -1126,9 +1175,6 @@ describe("chat API application scoping", () => {
           createdAt: new Date("2026-08-13T00:00:01.000Z")
         }
       ]);
-    responsesCreate.mockResolvedValueOnce({
-      output_text: "I can create an application workspace from that job URL."
-    });
     subscriptionFindUnique.mockResolvedValueOnce(null);
     applicationCount.mockResolvedValueOnce(1);
     applicationFindUnique.mockResolvedValueOnce(null);
@@ -1158,6 +1204,7 @@ describe("chat API application scoping", () => {
         })
       })
     );
+    expect(responsesCreate).not.toHaveBeenCalled();
   });
 
   it("creates a profile handoff from general chat without updating the profile bank", async () => {

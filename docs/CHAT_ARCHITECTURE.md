@@ -138,12 +138,12 @@ General Chat may ask a clarifying question more often when the request is ambigu
 Expected flow:
 
 1. User pastes a job description or URL in General Chat.
-2. General Agent identifies that an application could be created.
-3. Assistant returns a proposed action or the backend classifier detects the job source.
-4. Backend validates the action payload.
-5. Backend resolves the job source, extracts/infer company and role, stores `jobPost`, stores `jobSummary`, initializes `Application.memory`, and creates the default application conversation.
-6. Chat response includes an `open_application_chat` action button.
-7. Clicking the button switches the UI to the new application chat.
+2. Backend detects an actionable job source before the main LLM call.
+3. Backend preflights deterministic constraints such as billing/application limits.
+4. If creation is allowed, backend resolves the job source, extracts/infer company and role, stores `jobPost`, stores `jobSummary`, initializes `Application.memory`, and creates the default application conversation.
+5. Chat response includes an `open_application_chat` action button.
+6. Clicking the button switches the UI to the new application chat.
+7. If creation is blocked, the assistant returns a short deterministic explanation and does not generate generic tailoring content first.
 
 Backend action:
 
@@ -166,6 +166,10 @@ open_application_chat({
 ```
 
 The existing `/api/applications` creation route should remain available for backwards compatibility and tests, but new UX should route users through General Chat.
+
+Product rule:
+
+Job-source creation runs before response generation. The model should not spend tokens drafting cover-letter/CV templates for a role that the backend is unable to create as an application.
 
 ## General Chat Threads
 
@@ -288,11 +292,23 @@ Target state:
 - Do not run every possible sidecar on every message.
 - Use one main LLM call where practical.
 - General Chat uses deterministic context planning before workspace retrieval, so casual turns avoid application/profile/source reads.
+- General Chat job-source creation is deterministic and skips the main LLM call.
 - Run memory updates only for modes where memory can change.
 - Run summaries only after thresholds.
 - Use cheaper/smaller configured models for background summarization or extraction when suitable.
 - Keep prompt/context budgets explicit.
 - Cache stable job parsing and application summaries.
+
+## Temporary Internal Accounts
+
+Until admin tooling exists, trusted internal accounts can be represented by `Subscription.plan = "internal"` with `status = "active"`.
+
+Rules:
+
+- `internal` uses the same billing helper as other plans.
+- Feature limits return effectively unlimited numeric caps.
+- Account settings display those limits as `Unlimited`.
+- This is a temporary operational override, not a public pricing tier.
 
 ## Conversation Summaries and Retrieval
 

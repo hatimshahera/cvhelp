@@ -100,6 +100,8 @@ Current `/api/chat` behavior:
 - Preserves existing profile/application memory when sidecar model JSON is malformed or fails validation.
 - Exposes General Chat in the UI.
 - Creates applications from General Chat through deterministic backend code.
+- Preflights General Chat job-source creation before calling the chat model.
+- Returns short deterministic creation-blocked responses instead of generic tailoring content when application creation fails.
 - Creates explicit Profile Chat handoffs from General Chat.
 - Creates explicit Profile Chat handoffs from Application Chat when the user asks to update reusable/global profile facts.
 - Provides `POST /api/chat/actions` for deterministic platform actions.
@@ -143,6 +145,7 @@ Current billing route behavior:
 - `/api/billing/portal` exists.
 - `/api/billing/webhook` exists.
 - Feature gates exist for applications, uploads, generations, and exports.
+- Temporary internal accounts can use `Subscription.plan = "internal"` for effectively unlimited limits.
 - Stripe setup can remain incomplete locally while routes return controlled setup errors.
 
 ## Current UI

@@ -1,4 +1,4 @@
-export type BillingPlan = "free" | "pro";
+export type BillingPlan = "free" | "pro" | "internal";
 export type BillingFeature = "applications" | "generations" | "exports" | "uploads";
 
 export const planLimits: Record<BillingPlan, Record<BillingFeature, number>> = {
@@ -13,10 +13,17 @@ export const planLimits: Record<BillingPlan, Record<BillingFeature, number>> = {
     generations: 500,
     exports: 200,
     uploads: 200
+  },
+  internal: {
+    applications: Number.MAX_SAFE_INTEGER,
+    generations: Number.MAX_SAFE_INTEGER,
+    exports: Number.MAX_SAFE_INTEGER,
+    uploads: Number.MAX_SAFE_INTEGER
   }
 };
 
 export function normalizePlan(plan: string | null | undefined): BillingPlan {
+  if (plan === "internal") return "internal";
   return plan === "pro" ? "pro" : "free";
 }
 
@@ -39,6 +46,7 @@ export function getBillingStatus(subscription: {
     trialEndsAt: subscription?.trialEndsAt ?? null,
     hasCustomer: Boolean(subscription?.providerCustomerId),
     hasSubscription: Boolean(subscription?.providerSubscriptionId),
+    hasUnlimitedLimits: plan === "internal",
     limits: planLimits[plan]
   };
 }

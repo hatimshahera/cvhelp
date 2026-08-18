@@ -45,6 +45,7 @@ import {
 } from "@/lib/sources";
 import {
   createApplicationFromJobSource,
+  isLikelyUrl,
   looksLikeJobSource
 } from "@/lib/tools/application-actions";
 
@@ -62,6 +63,15 @@ const modeSchema = chatModeSchema.default("build_profile");
 function toTitle(message: string) {
   const compact = message.replace(/\s+/g, " ").trim();
   return compact.length > 58 ? `${compact.slice(0, 58)}...` : compact || "New chat";
+}
+
+function looksLikeActionableJobSource(message: string) {
+  if (isLikelyUrl(message.trim())) return true;
+  if (!looksLikeJobSource(message)) return false;
+
+  return /\b(about the job|job description|the company|the role|requirements?|responsibilities|is hiring|are hiring|we are hiring|they are hiring|hiring an?|hiring a|apply for)\b/i.test(
+    message
+  );
 }
 
 async function checkApplicationCreationLimit(userId: string) {
@@ -241,13 +251,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Sign in to use chat." }, { status: 401 });
   }
 
-  if (!process.env.OPENAI_API_KEY) {
-    return NextResponse.json(
-      { error: "OPENAI_API_KEY is not configured on the server." },
-      { status: 500 }
-    );
-  }
-
   const parsed = chatSchema.safeParse(await request.json().catch(() => null));
 
   if (!parsed.success) {
@@ -321,6 +324,21 @@ export async function POST(request: Request) {
     );
   }
 
+  const jobSourceFromAttachment =
+    mode === "general"
+      ? attachedSources.find((source) => source.textContent && looksLikeJobSource(source.textContent))
+      : null;
+  const jobSourceText = looksLikeActionableJobSource(parsed.data.message)
+    ? parsed.data.message
+    : jobSourceFromAttachment?.textContent ?? "";
+
+  if (!jobSourceText && !process.env.OPENAI_API_KEY) {
+    return NextResponse.json(
+      { error: "OPENAI_API_KEY is not configured on the server." },
+      { status: 500 }
+    );
+  }
+
   const userMessage = await prisma.chatMessage.create({
     data: {
       conversationId: conversation.id,
@@ -343,6 +361,67 @@ export async function POST(request: Request) {
           existing: profileBank
         })
       : profileBank;
+
+  if (mode === "general" && jobSourceText) {
+    const actions: ChatAction[] = [];
+    let assistantText = "";
+
+    try {
+      await checkApplicationCreationLimit(user.id);
+      const createdApplication = await createApplicationFromJobSource({
+        userId: user.id,
+        input: {
+          jobSource: jobSourceText
+        }
+      });
+      if (jobSourceFromAttachment) {
+        await moveSourcesToApplication({
+          userId: user.id,
+          sourceIds: [jobSourceFromAttachment.id],
+          applicationId: createdApplication.id
+        });
+      }
+
+      assistantText = `Created a new application for ${createdApplication.company} - ${createdApplication.role}.`;
+      actions.push({
+        type: "open_application_chat",
+        label: "Open application chat",
+        applicationId: createdApplication.id
+      });
+    } catch (creationError) {
+      assistantText =
+        creationError instanceof Error
+          ? `I found a job description, but I could not create the application: ${creationError.message}`
+          : "I found a job description, but I could not create an application from it.";
+    }
+
+    await prisma.chatMessage.create({
+      data: {
+        conversationId: conversation.id,
+        userId: user.id,
+        role: "assistant",
+        content: assistantText,
+        metadata: actions.length ? { actions } : undefined
+      }
+    });
+
+    await prisma.conversation.update({
+      where: { id: conversation.id },
+      data: { updatedAt: new Date() }
+    });
+
+    const finalMessages = await listConversationMessages({
+      userId: user.id,
+      conversationId: conversation.id
+    });
+
+    return NextResponse.json({
+      conversationId: conversation.id,
+      messages: finalMessages,
+      profileBank: summarizeProfileBank(updatedProfileBank),
+      application: null
+    });
+  }
 
   const chatContextMessages = await getConversationContextMessages({
     conversationId: conversation.id,
@@ -389,50 +468,7 @@ export async function POST(request: Request) {
       response.output_text?.trim() ||
       "I could not produce a response. Try again with a little more context.";
     const actions: ChatAction[] = [];
-
-    const jobSourceFromAttachment =
-      mode === "general"
-        ? attachedSources.find((source) => source.textContent && looksLikeJobSource(source.textContent))
-        : null;
-    const jobSourceText = looksLikeJobSource(parsed.data.message)
-      ? parsed.data.message
-      : jobSourceFromAttachment?.textContent ?? "";
-
-    if (mode === "general" && jobSourceText) {
-      try {
-        await checkApplicationCreationLimit(user.id);
-        const createdApplication = await createApplicationFromJobSource({
-          userId: user.id,
-          input: {
-            jobSource: jobSourceText
-          }
-        });
-        if (jobSourceFromAttachment) {
-          await moveSourcesToApplication({
-            userId: user.id,
-            sourceIds: [jobSourceFromAttachment.id],
-            applicationId: createdApplication.id
-          });
-        }
-
-        assistantText = [
-          assistantText,
-          `Created a new application for ${createdApplication.company} - ${createdApplication.role}.`
-        ].join("\n\n");
-        actions.push({
-          type: "open_application_chat",
-          label: "Open application chat",
-          applicationId: createdApplication.id
-        });
-      } catch (creationError) {
-        assistantText = [
-          assistantText,
-          creationError instanceof Error
-            ? `I could not create the application: ${creationError.message}`
-            : "I could not create the application from that job source."
-        ].join("\n\n");
-      }
-    } else if (mode === "general" && looksLikeProfileHandoffRequest(parsed.data.message)) {
+    if (mode === "general" && looksLikeProfileHandoffRequest(parsed.data.message)) {
       const profileConversation = await createProfileHandoff({
         userId: user.id,
         context: parsed.data.message

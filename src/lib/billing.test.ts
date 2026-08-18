@@ -11,6 +11,7 @@ describe("billing helpers", () => {
       trialEndsAt: null,
       hasCustomer: false,
       hasSubscription: false,
+      hasUnlimitedLimits: false,
       limits: planLimits.free
     });
   });
@@ -18,6 +19,7 @@ describe("billing helpers", () => {
   it("normalizes unknown plans to free", () => {
     expect(normalizePlan("enterprise")).toBe("free");
     expect(normalizePlan("pro")).toBe("pro");
+    expect(normalizePlan("internal")).toBe("internal");
   });
 
   it("checks feature limits for the selected plan", () => {
@@ -31,5 +33,20 @@ describe("billing helpers", () => {
       limit: 5,
       remaining: 0
     });
+  });
+
+  it("supports temporary internal unlimited limits", () => {
+    expect(getBillingStatus({ plan: "internal", status: "active" })).toMatchObject({
+      plan: "internal",
+      status: "active",
+      hasUnlimitedLimits: true
+    });
+    expect(
+      checkFeatureLimit({
+        plan: "internal",
+        feature: "applications",
+        used: 100_000
+      }).allowed
+    ).toBe(true);
   });
 });

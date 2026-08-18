@@ -65,6 +65,36 @@ describe("applications API", () => {
     expect(applicationCreate).not.toHaveBeenCalled();
   });
 
+  it("allows temporary internal accounts past the free application limit", async () => {
+    subscriptionFindUnique.mockResolvedValueOnce({ plan: "internal", status: "active" });
+    applicationCount.mockResolvedValueOnce(5);
+    applicationFindUnique.mockResolvedValueOnce(null);
+    applicationCreate.mockResolvedValueOnce({
+      id: "app-internal",
+      company: "Example AI",
+      role: "AI Engineer",
+      slug: "example-ai-ai-engineer",
+      status: "draft",
+      createdAt: new Date("2026-08-13T00:00:00.000Z"),
+      updatedAt: new Date("2026-08-13T00:00:00.000Z")
+    });
+    conversationCreate.mockResolvedValueOnce({ id: "conversation-internal" });
+
+    const { POST } = await import("./route");
+    const response = await POST(
+      new Request("http://localhost/api/applications", {
+        method: "POST",
+        body: JSON.stringify({
+          jobSource:
+            "Example AI is hiring an AI Engineer to build agents, RAG systems, evaluations, and backend services."
+        })
+      })
+    );
+
+    expect(response.status).toBe(201);
+    expect(applicationCreate).toHaveBeenCalled();
+  });
+
   it("creates an application when the user is below the plan limit", async () => {
     subscriptionFindUnique.mockResolvedValueOnce(null);
     applicationCount.mockResolvedValueOnce(1);

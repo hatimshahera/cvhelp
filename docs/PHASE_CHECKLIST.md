@@ -49,6 +49,7 @@ Tests:
 - [x] `npm test`.
 - [x] `npm run build`.
 - [x] `npm run test:e2e`.
+- [x] `npm run test:e2e`.
 - [x] `npx prisma validate`.
 
 ## Phase 3: Scoped Context Builder
@@ -306,3 +307,24 @@ Tests:
 - [x] `npm test`.
 - [x] `npm run build`.
 - [x] `npm run test:e2e`.
+
+## Product Correction: Job-Source Preflight and Internal Account Limits
+
+- [x] Move General Chat job-source creation before the main chat model call.
+- [x] Return short deterministic creation success/failure messages for job-source turns.
+- [x] Prevent generic tailoring/template output when application creation is blocked.
+- [x] Keep successful job-source responses returning `open_application_chat`.
+- [x] Keep attached job-source conversion behavior.
+- [x] Add temporary `internal` billing plan for unlimited internal accounts.
+- [x] Update account settings to display internal limits as `Unlimited`.
+- [x] Mark `hatimshahera@gmail.com` as `internal` in the connected database.
+- [x] Document the preflight and internal-plan decisions.
+
+Tests:
+
+- [x] Over-limit job-source General Chat path does not call the model.
+- [x] Direct application creation allows `internal` accounts above the free cap.
+- [x] Billing helper covers `internal` unlimited limits.
+- [x] `npm run typecheck`.
+- [x] `npm test`.
+- [x] `npm run build`.

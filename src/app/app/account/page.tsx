@@ -12,6 +12,7 @@ export default async function AccountPage() {
     where: { userId: user.id }
   });
   const billing = getBillingStatus(subscription);
+  const formatLimit = (limit: number) => (billing.hasUnlimitedLimits ? "Unlimited" : limit);
 
   return (
     <main className="account-page">
@@ -55,15 +56,15 @@ export default async function AccountPage() {
             </div>
             <div>
               <dt>Applications</dt>
-              <dd>{billing.limits.applications}</dd>
+              <dd>{formatLimit(billing.limits.applications)}</dd>
             </div>
             <div>
               <dt>Generations</dt>
-              <dd>{billing.limits.generations}</dd>
+              <dd>{formatLimit(billing.limits.generations)}</dd>
             </div>
             <div>
               <dt>Exports</dt>
-              <dd>{billing.limits.exports}</dd>
+              <dd>{formatLimit(billing.limits.exports)}</dd>
             </div>
           </dl>
         </section>

@@ -104,6 +104,34 @@ Reasoning:
 
 Users naturally paste job descriptions into chat. Keeping application creation in General Chat lets the app understand intent, create the job/application record through deterministic backend code, and then offer a clear button to open the newly created application chat. The Applications sidebar should be navigation only rather than a creation/search surface.
 
+### Job-Source Preflight Before Generation
+
+Decision:
+
+General Chat handles actionable job descriptions and job URLs through deterministic backend creation before the main LLM response call.
+
+Reasoning:
+
+When the user pastes a job source, the product action is application creation. The previous ordering generated generic CV/cover-letter advice first and only then appended a backend failure such as a plan-limit error. That buried the important state and made the assistant feel confused. Preflighting creation keeps the response aligned with what the backend can actually do and avoids spending tokens on irrelevant templates.
+
+Tradeoff:
+
+The first response to a pasted job source is now intentionally short: create the application, provide the open-chat button, or explain why creation was blocked. Detailed tailoring belongs inside the resulting application chat.
+
+### Temporary Internal Unlimited Plan
+
+Decision:
+
+Use `Subscription.plan = "internal"` for temporary unlimited internal/test accounts until admin account management exists.
+
+Reasoning:
+
+This keeps the override inside the same billing helper and deterministic feature gates as normal plans, without adding a migration or scattering user-specific exceptions through application routes.
+
+Tradeoff:
+
+`internal` is an operational override, not a pricing/product tier. It should be replaced by admin-managed account controls later.
+
 ### Simple Workspace Sidebar
 
 Decision:
