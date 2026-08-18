@@ -31,6 +31,12 @@ import { checkRequestLimit, getIntegerEnv } from "@/lib/rate-limit";
 import { logError } from "@/lib/server-log";
 import { getCurrentUser } from "@/lib/session";
 import {
+  buildSourceSnippetContext,
+  getSourcesForChat,
+  linkSourcesToMessage,
+  moveSourcesToApplication
+} from "@/lib/sources";
+import {
   createApplicationFromJobSource,
   looksLikeJobSource
 } from "@/lib/tools/application-actions";
@@ -39,7 +45,8 @@ const chatSchema = z.object({
   message: z.string().trim().min(1, "Enter a message.").max(8000),
   conversationId: z.string().nullable().optional(),
   mode: chatModeSchema.default("build_profile"),
-  applicationId: z.string().nullable().optional()
+  applicationId: z.string().nullable().optional(),
+  sourceIds: z.array(z.string()).max(12).default([])
 });
 
 const modeSchema = chatModeSchema.default("build_profile");
@@ -266,6 +273,26 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Conversation not found." }, { status: 404 });
   }
 
+  let attachedSources;
+  try {
+    attachedSources = await getSourcesForChat({
+      userId: user.id,
+      mode,
+      applicationId: conversationApplicationIdForMode(mode, application?.id),
+      sourceIds: parsed.data.sourceIds
+    });
+  } catch (sourceError) {
+    return NextResponse.json(
+      {
+        error:
+          sourceError instanceof Error
+            ? sourceError.message
+            : "One or more attached sources are unavailable for this chat."
+      },
+      { status: 400 }
+    );
+  }
+
   const userMessage = await prisma.chatMessage.create({
     data: {
       conversationId: conversation.id,
@@ -273,6 +300,11 @@ export async function POST(request: Request) {
       role: "user",
       content: parsed.data.message
     }
+  });
+  await linkSourcesToMessage({
+    userId: user.id,
+    messageId: userMessage.id,
+    sourceIds: attachedSources.map((source) => source.id)
   });
 
   const updatedProfileBank =
@@ -321,7 +353,8 @@ export async function POST(request: Request) {
         recentMessages,
         profileBank: updatedProfileBank,
         application,
-        workspaceApplications
+        workspaceApplications,
+        sourceSnippetContext: buildSourceSnippetContext(attachedSources)
       })
     });
 
@@ -330,15 +363,30 @@ export async function POST(request: Request) {
       "I could not produce a response. Try again with a little more context.";
     const actions: ChatAction[] = [];
 
-    if (mode === "general" && looksLikeJobSource(parsed.data.message)) {
+    const jobSourceFromAttachment =
+      mode === "general"
+        ? attachedSources.find((source) => source.textContent && looksLikeJobSource(source.textContent))
+        : null;
+    const jobSourceText = looksLikeJobSource(parsed.data.message)
+      ? parsed.data.message
+      : jobSourceFromAttachment?.textContent ?? "";
+
+    if (mode === "general" && jobSourceText) {
       try {
         await checkApplicationCreationLimit(user.id);
         const createdApplication = await createApplicationFromJobSource({
           userId: user.id,
           input: {
-            jobSource: parsed.data.message
+            jobSource: jobSourceText
           }
         });
+        if (jobSourceFromAttachment) {
+          await moveSourcesToApplication({
+            userId: user.id,
+            sourceIds: [jobSourceFromAttachment.id],
+            applicationId: createdApplication.id
+          });
+        }
 
         assistantText = [
           assistantText,

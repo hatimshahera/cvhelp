@@ -581,11 +581,13 @@ export function AppShell({
     setIsSending(true);
 
     try {
-      let fileContext = "";
+      let sourceIds: string[] = [];
 
       if (filesToUpload.length) {
         const formData = new FormData();
         filesToUpload.forEach((file) => formData.append("files", file));
+        formData.append("mode", activeMode);
+        if (activeApplicationId) formData.append("applicationId", activeApplicationId);
 
         const uploadResponse = await fetch("/api/profile-sources", {
           method: "POST",
@@ -601,22 +603,30 @@ export function AppShell({
         }
 
         setProfileBank(uploadData.profileBank ?? profileBank);
-        fileContext = uploadData.messageContext || "";
+        sourceIds = Array.isArray(uploadData.uploaded)
+          ? uploadData.uploaded
+              .map((file: { sourceId?: unknown }) => file.sourceId)
+              .filter((sourceId: unknown): sourceId is string => typeof sourceId === "string")
+          : [];
       }
 
       const finalMessage =
         trimmed ||
-        "I uploaded files to my profile bank. Please review what you can use and tell me what else you need.";
-      const messageWithFiles = [finalMessage, fileContext].filter(Boolean).join("\n\n");
+        (activeMode === "application"
+          ? "I uploaded files for this application. Please review what you can use and tell me what else you need."
+          : activeMode === "general"
+            ? "I uploaded files. Please review what you can use and tell me what else you need."
+            : "I uploaded files to my profile bank. Please review what you can use and tell me what else you need.");
 
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           conversationId,
-          message: messageWithFiles,
+          message: finalMessage,
           mode: activeMode,
-          applicationId: activeApplicationId
+          applicationId: activeApplicationId,
+          sourceIds
         })
       });
       const data = await readJsonResponse(response);

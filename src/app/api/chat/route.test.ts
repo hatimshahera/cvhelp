@@ -14,9 +14,12 @@ const chatMessageCreate = vi.fn();
 const chatMessageDelete = vi.fn();
 const chatMessageDeleteMany = vi.fn();
 const chatMessageFindMany = vi.fn();
+const chatMessageSourceCreateMany = vi.fn();
 const subscriptionFindUnique = vi.fn();
 const applicationUpdate = vi.fn();
 const applicationCreate = vi.fn();
+const sourceFindMany = vi.fn();
+const sourceUpdateMany = vi.fn();
 const responsesCreate = vi.fn();
 
 vi.mock("next-auth", () => ({
@@ -54,6 +57,13 @@ vi.mock("@/lib/prisma", () => ({
       delete: chatMessageDelete,
       deleteMany: chatMessageDeleteMany,
       findMany: chatMessageFindMany
+    },
+    chatMessageSource: {
+      createMany: chatMessageSourceCreateMany
+    },
+    source: {
+      findMany: sourceFindMany,
+      updateMany: sourceUpdateMany
     }
   }
 }));
@@ -109,6 +119,9 @@ describe("chat API application scoping", () => {
     profileBankUpsert.mockResolvedValue(profileBank);
     profileBankUpdate.mockResolvedValue(profileBank);
     applicationFindMany.mockResolvedValue([]);
+    sourceFindMany.mockResolvedValue([]);
+    sourceUpdateMany.mockResolvedValue({ count: 0 });
+    chatMessageSourceCreateMany.mockResolvedValue({ count: 0 });
     const { getServerSession } = await import("next-auth");
     vi.mocked(getServerSession).mockResolvedValue({
       user: {
@@ -209,6 +222,224 @@ describe("chat API application scoping", () => {
     expect(conversationCreate).not.toHaveBeenCalled();
     expect(chatMessageCreate).not.toHaveBeenCalled();
     expect(responsesCreate).not.toHaveBeenCalled();
+  });
+
+  it("rejects attached sources outside the current chat scope before saving a chat message", async () => {
+    applicationFindFirst.mockResolvedValueOnce(application);
+    conversationCreate.mockResolvedValueOnce({
+      id: "conversation-1",
+      mode: "application",
+      applicationId: "app-1"
+    });
+    sourceFindMany.mockResolvedValueOnce([]);
+    const { POST } = await import("./route");
+    const response = await POST(
+      new Request("http://localhost/api/chat", {
+        method: "POST",
+        body: JSON.stringify({
+          mode: "application",
+          applicationId: "app-1",
+          message: "Use this source.",
+          sourceIds: ["source-from-another-app"]
+        })
+      })
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(400);
+    expect(body.error).toBe("One or more attached sources are unavailable for this chat.");
+    expect(sourceFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          id: { in: ["source-from-another-app"] },
+          userId: "user-1",
+          scope: "application",
+          applicationId: "app-1"
+        })
+      })
+    );
+    expect(chatMessageCreate).not.toHaveBeenCalled();
+    expect(responsesCreate).not.toHaveBeenCalled();
+  });
+
+  it("links valid attached sources to the saved user message", async () => {
+    conversationCreate.mockResolvedValueOnce({
+      id: "conversation-general",
+      mode: "general",
+      applicationId: null
+    });
+    sourceFindMany.mockResolvedValueOnce([
+      {
+        id: "source-1",
+        scope: "general",
+        applicationId: null,
+        kind: "file_upload_text",
+        name: "job.txt",
+        textContent: "Example AI is hiring an AI Engineer.",
+        metadata: null,
+        createdAt: new Date("2026-08-13T00:00:00.000Z")
+      }
+    ]);
+    chatMessageCreate
+      .mockResolvedValueOnce({
+        id: "message-user",
+        role: "user",
+        content: "Review the attached source."
+      })
+      .mockResolvedValueOnce({
+        id: "message-assistant",
+        role: "assistant",
+        content: "I reviewed it."
+      });
+    chatMessageFindMany
+      .mockResolvedValueOnce([
+        {
+          role: "user",
+          content: "Review the attached source."
+        }
+      ])
+      .mockResolvedValueOnce([]);
+    responsesCreate.mockResolvedValueOnce({
+      output_text: "I reviewed it."
+    });
+    conversationUpdate.mockResolvedValueOnce({ id: "conversation-general" });
+    const { POST } = await import("./route");
+    const response = await POST(
+      new Request("http://localhost/api/chat", {
+        method: "POST",
+        body: JSON.stringify({
+          mode: "general",
+          message: "Review the attached source.",
+          sourceIds: ["source-1"]
+        })
+      })
+    );
+
+    expect(response.status).toBe(200);
+    expect(chatMessageSourceCreateMany).toHaveBeenCalledWith({
+      data: [
+        {
+          userId: "user-1",
+          messageId: "message-user",
+          sourceId: "source-1"
+        }
+      ],
+      skipDuplicates: true
+    });
+    expect(responsesCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        input: expect.stringContaining("Attached source snippets")
+      })
+    );
+  });
+
+  it("creates an application from an attached general job source and moves that source to the application", async () => {
+    const jobText =
+      "Example AI is hiring an AI Engineer. Requirements include Python, RAG, LLM evaluation, backend APIs, and production agent workflows.";
+    conversationCreate
+      .mockResolvedValueOnce({
+        id: "conversation-general",
+        mode: "general",
+        applicationId: null
+      })
+      .mockResolvedValueOnce({
+        id: "conversation-application",
+        mode: "application",
+        applicationId: "app-from-source"
+      });
+    sourceFindMany.mockResolvedValueOnce([
+      {
+        id: "source-general-job",
+        scope: "general",
+        applicationId: null,
+        kind: "file_upload_text",
+        name: "job.txt",
+        textContent: jobText,
+        metadata: null,
+        createdAt: new Date("2026-08-13T00:00:00.000Z")
+      }
+    ]);
+    chatMessageCreate
+      .mockResolvedValueOnce({
+        id: "message-user",
+        role: "user",
+        content: "Create an application from this uploaded job source."
+      })
+      .mockResolvedValueOnce({
+        id: "message-assistant",
+        role: "assistant",
+        content: "Created a new application for Example AI - AI Engineer.",
+        metadata: {
+          actions: [
+            {
+              type: "open_application_chat",
+              label: "Open application chat",
+              applicationId: "app-from-source"
+            }
+          ]
+        }
+      });
+    chatMessageFindMany
+      .mockResolvedValueOnce([
+        {
+          role: "user",
+          content: "Create an application from this uploaded job source."
+        }
+      ])
+      .mockResolvedValueOnce([]);
+    responsesCreate.mockResolvedValueOnce({
+      output_text: "I can create an application from the attached job source."
+    });
+    subscriptionFindUnique.mockResolvedValueOnce(null);
+    applicationCount.mockResolvedValueOnce(1);
+    applicationFindUnique.mockResolvedValueOnce(null);
+    applicationCreate.mockResolvedValueOnce({
+      id: "app-from-source",
+      company: "Example AI",
+      role: "AI Engineer",
+      slug: "example-ai-ai-engineer",
+      status: "draft",
+      createdAt: new Date("2026-08-13T00:00:00.000Z"),
+      updatedAt: new Date("2026-08-13T00:00:00.000Z")
+    });
+    applicationFindFirst.mockResolvedValueOnce({ id: "app-from-source" });
+    sourceUpdateMany.mockResolvedValueOnce({ count: 1 });
+    conversationUpdate.mockResolvedValueOnce({ id: "conversation-general" });
+    const { POST } = await import("./route");
+    const response = await POST(
+      new Request("http://localhost/api/chat", {
+        method: "POST",
+        body: JSON.stringify({
+          mode: "general",
+          message: "Create an application from this uploaded job source.",
+          sourceIds: ["source-general-job"]
+        })
+      })
+    );
+
+    expect(response.status).toBe(200);
+    expect(applicationCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          userId: "user-1",
+          jobPost: expect.objectContaining({
+            content: jobText
+          })
+        })
+      })
+    );
+    expect(sourceUpdateMany).toHaveBeenCalledWith({
+      where: {
+        id: { in: ["source-general-job"] },
+        userId: "user-1",
+        scope: "general",
+        applicationId: null
+      },
+      data: {
+        scope: "application",
+        applicationId: "app-from-source"
+      }
+    });
   });
 
   it("extracts chat-provided profile facts into the profile bank", async () => {

@@ -14,6 +14,8 @@ import { prisma } from "@/lib/prisma";
 import { checkRequestLimit, getIntegerEnv } from "@/lib/rate-limit";
 import { logError } from "@/lib/server-log";
 import { getCurrentUser } from "@/lib/session";
+import { createTextSource, sourceScopeForChatMode } from "@/lib/sources";
+import { chatModeSchema, conversationApplicationIdForMode } from "@/lib/chat/types";
 
 export const runtime = "nodejs";
 
@@ -142,6 +144,15 @@ export async function POST(request: Request) {
     const files = formData
       .getAll("files")
       .filter((value): value is File => value instanceof File && Boolean(value.name));
+    const mode = chatModeSchema
+      .default("build_profile")
+      .parse(typeof formData.get("mode") === "string" ? formData.get("mode") : undefined);
+    const applicationId =
+      typeof formData.get("applicationId") === "string"
+        ? (formData.get("applicationId") as string)
+        : null;
+    const sourceScope = sourceScopeForChatMode(mode);
+    const sourceApplicationId = conversationApplicationIdForMode(mode, applicationId);
 
     if (!files.length) {
       return NextResponse.json({ error: "Choose at least one file." }, { status: 400 });
@@ -169,9 +180,22 @@ export async function POST(request: Request) {
       where: { userId: user.id }
     });
     const billing = getBillingStatus(subscription);
-    const uploadCount = parseRawSources(profileBank.rawSources).entries.filter((entry) =>
-      entry.type.startsWith("file_upload")
-    ).length;
+    const [legacyProfileUploadCount, normalizedUploadCount] = await Promise.all([
+      Promise.resolve(
+        parseRawSources(profileBank.rawSources).entries.filter((entry) =>
+          entry.type.startsWith("file_upload")
+        ).length
+      ),
+      prisma.source.count({
+        where: {
+          userId: user.id,
+          kind: {
+            startsWith: "file_upload"
+          }
+        }
+      })
+    ]);
+    const uploadCount = Math.max(legacyProfileUploadCount, normalizedUploadCount);
     const uploadLimit = checkFeatureLimit({
       plan: billing.plan,
       feature: "uploads",
@@ -230,7 +254,24 @@ export async function POST(request: Request) {
               : "This file was saved as an uploaded source, but text extraction is not available for this file type yet."
           ].join("\n");
 
+      const source = await createTextSource({
+        userId: user.id,
+        scope: sourceScope,
+        applicationId: sourceApplicationId,
+        kind: extraction.sourceType,
+        name: file.name,
+        mimeType: file.type || "unknown",
+        sizeBytes: file.size,
+        textContent: content,
+        metadata: {
+          fileType: file.type || "unknown",
+          fileSize: file.size,
+          extractedText: extraction.extracted
+        } as Prisma.InputJsonValue
+      });
+
       uploaded.push({
+        sourceId: source.id,
         name: file.name,
         size: file.size,
         type: file.type || "unknown",
@@ -238,29 +279,33 @@ export async function POST(request: Request) {
         extractedText: extraction.extracted
       });
 
-      rawSources = appendRawSource(rawSources, {
-        id: crypto.randomUUID(),
-        type: extraction.sourceType,
-        content,
-        createdAt: new Date().toISOString(),
-        name: file.name,
-        metadata: {
-          fileType: file.type || "unknown",
-          fileSize: file.size
-        }
-      });
+      if (sourceScope === "profile") {
+        rawSources = appendRawSource(rawSources, {
+          id: source.id,
+          type: extraction.sourceType,
+          content,
+          createdAt: new Date().toISOString(),
+          name: file.name,
+          metadata: {
+            fileType: file.type || "unknown",
+            fileSize: file.size,
+            normalizedSourceId: source.id
+          }
+        });
+      }
     }
 
     const lowerNames = uploaded.map((file) => file.name.toLowerCase()).join(" ");
-    const checklist = markChecklistFromText(parseChecklist(profileBank.checklist), lowerNames);
-
-    const updatedProfileBank = await prisma.profileBank.update({
-      where: { userId: user.id },
-      data: {
-        rawSources: rawSources as Prisma.InputJsonValue,
-        checklist: checklist as Prisma.InputJsonValue
-      }
-    });
+    const updatedProfileBank =
+      sourceScope === "profile"
+        ? await prisma.profileBank.update({
+            where: { userId: user.id },
+            data: {
+              rawSources: rawSources as Prisma.InputJsonValue,
+              checklist: markChecklistFromText(parseChecklist(profileBank.checklist), lowerNames) as Prisma.InputJsonValue
+            }
+          })
+        : profileBank;
 
     return NextResponse.json({
       uploaded,
@@ -310,6 +355,13 @@ export async function DELETE(request: Request) {
       where: { userId: user.id },
       data: {
         rawSources: { entries: nextEntries } as Prisma.InputJsonValue
+      }
+    });
+    await prisma.source.deleteMany({
+      where: {
+        id: parsed.data.sourceId,
+        userId: user.id,
+        scope: "profile"
       }
     });
 

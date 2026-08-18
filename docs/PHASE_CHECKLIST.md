@@ -108,27 +108,29 @@ Tests:
 
 ## Phase 5: First-Class Sources and Attachments
 
-- [ ] Add Prisma migration for `Source`.
-- [ ] Add Prisma migration for `ChatMessageSource`.
-- [ ] Consider adding `ChatMessage.metadata Json?`.
-- [ ] Keep `ProfileBank.rawSources` readable for existing data.
-- [ ] Update upload route to create source rows.
-- [ ] Preserve current profile source summary UI.
-- [ ] Add source scopes: `profile`, `application`, `general`.
-- [ ] Allow General Chat sources to become application sources during application creation.
-- [ ] Allow Application Chat file uploads to stay application-scoped.
-- [ ] Stop appending full uploaded source text into chat messages.
-- [ ] Context builder retrieves source snippets by scope and ownership.
+- [x] Add Prisma migration for `Source`.
+- [x] Add Prisma migration for `ChatMessageSource`.
+- [x] Consider adding `ChatMessage.metadata Json?`.
+- [x] Keep `ProfileBank.rawSources` readable for existing data.
+- [x] Update upload route to create source rows.
+- [x] Preserve current profile source summary UI.
+- [x] Add source scopes: `profile`, `application`, `general`.
+- [x] Allow General Chat sources to become application sources during application creation.
+- [x] Allow Application Chat file uploads to stay application-scoped.
+- [x] Stop appending full uploaded source text into chat messages.
+- [x] Context builder retrieves source snippets by scope and ownership.
 
 Tests:
 
-- [ ] Cross-user source IDs are rejected.
-- [ ] Application source cannot be attached to another application chat.
-- [ ] General source converted into an application is owned by that application.
-- [ ] Existing profile uploads still update profile source UI.
-- [ ] Upload billing and rate limits still apply.
-- [ ] `npm run typecheck`.
-- [ ] `npm test`.
+- [x] Cross-user source IDs are rejected.
+- [x] Application source cannot be attached to another application chat.
+- [x] General source converted into an application is owned by that application.
+- [x] Existing profile uploads still update profile source UI.
+- [x] Upload billing and rate limits still apply.
+- [x] `npm run typecheck`.
+- [x] `npm test`.
+- [x] `npm run build`.
+- [x] `npx prisma validate`.
 
 ## Phase 6: Conversation Summaries and Relevant Retrieval
 

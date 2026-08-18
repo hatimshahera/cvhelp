@@ -48,6 +48,7 @@ export function buildChatPromptContext({
   profileBank,
   application,
   workspaceApplications = [],
+  sourceSnippetContext = "",
   contextBudget = defaultContextBudget
 }: {
   mode: ChatMode;
@@ -56,6 +57,7 @@ export function buildChatPromptContext({
   profileBank?: ProfileBankContext | null;
   application?: ApplicationContext | null;
   workspaceApplications?: WorkspaceApplicationSummary[];
+  sourceSnippetContext?: string;
   contextBudget?: number;
 }) {
   const transcript = buildTranscript(recentMessages);
@@ -101,9 +103,12 @@ export function buildChatPromptContext({
           2
         )}`
       : "";
+  const attachedSourceContext = sourceSnippetContext
+    ? `\n\nAttached source snippets:\n${sourceSnippetContext}`
+    : "";
   const prefix = `The signed-in user's name is ${userName}. Continue this private conversation.`;
   const context = truncateSection(
-    `${profileContext}${applicationContext}${generalContext}`,
+    `${profileContext}${applicationContext}${generalContext}${attachedSourceContext}`,
     Math.max(0, contextBudget - prefix.length - transcript.length - 4)
   );
 

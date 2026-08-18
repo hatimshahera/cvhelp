@@ -4,6 +4,10 @@ import { resetRequestLimits } from "@/lib/rate-limit";
 const profileBankUpsert = vi.fn();
 const profileBankUpdate = vi.fn();
 const subscriptionFindUnique = vi.fn();
+const sourceCount = vi.fn();
+const sourceCreate = vi.fn();
+const sourceDeleteMany = vi.fn();
+const applicationFindFirst = vi.fn();
 const pdfGetText = vi.fn();
 const pdfDestroy = vi.fn();
 
@@ -23,6 +27,14 @@ vi.mock("@/lib/prisma", () => ({
     },
     subscription: {
       findUnique: subscriptionFindUnique
+    },
+    source: {
+      count: sourceCount,
+      create: sourceCreate,
+      deleteMany: sourceDeleteMany
+    },
+    application: {
+      findFirst: applicationFindFirst
     }
   }
 }));
@@ -60,6 +72,14 @@ describe("profile source uploads", () => {
       expires: "2026-08-13T00:00:00.000Z"
     });
     subscriptionFindUnique.mockResolvedValue(null);
+    sourceCount.mockResolvedValue(0);
+    sourceCreate.mockResolvedValue({
+      id: "source-1"
+    });
+    sourceDeleteMany.mockResolvedValue({ count: 0 });
+    applicationFindFirst.mockResolvedValue({
+      id: "app-1"
+    });
   });
 
   it("blocks uploads when the upload limit is reached", async () => {
@@ -153,7 +173,20 @@ describe("profile source uploads", () => {
 
     expect(response.status).toBe(200);
     expect(body.uploaded[0].name).toBe("cv.txt");
+    expect(body.uploaded[0].sourceId).toBe("source-1");
     expect(body.uploaded[0].extractedText).toBe(true);
+    expect(sourceCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          userId: "user-1",
+          scope: "profile",
+          applicationId: null,
+          kind: "file_upload_text",
+          name: "cv.txt",
+          textContent: expect.stringContaining("CV text")
+        })
+      })
+    );
     expect(profileBankUpdate).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { userId: "user-1" },
@@ -228,6 +261,46 @@ describe("profile source uploads", () => {
     );
   });
 
+  it("stores application-scoped uploads without writing profile raw sources", async () => {
+    profileBankUpsert.mockResolvedValueOnce({
+      masterProfile: {},
+      rawSources: { entries: [] },
+      checklist: []
+    });
+    sourceCreate.mockResolvedValueOnce({ id: "source-app-1" });
+    const formData = formDataWithFile(
+      new File(["Portfolio note for this application"], "role-note.txt", { type: "text/plain" })
+    );
+    formData.append("mode", "application");
+    formData.append("applicationId", "app-1");
+    const { POST } = await import("./route");
+    const response = await POST(
+      new Request("http://localhost/api/profile-sources", {
+        method: "POST",
+        body: formData
+      })
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.uploaded[0].sourceId).toBe("source-app-1");
+    expect(applicationFindFirst).toHaveBeenCalledWith({
+      where: { id: "app-1", userId: "user-1" },
+      select: { id: true }
+    });
+    expect(sourceCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          userId: "user-1",
+          scope: "application",
+          applicationId: "app-1",
+          kind: "file_upload_text"
+        })
+      })
+    );
+    expect(profileBankUpdate).not.toHaveBeenCalled();
+  });
+
   it("deletes one saved source from the signed-in user's profile bank", async () => {
     profileBankUpsert.mockResolvedValueOnce({
       masterProfile: {},
@@ -284,6 +357,13 @@ describe("profile source uploads", () => {
             })
           ]
         }
+      }
+    });
+    expect(sourceDeleteMany).toHaveBeenCalledWith({
+      where: {
+        id: "source-1",
+        userId: "user-1",
+        scope: "profile"
       }
     });
   });
