@@ -96,6 +96,7 @@ Current `/api/chat` behavior:
 - Updates application-specific memory and notes after application chat turns.
 - Preserves existing profile/application memory when sidecar model JSON is malformed or fails validation.
 - Exposes General Chat in the UI.
+- General Chat replies normally to simple greetings/health checks without retrieving workspace summaries or calling OpenAI.
 - Creates applications from General Chat through deterministic backend code.
 - Creates explicit Profile Chat handoffs from General Chat.
 - Creates explicit Profile Chat handoffs from Application Chat when the user asks to update reusable/global profile facts.

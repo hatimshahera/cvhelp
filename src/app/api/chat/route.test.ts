@@ -333,6 +333,136 @@ describe("chat API application scoping", () => {
     );
   });
 
+  it("answers lightweight general health checks without workspace context or OpenAI", async () => {
+    delete process.env.OPENAI_API_KEY;
+    conversationCreate.mockResolvedValueOnce({
+      id: "conversation-general",
+      mode: "general",
+      applicationId: null,
+      summary: {
+        version: 1,
+        text: "Previous workspace planning summary that should not be used.",
+        updatedAt: "2026-08-13T00:00:00.000Z",
+        summarizedMessageCount: 40
+      },
+      lastSummarizedMessageId: "message-old"
+    });
+    chatMessageCreate
+      .mockResolvedValueOnce({
+        id: "message-user",
+        role: "user",
+        content: "Hi there does this work"
+      })
+      .mockResolvedValueOnce({
+        id: "message-assistant",
+        role: "assistant",
+        content:
+          "Hi Hatim. Yes, it works. You can paste a job description here, ask a career question, or route profile updates."
+      });
+    conversationUpdate.mockResolvedValueOnce({ id: "conversation-general" });
+    chatMessageFindMany.mockResolvedValueOnce([
+      {
+        id: "message-user",
+        role: "user",
+        content: "Hi there does this work",
+        metadata: null,
+        createdAt: new Date("2026-08-13T00:00:00.000Z")
+      },
+      {
+        id: "message-assistant",
+        role: "assistant",
+        content:
+          "Hi Hatim. Yes, it works. You can paste a job description here, ask a career question, or route profile updates.",
+        metadata: null,
+        createdAt: new Date("2026-08-13T00:00:01.000Z")
+      }
+    ]);
+
+    const { POST } = await import("./route");
+    const response = await POST(
+      new Request("http://localhost/api/chat", {
+        method: "POST",
+        body: JSON.stringify({
+          mode: "general",
+          message: "Hi there does this work"
+        })
+      })
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.messages[1].content).toBe(
+      "Hi Hatim. Yes, it works. You can paste a job description here, ask a career question, or route profile updates."
+    );
+    expect(applicationFindMany).not.toHaveBeenCalled();
+    expect(responsesCreate).not.toHaveBeenCalled();
+  });
+
+  it("includes workspace summaries for general application questions", async () => {
+    conversationCreate.mockResolvedValueOnce({
+      id: "conversation-general",
+      mode: "general",
+      applicationId: null,
+      summary: null,
+      lastSummarizedMessageId: null
+    });
+    chatMessageCreate
+      .mockResolvedValueOnce({
+        id: "message-user",
+        role: "user",
+        content: "Compare my active applications"
+      })
+      .mockResolvedValueOnce({
+        id: "message-assistant",
+        role: "assistant",
+        content: "Here is the comparison."
+      });
+    chatMessageFindMany
+      .mockResolvedValueOnce([
+        {
+          role: "user",
+          content: "Compare my active applications"
+        }
+      ])
+      .mockResolvedValueOnce([]);
+    applicationFindMany.mockResolvedValueOnce([
+      {
+        id: "app-1",
+        company: "Example AI",
+        role: "AI Engineer",
+        status: "draft",
+        nextAction: "Tailor CV"
+      }
+    ]);
+    responsesCreate.mockResolvedValueOnce({
+      output_text: "Here is the comparison."
+    });
+    conversationUpdate.mockResolvedValueOnce({ id: "conversation-general" });
+
+    const { POST } = await import("./route");
+    const response = await POST(
+      new Request("http://localhost/api/chat", {
+        method: "POST",
+        body: JSON.stringify({
+          mode: "general",
+          message: "Compare my active applications"
+        })
+      })
+    );
+
+    expect(response.status).toBe(200);
+    expect(applicationFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { userId: "user-1" }
+      })
+    );
+    expect(responsesCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        input: expect.stringContaining("Workspace application summaries")
+      })
+    );
+  });
+
   it("creates an application from an attached general job source and moves that source to the application", async () => {
     const jobText =
       "Example AI is hiring an AI Engineer. Requirements include Python, RAG, LLM evaluation, backend APIs, and production agent workflows.";

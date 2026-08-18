@@ -104,6 +104,16 @@ Reasoning:
 
 Users naturally paste job descriptions into chat. Keeping application creation in General Chat lets the app understand intent, create the job/application record through deterministic backend code, and then offer a clear button to open the newly created application chat. The Applications sidebar should become navigation, search, status, and archive management rather than the primary creation form.
 
+### General Chat Context Gating
+
+Decision:
+
+General Chat behaves like a normal chatbot by default. Greetings, pings, and simple health checks do not receive workspace summaries and do not call the model. Workspace summaries are included only when the user asks for application/workspace work, provides a job source, attaches sources, or triggers a profile handoff.
+
+Reasoning:
+
+General Chat should not turn every casual message into a workspace audit. Intent-gated context keeps responses natural, reduces cost, and still gives the agent the right information when the user actually needs cross-application behavior.
+
 ### Deterministic Backend Actions
 
 Decision:
