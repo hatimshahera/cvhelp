@@ -157,6 +157,7 @@ Done:
 - Application side panel can show job post, artifacts, and CV PDF previews.
 - Assistant action buttons can open a newly created application chat or continue in Profile Chat.
 - Playwright browser smoke tests cover General Chat routing, Profile Chat handoff, application creation handoff, desktop layout, mobile layout, keyboard activation, overflow checks, and client console errors.
+- Production smoke tests passed for auth, General Chat application creation, Profile Chat handoff, and switching into the created application chat.
 
 ## ProofCV Reference System
 
@@ -183,6 +184,5 @@ ProofCV application data shape currently includes:
 - The README and older docs may understate current implementation and need updating as part of architecture work.
 - Application memory remains JSON-based and should be protected by stricter context and write boundaries.
 - Source retrieval uses scoped source records but does not yet chunk large files independently.
-- No end-to-end tests exist.
-- No production smoke test has been performed in this planning pass.
+- A fresh migration replay still needs a disposable Postgres shadow database URL.
 - Secrets appear in local env files and should be treated carefully.

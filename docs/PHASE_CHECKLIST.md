@@ -228,25 +228,29 @@ Tests:
 
 ## Phase 10: Production Readiness
 
-- [ ] Verify fresh database migrations.
-- [ ] Verify migration path from existing data.
-- [ ] Confirm Vercel `DATABASE_URL`.
-- [ ] Confirm Vercel `DATABASE_URL_UNPOOLED`.
-- [ ] Confirm Vercel `NEXTAUTH_URL`.
-- [ ] Confirm Vercel `NEXTAUTH_SECRET`.
-- [ ] Confirm Vercel `OPENAI_API_KEY`.
-- [ ] Confirm Vercel `OPENAI_MODEL`.
-- [ ] Confirm billing behavior after chat refactor.
-- [ ] Run production build.
-- [ ] Deploy.
-- [ ] Smoke test auth in production.
-- [ ] Smoke test General Chat application creation in production.
-- [ ] Smoke test Profile Chat handoff in production.
-- [ ] Smoke test Application Chat isolation in production.
+- [ ] Verify fresh database migrations with a disposable Postgres shadow database.
+- [x] Verify schema can generate from an empty baseline.
+- [x] Verify migration path from existing data.
+- [x] Confirm Vercel `DATABASE_URL`.
+- [x] Confirm Vercel `DATABASE_URL_UNPOOLED`.
+- [x] Confirm Vercel `NEXTAUTH_URL`.
+- [x] Confirm Vercel `NEXTAUTH_SECRET`.
+- [x] Confirm Vercel `OPENAI_API_KEY`.
+- [x] Confirm Vercel `OPENAI_MODEL` fallback behavior.
+- [x] Confirm billing behavior after chat refactor.
+- [x] Run production build.
+- [x] Deploy.
+- [x] Smoke test auth in production.
+- [x] Smoke test General Chat application creation in production.
+- [x] Smoke test Profile Chat handoff in production.
+- [x] Smoke test Application Chat isolation in production.
 
 Tests:
 
-- [ ] `npm run typecheck`.
-- [ ] `npm test`.
-- [ ] `npm run build`.
-- [ ] `npx prisma migrate status`.
+- [x] `npm run typecheck`.
+- [x] `npm test`.
+- [x] `npm run build`.
+- [x] `npx prisma migrate status`.
+- [x] `npx prisma validate`.
+- [x] Real production chat smoke with `CVHELP_E2E_REAL_CHAT=1`.
+- [x] `npm run test:e2e:prod`.
