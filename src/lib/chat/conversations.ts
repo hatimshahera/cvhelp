@@ -33,6 +33,60 @@ export async function getLatestConversationWithMessages({
   });
 }
 
+export async function getConversationWithMessages({
+  userId,
+  mode,
+  applicationId,
+  conversationId
+}: {
+  userId: string;
+  mode: ChatMode;
+  applicationId: string | null;
+  conversationId: string;
+}) {
+  return prisma.conversation.findFirst({
+    where: { id: conversationId, userId, mode, applicationId },
+    include: {
+      messages: {
+        orderBy: { createdAt: "asc" },
+        select: {
+          id: true,
+          role: true,
+          content: true,
+          metadata: true,
+          createdAt: true
+        }
+      }
+    }
+  });
+}
+
+export async function listConversations({
+  userId,
+  mode,
+  applicationId,
+  limit = 30
+}: {
+  userId: string;
+  mode: ChatMode;
+  applicationId: string | null;
+  limit?: number;
+}) {
+  return prisma.conversation.findMany({
+    where: { userId, mode, applicationId },
+    orderBy: { updatedAt: "desc" },
+    take: limit,
+    select: {
+      id: true,
+      title: true,
+      mode: true,
+      applicationId: true,
+      createdAt: true,
+      updatedAt: true
+    }
+  });
+}
+
 export async function clearConversationMessages({
   userId,
   mode,
@@ -73,13 +127,15 @@ export async function getOrCreateConversation({
   mode,
   applicationId,
   conversationId,
-  title
+  title,
+  forceNew = false
 }: {
   userId: string;
   mode: ChatMode;
   applicationId: string | null;
   conversationId?: string | null;
   title: string;
+  forceNew?: boolean;
 }) {
   if (conversationId) {
     return prisma.conversation.findFirst({
@@ -87,18 +143,19 @@ export async function getOrCreateConversation({
         id: conversationId,
         userId,
         mode,
-        applicationId,
-        threadKey: "default"
+        applicationId
       }
     });
   }
+
+  const threadKey = forceNew ? crypto.randomUUID() : "default";
 
   return prisma.conversation.create({
     data: {
       userId,
       mode,
       applicationId,
-      threadKey: "default",
+      threadKey,
       title
     }
   });

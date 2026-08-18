@@ -9,6 +9,7 @@ const applicationFindMany = vi.fn();
 const applicationFindUnique = vi.fn();
 const applicationCount = vi.fn();
 const conversationFindFirst = vi.fn();
+const conversationFindMany = vi.fn();
 const conversationCreate = vi.fn();
 const conversationUpdate = vi.fn();
 const chatMessageCreate = vi.fn();
@@ -51,6 +52,7 @@ vi.mock("@/lib/prisma", () => ({
     },
     conversation: {
       findFirst: conversationFindFirst,
+      findMany: conversationFindMany,
       create: conversationCreate,
       update: conversationUpdate
     },
@@ -122,6 +124,7 @@ describe("chat API application scoping", () => {
     profileBankUpdate.mockResolvedValue(profileBank);
     profileBankFindUnique.mockResolvedValue(profileBank);
     applicationFindMany.mockResolvedValue([]);
+    conversationFindMany.mockResolvedValue([]);
     sourceFindMany.mockResolvedValue([]);
     sourceUpdateMany.mockResolvedValue({ count: 0 });
     chatMessageSourceCreateMany.mockResolvedValue({ count: 0 });
@@ -195,13 +198,64 @@ describe("chat API application scoping", () => {
         id: "conversation-2",
         userId: "user-1",
         mode: "application",
-        applicationId: "app-1",
-        threadKey: "default"
+        applicationId: "app-1"
       }
     });
     expect(chatMessageCreate).not.toHaveBeenCalled();
     expect(applicationUpdate).not.toHaveBeenCalled();
     expect(responsesCreate).not.toHaveBeenCalled();
+  });
+
+  it("returns General Chat thread summaries with the latest General conversation", async () => {
+    conversationFindFirst.mockResolvedValueOnce({
+      id: "conversation-general-2",
+      mode: "general",
+      applicationId: null,
+      messages: [
+        {
+          id: "message-1",
+          role: "user",
+          content: "Second chat",
+          metadata: null,
+          createdAt: new Date("2026-08-13T00:00:00.000Z")
+        }
+      ]
+    });
+    conversationFindMany.mockResolvedValueOnce([
+      {
+        id: "conversation-general-2",
+        title: "Second chat",
+        mode: "general",
+        applicationId: null,
+        createdAt: new Date("2026-08-13T00:00:00.000Z"),
+        updatedAt: new Date("2026-08-13T00:00:00.000Z")
+      },
+      {
+        id: "conversation-general-1",
+        title: "First chat",
+        mode: "general",
+        applicationId: null,
+        createdAt: new Date("2026-08-12T00:00:00.000Z"),
+        updatedAt: new Date("2026-08-12T00:00:00.000Z")
+      }
+    ]);
+
+    const { GET } = await import("./route");
+    const response = await GET(new Request("http://localhost/api/chat?mode=general"));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body.conversationId).toBe("conversation-general-2");
+    expect(body.conversations).toHaveLength(2);
+    expect(conversationFindMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          userId: "user-1",
+          mode: "general",
+          applicationId: null
+        }
+      })
+    );
   });
 
   it("blocks chat requests when the request limiter is reached", async () => {
@@ -413,6 +467,65 @@ describe("chat API application scoping", () => {
         input: expect.not.stringContaining("On-demand workspace context")
       })
     );
+  });
+
+  it("creates a separate General Chat thread when the client starts a new chat", async () => {
+    conversationCreate.mockResolvedValueOnce({
+      id: "conversation-general-new",
+      mode: "general",
+      applicationId: null,
+      summary: null,
+      lastSummarizedMessageId: null
+    });
+    chatMessageCreate
+      .mockResolvedValueOnce({
+        id: "message-user",
+        role: "user",
+        content: "hello new chat"
+      })
+      .mockResolvedValueOnce({
+        id: "message-assistant",
+        role: "assistant",
+        content: "Hi."
+      });
+    chatMessageFindMany
+      .mockResolvedValueOnce([
+        {
+          role: "user",
+          content: "hello new chat"
+        }
+      ])
+      .mockResolvedValueOnce([]);
+    responsesCreate.mockResolvedValueOnce({
+      output_text: "Hi."
+    });
+    conversationUpdate.mockResolvedValueOnce({ id: "conversation-general-new" });
+
+    const { POST } = await import("./route");
+    const response = await POST(
+      new Request("http://localhost/api/chat", {
+        method: "POST",
+        body: JSON.stringify({
+          mode: "general",
+          newConversation: true,
+          message: "hello new chat"
+        })
+      })
+    );
+
+    expect(response.status).toBe(200);
+    expect(conversationCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          userId: "user-1",
+          mode: "general",
+          applicationId: null,
+          title: "hello new chat",
+          threadKey: expect.any(String)
+        })
+      })
+    );
+    expect(conversationCreate.mock.calls[0]?.[0]?.data.threadKey).not.toBe("default");
   });
 
   it("loads application workspace context only for explicit general workspace requests", async () => {

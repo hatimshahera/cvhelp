@@ -281,3 +281,28 @@ Tests:
 - [x] `npx prisma validate`.
 - [x] Real production chat smoke with `CVHELP_E2E_REAL_CHAT=1`.
 - [x] `npm run test:e2e:prod`.
+
+## Product Correction: Simple Workspace Sidebar
+
+- [x] Make General Chat the first primary sidebar area.
+- [x] Add multiple durable General Chat threads to the sidebar.
+- [x] Add `New chat` for blank General Chat starts.
+- [x] Persist new General chats only after the first sent message.
+- [x] Show Applications as a flat active application list.
+- [x] Move archived applications into a collapsed archived group with count.
+- [x] Remove application search/filter controls from the sidebar.
+- [x] Remove application creation controls from the sidebar.
+- [x] Keep Profile Builder as the last primary sidebar area.
+- [x] Keep profile editor accessible from the Profile header.
+- [x] Keep selected application files/details in the main application workspace.
+- [x] Document the navigation decision and tradeoffs.
+
+Tests:
+
+- [x] General Chat thread list is returned by `/api/chat?mode=general`.
+- [x] New General Chat posts create a distinct conversation thread key.
+- [x] Application creation and profile handoff browser smoke tests use the simplified rail.
+- [x] `npm run typecheck`.
+- [x] `npm test`.
+- [x] `npm run build`.
+- [x] `npm run test:e2e`.

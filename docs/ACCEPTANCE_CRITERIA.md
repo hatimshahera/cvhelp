@@ -101,8 +101,10 @@ Tests:
 
 Acceptance criteria:
 
-- General Chat is visible in the workspace navigation.
-- General Chat has its own durable conversation.
+- General Chat is the first primary area in the workspace navigation.
+- General Chat supports multiple durable conversations.
+- The sidebar exposes `New chat` for starting a blank General Chat thread.
+- A new General Chat thread is persisted when the first message is sent.
 - General Chat answers casual messages like a normal chatbot without loading workspace context.
 - General Chat can answer broader career and cross-application questions without requiring an application.
 - General Chat does not load application summaries, profile data, sources, or files by default.
@@ -120,6 +122,8 @@ Tests:
 
 - General Chat loads for a signed-in user.
 - General Chat rejects signed-out requests.
+- General Chat thread summaries are scoped to the signed-in user.
+- New General Chat creates a distinct thread key.
 - Casual General Chat messages do not query applications, profile bank reads, or source search.
 - Explicit application/workspace requests trigger bounded application retrieval.
 - Explicit profile/source requests trigger scoped profile/source retrieval.
@@ -230,6 +234,9 @@ Tests:
 Acceptance criteria:
 
 - The app has a clear workspace layout.
+- Sidebar has three primary navigation areas: General Chat, Applications, Profile Builder.
+- Applications sidebar has no search/filter/create-job controls.
+- Archived applications are behind a collapsed `Archived (n)` group.
 - Profile builder and applications are visually distinct.
 - Each application shows status, memory, next action, and saved drafts.
 - Empty states tell the user what action is available next.

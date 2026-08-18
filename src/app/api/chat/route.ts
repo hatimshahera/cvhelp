@@ -15,8 +15,10 @@ import {
 import { updateApplicationMemory, updateMasterProfile } from "@/lib/ai/memory-updates";
 import {
   clearConversationMessages,
+  getConversationWithMessages,
   getLatestConversationWithMessages,
   getOrCreateConversation,
+  listConversations,
   listConversationMessages
 } from "@/lib/chat/conversations";
 import { buildChatPromptContext } from "@/lib/chat/context";
@@ -49,6 +51,7 @@ import {
 const chatSchema = z.object({
   message: z.string().trim().min(1, "Enter a message.").max(8000),
   conversationId: z.string().nullable().optional(),
+  newConversation: z.boolean().optional(),
   mode: chatModeSchema.default("build_profile"),
   applicationId: z.string().nullable().optional(),
   sourceIds: z.array(z.string()).max(12).default([])
@@ -134,7 +137,9 @@ export async function GET(request: Request) {
   }
 
   const mode = modeSchema.parse(new URL(request.url).searchParams.get("mode") ?? undefined);
-  const applicationId = new URL(request.url).searchParams.get("applicationId");
+  const requestUrl = new URL(request.url);
+  const applicationId = requestUrl.searchParams.get("applicationId");
+  const conversationId = requestUrl.searchParams.get("conversationId");
   const profileBank =
     mode === "build_profile" || mode === "application" ? await getOrCreateProfileBank(user.id) : null;
   const application =
@@ -161,15 +166,32 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Choose an application first." }, { status: 400 });
   }
 
-  const conversation = await getLatestConversationWithMessages({
-    userId: user.id,
-    mode,
-    applicationId: conversationApplicationIdForMode(mode, application?.id)
-  });
+  const scopedApplicationId = conversationApplicationIdForMode(mode, application?.id);
+  const conversation = conversationId
+    ? await getConversationWithMessages({
+        userId: user.id,
+        mode,
+        applicationId: scopedApplicationId,
+        conversationId
+      })
+    : await getLatestConversationWithMessages({
+        userId: user.id,
+        mode,
+        applicationId: scopedApplicationId
+      });
+  const conversations =
+    mode === "general"
+      ? await listConversations({
+          userId: user.id,
+          mode,
+          applicationId: null
+        })
+      : [];
 
   return NextResponse.json({
     conversationId: conversation?.id ?? null,
     messages: conversation?.messages ?? [],
+    conversations,
     profileBank: summarizeProfileBank(profileBank),
     application
   });
@@ -271,7 +293,8 @@ export async function POST(request: Request) {
     mode,
     applicationId: conversationApplicationIdForMode(mode, application?.id),
     conversationId: parsed.data.conversationId,
-    title: toTitle(parsed.data.message)
+    title: toTitle(parsed.data.message),
+    forceNew: mode === "general" && parsed.data.newConversation === true
   });
 
   if (!conversation) {

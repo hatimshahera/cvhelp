@@ -4957,3 +4957,129 @@ body {
     animation: none;
   }
 }
+
+/* Simple workspace rail: three primary areas, flat thread/application lists. */
+.settings-rail {
+  gap: 14px;
+}
+
+.rail-nav {
+  gap: 4px;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.rail-nav button,
+.nav-subitem,
+.application-folder-button,
+.archived-application-button {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.rail-nav button,
+.nav-subitem {
+  width: 100%;
+}
+
+.nav-section-toggle {
+  display: grid !important;
+  grid-template-columns: 20px minmax(0, 1fr) 18px;
+  align-items: center !important;
+  min-height: 40px !important;
+  padding: 7px 8px !important;
+}
+
+.nav-section-toggle span,
+.application-folder-button span,
+.archived-application-button span,
+.nav-subitem {
+  min-width: 0;
+}
+
+.nav-section-toggle strong,
+.application-folder-button strong,
+.archived-application-button strong,
+.nav-subitem {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.general-thread-list,
+.applications-list,
+.archived-application-list {
+  display: grid;
+  gap: 1px;
+  min-height: 0;
+}
+
+.general-thread-list,
+.applications-list {
+  padding: 0 0 8px 24px;
+}
+
+.archived-application-list {
+  padding: 2px 0 3px 22px;
+}
+
+.nav-subitem,
+.application-folder-button,
+.archived-application-button {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  align-items: center;
+  gap: 7px;
+  min-height: 31px;
+  padding: 4px 7px;
+  border-radius: 6px;
+  color: var(--workspace-muted);
+  font-size: 13px;
+  font-weight: 750;
+  text-align: left;
+}
+
+.application-folder-button span,
+.archived-application-button span {
+  display: grid;
+  gap: 1px;
+}
+
+.application-folder-button small,
+.archived-application-button small {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--workspace-muted);
+  font-size: 11px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rail-nav button.active,
+.nav-subitem.active,
+.application-tree-item.active > .application-folder-button,
+.archived-application-button.active {
+  background: rgba(244, 183, 27, 0.14);
+  color: #ffffff;
+  box-shadow: inset 2px 0 0 #f4b71b;
+}
+
+.application-tree-item {
+  gap: 0;
+}
+
+.archived-group {
+  margin-top: 5px;
+  padding-top: 5px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.applications-list p,
+.archived-application-list p {
+  padding: 5px 7px;
+  color: var(--workspace-muted);
+  font-size: 12px;
+}

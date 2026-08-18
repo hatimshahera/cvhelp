@@ -10,14 +10,13 @@ import {
   ChevronRight,
   Database,
   FileText,
-  FilePlus2,
   Loader2,
   LogOut,
   MessageSquareText,
   Paperclip,
   PencilLine,
+  Plus,
   Save,
-  Search,
   Send,
   Settings,
   Trash2,
@@ -91,6 +90,15 @@ type ApplicationItem = {
   status: string;
   createdAt?: string;
   updatedAt?: string;
+};
+
+type ConversationItem = {
+  id: string;
+  title: string;
+  mode: string;
+  applicationId: string | null;
+  createdAt: string;
+  updatedAt: string;
 };
 
 type ArtifactItem = {
@@ -302,10 +310,11 @@ export function AppShell({
   userName: string;
   userEmail: string;
 }) {
-  const [activeMode, setActiveMode] = useState<ChatMode>("build_profile");
+  const [activeMode, setActiveMode] = useState<ChatMode>("general");
   const [profileView, setProfileView] = useState<ProfileWorkspaceView>("chat");
-  const [isBuildProfileOpen, setIsBuildProfileOpen] = useState(true);
+  const [isGeneralChatsOpen, setIsGeneralChatsOpen] = useState(true);
   const [isApplicationsOpen, setIsApplicationsOpen] = useState(true);
+  const [isArchivedApplicationsOpen, setIsArchivedApplicationsOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [activeApplicationId, setActiveApplicationId] = useState<string | null>(null);
   const [expandedApplicationId, setExpandedApplicationId] = useState<string | null>(null);
@@ -313,8 +322,8 @@ export function AppShell({
   const [sidePanelWidth, setSidePanelWidth] = useState(400);
   const [isResizingSidePanel, setIsResizingSidePanel] = useState(false);
   const [applications, setApplications] = useState<ApplicationItem[]>([]);
-  const [applicationSearch, setApplicationSearch] = useState("");
-  const [applicationListFilter, setApplicationListFilter] = useState<"active" | "archived" | "all">("active");
+  const [generalConversations, setGeneralConversations] = useState<ConversationItem[]>([]);
+  const [isNewGeneralChat, setIsNewGeneralChat] = useState(false);
   const [applicationDetail, setApplicationDetail] = useState<ApplicationDetail | null>(null);
   const [isLoadingApplicationDetail, setIsLoadingApplicationDetail] = useState(false);
   const [selectedWorkspaceFile, setSelectedWorkspaceFile] = useState<WorkspaceFile>({ kind: "empty", label: "Workspace" });
@@ -342,17 +351,6 @@ export function AppShell({
   const activeApplication = applications.find((item) => item.id === activeApplicationId) ?? null;
   const activeApplications = applications.filter((item) => item.status !== "archived");
   const archivedApplications = applications.filter((item) => item.status === "archived");
-  const filteredApplications = applications.filter((item) => {
-    const matchesFilter =
-      applicationListFilter === "all" ||
-      (applicationListFilter === "archived" ? item.status === "archived" : item.status !== "archived");
-    const search = applicationSearch.trim().toLowerCase();
-    const matchesSearch =
-      !search ||
-      [item.company, item.role, item.status].some((value) => value.toLowerCase().includes(search));
-
-    return matchesFilter && matchesSearch;
-  });
   const activeTitle =
     activeMode === "general"
       ? "General"
@@ -389,8 +387,24 @@ export function AppShell({
     }
   }
 
+  async function loadGeneralConversations() {
+    try {
+      const response = await fetch("/api/chat?mode=general", { cache: "no-store" });
+      const data = await readJsonResponse(response);
+
+      if (!response.ok) {
+        throw new Error(data.error || "Could not load General Chat threads.");
+      }
+
+      setGeneralConversations(data.conversations ?? []);
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : "Could not load General Chat threads.");
+    }
+  }
+
   useEffect(() => {
     loadApplications();
+    loadGeneralConversations();
   }, []);
 
   async function loadProfileDetails() {
@@ -479,6 +493,15 @@ export function AppShell({
       setIsLoadingHistory(true);
       setError("");
       try {
+        if (activeMode === "general" && isNewGeneralChat) {
+          if (isMounted && loadRequestRef.current === requestId) {
+            setConversationId(null);
+            setMessages([]);
+            setIsLoadingHistory(false);
+          }
+          return;
+        }
+
         if (activeMode === "application" && !activeApplicationId) {
           if (isMounted && loadRequestRef.current === requestId) {
             setConversationId(null);
@@ -491,6 +514,7 @@ export function AppShell({
 
         const params = new URLSearchParams({ mode: activeMode });
         if (activeApplicationId) params.set("applicationId", activeApplicationId);
+        if (conversationId && activeMode !== "application") params.set("conversationId", conversationId);
         const response = await fetch(`/api/chat?${params.toString()}`, { cache: "no-store" });
         const data = await readJsonResponse(response);
 
@@ -501,6 +525,9 @@ export function AppShell({
         if (isMounted && loadRequestRef.current === requestId) {
           setConversationId(data.conversationId);
           setMessages(data.messages);
+          if (activeMode === "general") {
+            setGeneralConversations(data.conversations ?? []);
+          }
           setProfileBank(data.profileBank ?? null);
         }
       } catch (loadError) {
@@ -519,7 +546,7 @@ export function AppShell({
     return () => {
       isMounted = false;
     };
-  }, [activeMode, activeApplicationId]);
+  }, [activeMode, activeApplicationId, conversationId, isNewGeneralChat]);
 
   useEffect(() => {
     listRef.current?.scrollTo({
@@ -624,6 +651,7 @@ export function AppShell({
         body: JSON.stringify({
           conversationId,
           message: finalMessage,
+          newConversation: activeMode === "general" && isNewGeneralChat,
           mode: activeMode,
           applicationId: activeApplicationId,
           sourceIds
@@ -636,6 +664,10 @@ export function AppShell({
       }
 
       setConversationId(data.conversationId);
+      if (activeMode === "general") {
+        setIsNewGeneralChat(false);
+        await loadGeneralConversations();
+      }
       setProfileBank(data.profileBank ?? profileBank);
       setMessages(data.messages ?? []);
       if (activeMode === "build_profile") {
@@ -824,6 +856,7 @@ export function AppShell({
   function openProfileChat() {
     setActiveMode("build_profile");
     setProfileView("chat");
+    setIsNewGeneralChat(false);
     setActiveApplicationId(null);
     setExpandedApplicationId(null);
     setConversationId(null);
@@ -835,6 +868,7 @@ export function AppShell({
   function openGeneralChat() {
     setActiveMode("general");
     setProfileView("chat");
+    setIsNewGeneralChat(false);
     setActiveApplicationId(null);
     setExpandedApplicationId(null);
     setConversationId(null);
@@ -843,9 +877,34 @@ export function AppShell({
     setSelectedFiles([]);
   }
 
+  function openNewGeneralChat() {
+    setActiveMode("general");
+    setProfileView("chat");
+    setIsNewGeneralChat(true);
+    setActiveApplicationId(null);
+    setExpandedApplicationId(null);
+    setConversationId(null);
+    setMessages([]);
+    setMessage("");
+    setSelectedFiles([]);
+  }
+
+  function openGeneralConversation(nextConversationId: string) {
+    setActiveMode("general");
+    setProfileView("chat");
+    setIsNewGeneralChat(false);
+    setActiveApplicationId(null);
+    setExpandedApplicationId(null);
+    setConversationId(nextConversationId);
+    setMessages([]);
+    setMessage("");
+    setSelectedFiles([]);
+  }
+
   function openProfileEditor() {
     setActiveMode("build_profile");
     setProfileView("profile");
+    setIsNewGeneralChat(false);
     setActiveApplicationId(null);
     setExpandedApplicationId(null);
     setConversationId(null);
@@ -859,6 +918,7 @@ export function AppShell({
       await loadApplications();
       setActiveMode("application");
       setProfileView("chat");
+      setIsNewGeneralChat(false);
       setActiveApplicationId(action.applicationId);
       setExpandedApplicationId(action.applicationId);
       setSelectedWorkspaceFile({ kind: "empty", label: "Workspace" });
@@ -872,6 +932,7 @@ export function AppShell({
 
     setActiveMode("build_profile");
     setProfileView("chat");
+    setIsNewGeneralChat(false);
     setActiveApplicationId(null);
     setExpandedApplicationId(null);
     setConversationId(action.conversationId ?? null);
@@ -1029,48 +1090,46 @@ export function AppShell({
           <button
             className={activeMode === "general" ? "active nav-section-toggle" : "nav-section-toggle"}
             type="button"
-            onClick={openGeneralChat}
+            onClick={() => {
+              if (activeMode !== "general") {
+                openGeneralChat();
+                setIsGeneralChatsOpen(true);
+                return;
+              }
+              setIsGeneralChatsOpen((current) => !current);
+            }}
+            aria-expanded={isGeneralChatsOpen}
           >
             <MessageSquareText size={18} />
             <span>
-              <strong>General</strong>
-              <small>Intake and routing</small>
+              <strong>General Chat</strong>
+              <small>{generalConversations.length} chats</small>
             </span>
-            <ChevronRight size={16} />
+            {isGeneralChatsOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
           </button>
 
-          <button
-            className="nav-section-toggle"
-            type="button"
-            onClick={() => setIsBuildProfileOpen((current) => !current)}
-            aria-expanded={isBuildProfileOpen}
-          >
-            <UserRound size={18} />
-            <span>
-              <strong>Build profile</strong>
-              <small>Chat or edit profile</small>
-            </span>
-            {isBuildProfileOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-          </button>
-
-          {isBuildProfileOpen ? (
-            <div className="nav-subitems" aria-label="Build profile views">
-              <button
-                className={activeMode === "build_profile" && profileView === "chat" ? "active nav-subitem" : "nav-subitem"}
-                type="button"
-                onClick={openProfileChat}
-              >
-                <MessageSquareText size={15} />
-                Chat
+          {isGeneralChatsOpen ? (
+            <div className="nav-subitems general-thread-list" aria-label="General Chat threads">
+              <button className={isNewGeneralChat ? "active nav-subitem" : "nav-subitem"} type="button" onClick={openNewGeneralChat}>
+                <Plus size={15} />
+                New chat
               </button>
-              <button
-                className={activeMode === "build_profile" && profileView === "profile" ? "active nav-subitem" : "nav-subitem"}
-                type="button"
-                onClick={openProfileEditor}
-              >
-                <Database size={15} />
-                Profile
-              </button>
+              {generalConversations.map((conversation) => (
+                <button
+                  className={
+                    activeMode === "general" && !isNewGeneralChat && conversationId === conversation.id
+                      ? "active nav-subitem"
+                      : "nav-subitem"
+                  }
+                  key={conversation.id}
+                  type="button"
+                  onClick={() => openGeneralConversation(conversation.id)}
+                  title={conversation.title}
+                >
+                  <MessageSquareText size={15} />
+                  {conversation.title}
+                </button>
+              ))}
             </div>
           ) : null}
 
@@ -1087,74 +1146,24 @@ export function AppShell({
             </span>
             {isApplicationsOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
           </button>
-        </nav>
 
-        {isApplicationsOpen ? (
-        <section className="applications-panel" aria-label="Applications">
-          <div className="applications-heading">
-            <div>
-              <BriefcaseBusiness size={17} />
-              <strong>Applications</strong>
-            </div>
-            <span>{applications.length}</span>
-          </div>
-          <button
-            className="add-application-button"
-            type="button"
-            onClick={openGeneralChat}
-          >
-            <FilePlus2 size={16} />
-            Create from General Chat
-          </button>
-
-          <div className="application-list-controls">
-            <div className="application-search">
-              <Search size={14} />
-              <input
-                value={applicationSearch}
-                onChange={(event) => setApplicationSearch(event.target.value)}
-                placeholder="Search applications"
-              />
-            </div>
-            <div className="application-filter-tabs" aria-label="Application filters">
-              {[
-                ["active", `Active ${activeApplications.length}`],
-                ["archived", `Archived ${archivedApplications.length}`],
-                ["all", `All ${applications.length}`]
-              ].map(([filter, label]) => (
-                <button
-                  key={filter}
-                  className={applicationListFilter === filter ? "active" : ""}
-                  type="button"
-                  onClick={() => setApplicationListFilter(filter as "active" | "archived" | "all")}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="applications-list">
-            {filteredApplications.length ? (
-              filteredApplications.map((application) => {
+          {isApplicationsOpen ? (
+            <div className="applications-list" aria-label="Applications">
+              {activeApplications.length ? (
+                activeApplications.map((application) => {
                 const isActive = activeMode === "application" && activeApplicationId === application.id;
-                const isExpanded = expandedApplicationId === application.id;
-                const visibleFiles = isActive && isExpanded ? workspaceFiles : [];
 
                 return (
-                  <div className={`application-tree-item ${isActive ? "active" : ""} ${isExpanded ? "expanded" : ""}`} key={application.id}>
+                  <div className={`application-tree-item ${isActive ? "active" : ""}`} key={application.id}>
                     <button
                       className="application-folder-button"
                       type="button"
                       onClick={() => {
-                        if (isActive) {
-                          setExpandedApplicationId(isExpanded ? null : application.id);
-                          return;
-                        }
                         setActiveMode("application");
                         setProfileView("chat");
+                        setIsNewGeneralChat(false);
                         setActiveApplicationId(application.id);
-                        setExpandedApplicationId(application.id);
+                        setExpandedApplicationId(null);
                         setSelectedWorkspaceFile({ kind: "empty", label: "Workspace" });
                         setIsSidePanelOpen(true);
                         setConversationId(null);
@@ -1163,48 +1172,87 @@ export function AppShell({
                         setSelectedFiles([]);
                       }}
                     >
-                      {isExpanded ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
-                      <strong>{application.company}</strong>
+                      <BriefcaseBusiness size={15} />
+                      <span>
+                        <strong>{application.company}</strong>
+                        <small>{application.role}</small>
+                      </span>
                     </button>
-                    {isExpanded ? <span className="application-tree-role">{application.role}</span> : null}
-                    {visibleFiles.length ? (
-                      <div className="application-file-list" aria-label={`${application.company} files`}>
-                        {visibleFiles.map((file) => {
-                          const key =
-                            file.kind === "artifact" || file.kind === "cv_preview" ? file.artifactId : file.kind;
-                          const isSelected =
-                            selectedWorkspaceFile.kind === file.kind &&
-                            ((file.kind !== "artifact" && file.kind !== "cv_preview") ||
-                              ((selectedWorkspaceFile.kind === "artifact" ||
-                                selectedWorkspaceFile.kind === "cv_preview") &&
-                                selectedWorkspaceFile.artifactId === file.artifactId));
-
-                          return (
-                            <button
-                              className={isSelected ? "active" : ""}
-                              key={key}
-                              type="button"
-                              onClick={() => {
-                                setSelectedWorkspaceFile(file);
-                                setIsSidePanelOpen(true);
-                              }}
-                            >
-                              <FileText size={13} />
-                              <span>{file.label}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    ) : null}
                   </div>
                 );
               })
             ) : (
-              <p>No matching applications.</p>
-            )}
-          </div>
-        </section>
-        ) : null}
+                <p>No active applications.</p>
+              )}
+
+              <div className="application-tree-item archived-group">
+                <button
+                  className="application-folder-button"
+                  type="button"
+                  onClick={() => setIsArchivedApplicationsOpen((current) => !current)}
+                  aria-expanded={isArchivedApplicationsOpen}
+                >
+                  {isArchivedApplicationsOpen ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
+                  <span>
+                    <strong>Archived</strong>
+                    <small>{archivedApplications.length} applications</small>
+                  </span>
+                </button>
+                {isArchivedApplicationsOpen ? (
+                  <div className="archived-application-list">
+                    {archivedApplications.length ? (
+                      archivedApplications.map((application) => {
+                        const isActive = activeMode === "application" && activeApplicationId === application.id;
+
+                        return (
+                          <button
+                            className={isActive ? "active archived-application-button" : "archived-application-button"}
+                            key={application.id}
+                            type="button"
+                            onClick={() => {
+                              setActiveMode("application");
+                              setProfileView("chat");
+                              setIsNewGeneralChat(false);
+                              setActiveApplicationId(application.id);
+                              setExpandedApplicationId(null);
+                              setSelectedWorkspaceFile({ kind: "empty", label: "Workspace" });
+                              setIsSidePanelOpen(true);
+                              setConversationId(null);
+                              setMessages([]);
+                              setMessage("");
+                              setSelectedFiles([]);
+                            }}
+                          >
+                            <BriefcaseBusiness size={14} />
+                            <span>
+                              <strong>{application.company}</strong>
+                              <small>{application.role}</small>
+                            </span>
+                          </button>
+                        );
+                      })
+                    ) : (
+                      <p>No archived applications.</p>
+                    )}
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
+
+          <button
+            className={activeMode === "build_profile" ? "active nav-section-toggle" : "nav-section-toggle"}
+            type="button"
+            onClick={openProfileChat}
+          >
+            <UserRound size={18} />
+            <span>
+              <strong>Profile Builder</strong>
+              <small>Profile facts and preferences</small>
+            </span>
+            <ChevronRight size={16} />
+          </button>
+        </nav>
 
         <section className="settings-menu" aria-label="Account menu">
           <button
@@ -1266,6 +1314,17 @@ export function AppShell({
             ) : null}
           </div>
           <div className="chat-header-actions">
+            {activeMode === "build_profile" ? (
+              <button
+                className="clear-conversation-button"
+                type="button"
+                onClick={profileView === "profile" ? openProfileChat : openProfileEditor}
+                disabled={isSending || isLoadingHistory}
+              >
+                {profileView === "profile" ? <MessageSquareText size={16} /> : <Database size={16} />}
+                {profileView === "profile" ? "Profile chat" : "Profile data"}
+              </button>
+            ) : null}
             {activeMode === "build_profile" && profileView === "chat" ? (
               <button
                 className="clear-conversation-button"

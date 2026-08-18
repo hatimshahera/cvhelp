@@ -136,6 +136,19 @@ async function mockWorkspaceApis(page: Page) {
       contentType: "application/json",
       body: JSON.stringify({
         conversationId: isApplication ? "conversation-app" : isProfile ? "conversation-profile" : "conversation-general",
+        conversations:
+          mode === "general"
+            ? [
+                {
+                  id: "conversation-general",
+                  title: "General chat",
+                  mode: "general",
+                  applicationId: null,
+                  createdAt: "2026-08-18T12:00:00.000Z",
+                  updatedAt: "2026-08-18T12:00:00.000Z"
+                }
+              ]
+            : [],
         messages:
           isProfile && profileHandoffCreated
             ? [
@@ -230,7 +243,7 @@ function collectClientErrors(page: Page) {
 
 async function expectNoKeyControlOverflow(page: Page) {
   const overflowing = await page.locator(
-    ".nav-section-toggle, .nav-subitem, .add-application-button, .application-folder-button, .message-actions button, .composer input, .composer button"
+    ".nav-section-toggle, .nav-subitem, .application-folder-button, .archived-application-button, .message-actions button, .composer input, .composer button"
   ).evaluateAll((elements) =>
     elements
       .filter((element) => {
@@ -250,8 +263,9 @@ test("General Chat routes application creation into the new application chat", a
   await mockWorkspaceApis(page);
   await signUpAndSignIn(page);
 
-  await expect(page.getByRole("button", { name: "General Intake and routing" })).toBeVisible();
-  await page.getByRole("button", { name: "General Intake and routing" }).focus();
+  await expect(page.getByRole("button", { name: /General Chat/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: "New chat" })).toBeVisible();
+  await page.getByRole("button", { name: /General Chat/ }).focus();
   await page.keyboard.press("Enter");
   await expect(page.getByRole("heading", { name: "General" })).toBeVisible();
   await expect(
@@ -277,7 +291,7 @@ test("General Chat routes profile changes into Profile Chat with context", async
   await mockWorkspaceApis(page);
   await signUpAndSignIn(page);
 
-  await page.getByRole("button", { name: "General Intake and routing" }).focus();
+  await page.getByRole("button", { name: /General Chat/ }).focus();
   await page.keyboard.press("Enter");
   await page
     .getByPlaceholder("Paste a job, ask about applications, or route a profile update...")

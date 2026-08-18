@@ -167,6 +167,30 @@ open_application_chat({
 
 The existing `/api/applications` creation route should remain available for backwards compatibility and tests, but new UX should route users through General Chat.
 
+## General Chat Threads
+
+General Chat supports multiple durable conversations.
+
+UI behavior:
+
+- The sidebar shows General Chat as the first primary area.
+- `New chat` opens a blank unsaved General chat.
+- The first sent message creates a new General `Conversation` with a unique `threadKey`.
+- Existing General conversations are listed under General Chat by title.
+- Selecting a General conversation loads that conversation by ID.
+
+Application and Profile chats keep their existing scoped conversation behavior.
+
+## Sidebar Navigation
+
+The workspace sidebar is intentionally simple:
+
+- General Chat.
+- Applications.
+- Profile Builder.
+
+Applications contains active applications directly, plus one collapsed `Archived (n)` group for archived applications. It does not include application search, filter tabs, job-description creation UI, or application file children. Those workflows belong in General Chat or the selected application workspace.
+
 ## General Chat Profile Handoff
 
 Expected flow:

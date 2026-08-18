@@ -106,6 +106,8 @@ Current `/api/chat` behavior:
 - Supports confirmed archive, restore, status update, rename, and read-only comparison actions with ownership checks.
 - Uses extracted agent, context, source, handoff, application-action, and memory-update helpers.
 - Uses extracted General Chat context planning, workspace tool retrieval, and response-generation helpers.
+- Lists multiple durable General Chat threads in the workspace rail.
+- Creates a new General Chat thread when the user sends the first message from `New chat`.
 
 Current `/api/profile-sources` behavior:
 
@@ -148,9 +150,12 @@ Current billing route behavior:
 Done:
 
 - Signed-in workspace has a left rail.
+- Left rail is simplified to General Chat, Applications, and Profile Builder.
 - User identity and logout are shown.
 - Profile builder navigation exists.
-- Application list exists.
+- General Chat lists existing General Chat threads and a `New chat` action.
+- Application list shows active applications directly.
+- Archived applications are grouped under a collapsed archived section.
 - General Chat navigation exists.
 - Application creation is routed through General Chat.
 - Profile bank summary panel exists.
@@ -158,6 +163,7 @@ Done:
 - File attach control exists.
 - Clear profile conversation action exists.
 - Application selection loads separate chat history.
+- Application search and filter controls have been removed from the sidebar.
 - Application side panel can show job post, artifacts, and CV PDF previews.
 - Assistant action buttons can open a newly created application chat or continue in Profile Chat.
 - Playwright browser smoke tests cover General Chat routing, Profile Chat handoff, application creation handoff, desktop layout, mobile layout, keyboard activation, overflow checks, and client console errors.

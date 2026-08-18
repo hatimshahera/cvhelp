@@ -102,7 +102,23 @@ General Chat will become the primary surface for creating new applications from 
 
 Reasoning:
 
-Users naturally paste job descriptions into chat. Keeping application creation in General Chat lets the app understand intent, create the job/application record through deterministic backend code, and then offer a clear button to open the newly created application chat. The Applications sidebar should become navigation, search, status, and archive management rather than the primary creation form.
+Users naturally paste job descriptions into chat. Keeping application creation in General Chat lets the app understand intent, create the job/application record through deterministic backend code, and then offer a clear button to open the newly created application chat. The Applications sidebar should be navigation only rather than a creation/search surface.
+
+### Simple Workspace Sidebar
+
+Decision:
+
+The workspace rail has three primary areas in this order: General Chat, Applications, and Profile Builder. General Chat owns multiple durable general-purpose chat threads. Applications shows active applications directly and keeps archived applications inside one collapsed `Archived (n)` group. Profile Builder is a single primary rail item; its structured profile editor remains available from the Profile header instead of the sidebar.
+
+Reasoning:
+
+The previous rail mixed navigation, filtering, search, creation, profile subviews, application file children, and account controls. That made the product feel like every label was inside its own box. A flat rail matches common chatbot patterns, makes General Chat the obvious starting point, and leaves application files/detail viewing to the main application workspace where there is more room.
+
+Tradeoffs:
+
+- Application search is intentionally removed from the sidebar until the number of active applications justifies a dedicated command/search surface.
+- General Chat threads are created when the user sends the first message in a new chat, avoiding empty saved threads.
+- Profile editing is still available, but one level deeper from Profile Builder to keep the global navigation simple.
 
 ### Deterministic Backend Actions
 
