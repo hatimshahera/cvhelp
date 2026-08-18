@@ -1,6 +1,6 @@
 # What Has Been Done
 
-This is the factual status of the app at the start of the planning phase.
+This is the factual status of the app before the three-agent chat architecture refactor.
 
 ## Repository Shape
 
@@ -13,9 +13,7 @@ This is the factual status of the app at the start of the planning phase.
 Done:
 
 - Next.js app exists.
-- Vercel project link exists in `.vercel/project.json`.
 - Prisma is configured for Postgres.
-- Neon/Postgres env vars exist locally.
 - Auth.js is configured with Prisma adapter.
 - Credentials provider is implemented.
 - Optional Google, GitHub, and LinkedIn provider wiring exists.
@@ -26,9 +24,9 @@ Done:
 - Signup page exists at `/sign-up`.
 - Protected workspace page exists at `/app`.
 - Shared app shell component exists.
+- Vitest test suite exists.
 - Production build passes.
 - Typecheck passes.
-- Prisma migrate status reports database schema is up to date.
 
 ## Current Data Model
 
@@ -42,6 +40,8 @@ Done:
 - `ChatMessage`
 - `ProfileBank`
 - `Application`
+- `ApplicationArtifact`
+- `Subscription`
 
 Current `ProfileBank` fields:
 
@@ -55,10 +55,24 @@ Current `Application` fields:
 - `role`
 - `slug`
 - `status`
+- `nextAction`
+- `archivedAt`
 - `jobPost`
 - `jobSummary`
+- `memory`
+- `candidateSnapshot`
+- `selectedEvidence`
 - `notes`
 - `drafts`
+
+Current `ApplicationArtifact` fields:
+
+- `type`
+- `title`
+- `status`
+- `version`
+- `content`
+- `metadata`
 
 ## Current APIs
 
@@ -79,7 +93,9 @@ Current `/api/chat` behavior:
 - Builds prompt context from recent messages, profile bank, and selected application.
 - Updates profile raw sources/checklist from profile-builder messages.
 - Updates `masterProfile` with a second AI call in profile-builder mode.
-- Adds application chat summaries into application notes.
+- Updates application-specific memory and notes after application chat turns.
+- Does not yet expose General Chat in the UI.
+- Still contains most AI coordination logic inline.
 
 Current `/api/profile-sources` behavior:
 
@@ -97,8 +113,24 @@ Current `/api/applications` behavior:
 - Lists current user's applications.
 - Creates application from pasted job text or a readable URL.
 - Infers company and role roughly from job text.
-- Stores raw job post content and initial summary placeholders.
+- Stores raw job post content and initial deterministic job summary data.
 - Creates an application conversation.
+
+Current artifact route behavior:
+
+- `/api/applications/[id]/artifacts` lists and creates scoped artifacts.
+- Artifact generation supports CV drafts, cover notes, recruiter messages, application answers, and ProofCV-compatible data.
+- Artifact versions are stored under the correct application.
+- Export/PDF routes exist for saved artifacts.
+
+Current billing route behavior:
+
+- `/api/billing/status` exists.
+- `/api/billing/checkout` exists.
+- `/api/billing/portal` exists.
+- `/api/billing/webhook` exists.
+- Feature gates exist for applications, uploads, generations, and exports.
+- Stripe setup can remain incomplete locally while routes return controlled setup errors.
 
 ## Current UI
 
@@ -108,12 +140,14 @@ Done:
 - User identity and logout are shown.
 - Profile builder navigation exists.
 - Application list exists.
-- Application creation form exists.
+- Application creation form currently exists under the Applications sidebar.
 - Profile bank summary panel exists.
 - Chat area exists.
 - File attach control exists.
 - Clear profile conversation action exists.
 - Application selection loads separate chat history.
+- Application side panel can show job post, artifacts, and CV PDF previews.
+- General Chat is not yet visible in the workspace UI.
 
 ## ProofCV Reference System
 
@@ -137,15 +171,18 @@ ProofCV application data shape currently includes:
 
 ## Known Gaps
 
-- The README understates current implementation and needs updating later.
-- Application memory is still too loose and mostly JSON/blob based.
-- Application chat exists, but richer per-application artifacts are not yet modeled.
-- No generated CV/export route exists in the web app.
-- No payment/billing routes exist yet.
-- No Stripe integration exists yet.
-- No automated test suite is configured beyond typecheck/build.
+- The README and older docs may understate current implementation and need updating as part of architecture work.
+- `/api/chat` is too large and contains agent definitions, context building, model calls, and memory sidecars inline.
+- General Chat is accepted by the backend but not exposed in the UI.
+- New application creation currently lives in the Applications sidebar; target behavior is creation from General Chat.
+- There is no typed assistant action/button flow yet.
+- There is no deterministic chat action registry yet.
+- There is no explicit Profile Chat handoff flow from General Chat.
+- Application memory remains JSON-based and should be protected by stricter context and write boundaries.
+- Attachments are not first-class scoped records; uploads currently go into profile raw sources.
+- Conversation summaries and relevant older-message retrieval are not implemented yet.
+- Source retrieval is based on recent raw profile sources rather than scoped source records/chunks.
+- Browser smoke tests are still missing.
 - No end-to-end tests exist.
 - No production smoke test has been performed in this planning pass.
-- UI is functional but not yet polished into a full product workspace.
 - Secrets appear in local env files and should be treated carefully.
-

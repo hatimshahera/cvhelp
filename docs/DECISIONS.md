@@ -74,15 +74,55 @@ Reasoning:
 
 The user needs different chats for each application. A chat for one role should not leak notes or drafts into another role.
 
+### Three-Agent Chat Model
+
+Decision:
+
+CVhelp will use three production chat agents: Profile Agent, Application Agent, and General Agent.
+
+Reasoning:
+
+The current system already has profile and application modes, but the AI logic is concentrated in `/api/chat`. Formal agent definitions make behavior easier to test and keep memory boundaries clear. The Profile Agent owns reusable career memory, the Application Agent owns one isolated application workspace, and the General Agent owns cross-application routing and platform-level tasks.
+
+### General Chat as Intake and Router
+
+Decision:
+
+General Chat will become the primary surface for creating new applications from job descriptions or job URLs.
+
+Reasoning:
+
+Users naturally paste job descriptions into chat. Keeping application creation in General Chat lets the app understand intent, create the job/application record through deterministic backend code, and then offer a clear button to open the newly created application chat. The Applications sidebar should become navigation, search, status, and archive management rather than the primary creation form.
+
+### Deterministic Backend Actions
+
+Decision:
+
+Agents may propose actions, but backend code must validate and execute all state-changing operations.
+
+Reasoning:
+
+Application creation, archive/delete/status updates, profile handoffs, and other platform actions require ownership checks, schema validation, billing/rate gates, and predictable storage behavior. The model must not directly manipulate database state.
+
+### Profile Handoffs from General Chat
+
+Decision:
+
+When profile-related facts or preferences come up in General Chat, the app will create an explicit handoff to Profile Chat rather than silently updating the profile bank.
+
+Reasoning:
+
+Reusable profile memory has higher trust requirements than general discussion. A visible handoff note gives the user and Profile Agent enough context to confirm and save supported facts without polluting the profile with ambiguous comments.
+
 ### Application Chat Threads
 
 Decision:
 
-Each application will use one chat thread for the MVP.
+Each application will use one default chat thread unless a clearly justified task-specific thread is added later.
 
 Reasoning:
 
-Multiple threads for CV tailoring, cover letters, interview prep, and application questions could add avoidable complexity. One thread keeps the product easier to understand while memory and artifacts remain structured behind it.
+The schema already supports `threadKey`, but one application chat keeps the workflow understandable and preserves the current UI. Memory and artifacts remain structured behind the thread.
 
 ### Profile Editing
 
@@ -102,7 +142,7 @@ Email/password auth requires `DATABASE_URL`, `DATABASE_URL_UNPOOLED`, `NEXTAUTH_
 
 Reasoning:
 
-Email/password is the MVP auth path. Keeping OAuth optional reduces production auth risk while the core product is still moving. `NEXTAUTH_URL` must be the production origin and `NEXTAUTH_SECRET` must be a production-only random secret.
+Email/password is the primary auth path. Keeping OAuth optional reduces production auth risk while the core product is still moving. `NEXTAUTH_URL` must be the production origin and `NEXTAUTH_SECRET` must be a production-only random secret.
 
 ### AI Grounding
 
@@ -130,7 +170,7 @@ Current Stripe environment placeholders:
 - `STRIPE_PRICE_ID`
 - `STRIPE_WEBHOOK_SECRET`
 
-These are intentionally not required for local MVP use yet. Billing routes return clear setup errors until Stripe products, prices, webhook handling, and pricing strategy are finalized.
+These are intentionally not required for local development yet. Billing routes return clear setup errors until Stripe products, prices, webhook handling, and pricing strategy are finalized.
 
 ### Testing
 
@@ -162,17 +202,17 @@ Build route and feature-gate scaffolding, but do not hardcode final Stripe produ
 
 Decision:
 
-The MVP will use email/password auth only.
+The initial production path will use email/password auth only.
 
 Reasoning:
 
-Google, GitHub, and LinkedIn can be added later. Keeping the MVP to email/password reduces auth surface area while the core profile/application workflow is still being built.
+Google, GitHub, and LinkedIn can be added later. Keeping the initial production path to email/password reduces auth surface area while the core profile/application workflow is still being built.
 
 ### PDF Rendering Strategy
 
 Decision:
 
-Use TeX export first. Keep PDF rendering out of the request path for MVP.
+Use TeX export first. Keep PDF rendering out of the request path until the renderer has a production-safe execution path.
 
 Reasoning:
 
@@ -198,7 +238,7 @@ Open:
 
 Default for now:
 
-Keep MVP actions inline with good error handling. Move long-running generation/export to background processing if latency becomes a problem.
+Keep current actions inline with good error handling. Move long-running generation/export to background processing if latency becomes a problem.
 
 ### File Storage
 

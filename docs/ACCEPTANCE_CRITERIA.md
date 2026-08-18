@@ -66,8 +66,9 @@ Tests:
 
 Acceptance criteria:
 
-- A signed-in user can create an application from a pasted job description.
-- A signed-in user can create an application from a readable job URL.
+- A signed-in user can create an application from a pasted job description through General Chat.
+- A signed-in user can create an application from a readable job URL through General Chat.
+- The existing direct application creation API remains backwards-compatible until the General Chat flow fully replaces the sidebar creation UX.
 - The application stores company, role, slug, status, job post content, source, and captured date.
 - Application metadata can be edited.
 - Application status can be changed.
@@ -88,12 +89,40 @@ Acceptance criteria:
 
 Tests:
 
-- Create application from paste.
-- Create application from URL with mocked fetch.
+- Create application from General Chat paste.
+- Create application from General Chat URL with mocked fetch.
+- Direct application creation API remains compatible.
 - List only current user's applications.
 - Update application status.
 - Archive application.
 - Verify application memory isolation.
+
+## General Chat Router
+
+Acceptance criteria:
+
+- General Chat is visible in the workspace navigation.
+- General Chat has its own durable conversation.
+- General Chat can answer broader career and cross-application questions without requiring an application.
+- General Chat uses safe workspace summaries by default, not full unrelated application memories.
+- General Chat can propose application creation from a job description or URL.
+- Application creation is executed by deterministic backend code, not direct model state mutation.
+- Successful application creation returns an action button to open the new application chat.
+- Opening the new application chat loads the created application and its saved job context.
+- Profile-related comments in General Chat do not directly update the profile bank.
+- Profile-related comments can create an explicit Profile Chat handoff.
+- Profile handoff context is concise, visible, and auditable in the destination profile conversation.
+
+Tests:
+
+- General Chat loads for a signed-in user.
+- General Chat rejects signed-out requests.
+- General Chat creates an application through the deterministic action.
+- New application from General Chat is scoped to the signed-in user.
+- General Chat does not include full unrelated application memory in default context.
+- Returned `open_application_chat` action contains a user-owned application ID.
+- Returned `continue_in_profile_chat` action creates or targets the signed-in user's profile conversation.
+- General Chat profile handoff does not call profile-bank update directly.
 
 ## Application Chats
 
@@ -126,6 +155,8 @@ Acceptance criteria:
 - Agent responses are grounded in stored user data and job post data.
 - The system distinguishes global reusable profile facts from application-specific notes.
 - Application-specific claims are not written to the global profile unless the user explicitly asks.
+- General Chat does not write profile facts directly; it creates handoffs to Profile Chat.
+- State-changing agent actions are validated and executed by backend functions.
 - The app stores enough context to explain why a draft used a project, skill, or claim.
 
 Tests:
@@ -133,7 +164,9 @@ Tests:
 - Valid memory update saves.
 - Invalid memory update is ignored or handled gracefully.
 - Application note does not pollute global profile.
-- Explicit profile update from application chat updates profile bank.
+- Explicit profile update request creates or uses a supported profile update/handoff path.
+- General Chat profile discussion creates a handoff rather than mutating profile bank.
+- Deterministic action payloads reject unauthorized IDs.
 - AI failure rolls back only the failed chat turn when appropriate.
 
 ## Generation and Artifacts
@@ -225,4 +258,3 @@ Tests:
 - Deployed signup/signin smoke test.
 - Deployed profile chat smoke test.
 - Deployed application chat smoke test.
-

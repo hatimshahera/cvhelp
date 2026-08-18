@@ -1,453 +1,344 @@
-# CVhelp Implementation Plan
+# CVhelp Chat Architecture Implementation Plan
 
-This plan tracks the path from the current working MVP to a production-ready CVhelp app. The immediate goal is a usable signed-in workspace with a strong profile-builder chat, separate memory-backed chats for each job application, saved application artifacts similar to `proofcv/applications/*`, a polished UI, end-to-end tests, and payment route placeholders ready for Stripe.
+This plan tracks the incremental refactor from the current working CVhelp app to a production-grade three-agent chat system. The goal is not a rewrite. The goal is to preserve current behavior while making agent boundaries, context building, memory writes, application creation, and handoffs explicit, testable, and cheap to operate.
 
 ## Current Baseline
 
-- Next.js app with Auth.js, Prisma, Neon/Postgres, and OpenAI integration.
-- Email/password signup and signin exist.
-- Optional OAuth provider wiring exists for Google, GitHub, and LinkedIn.
-- Protected `/app` workspace exists.
-- Profile-builder chat exists and persists messages.
-- Profile bank exists with `masterProfile`, `rawSources`, and `checklist`.
-- File upload exists for text files and PDFs.
-- Application records exist with `company`, `role`, `slug`, `status`, `jobPost`, `jobSummary`, `notes`, and `drafts`.
-- Application-specific conversations exist, but the application memory/artifact model needs to be made explicit and richer.
-- Production build and typecheck currently pass.
+- Next.js app under `cvhelp/` with Auth.js, Prisma/Postgres, OpenAI Responses API, billing route boundaries, and Vitest.
+- `/api/chat` already accepts `build_profile`, `application`, and `general` modes.
+- The UI currently exposes profile chat/editor and application-specific chats, but not a visible General Chat.
+- `/api/chat` currently contains most AI logic inline: agent instructions, context construction, OpenAI calls, profile updates, and application memory updates.
+- `Conversation` already supports `mode`, `applicationId`, and `threadKey`.
+- `Application` already stores job post, summary, memory, candidate snapshot, selected evidence, notes, drafts, and artifacts.
+- `ApplicationArtifact` already supports generated/versioned outputs.
+- File upload currently saves sources to the profile bank and appends a short upload notice into the chat message.
+- Application creation currently happens from the Applications sidebar form.
 
-## Target Product Shape
+## Product Direction
 
-CVhelp should become a private AI application workspace:
+CVhelp will have three clearly scoped chat agents:
 
-- Users sign in and build a reusable career profile bank.
-- The profile builder asks focused questions and saves structured facts, evidence, preferences, sources, and open questions.
-- Each job application has its own workspace, chat history, job post, fit analysis, selected evidence, drafts, notes, files, decisions, and final outputs.
-- Application data should feel like the web version of `proofcv/applications/*`, but database-backed and editable.
-- Chat memory must be durable, scoped, and auditable.
-- The UI should make status, next steps, saved evidence, and outputs obvious without forcing the user to inspect raw chat.
-- Payments should be added behind route boundaries so Stripe can be connected later without reshaping the app.
-- Each phase must include tests and acceptance criteria.
+- Profile Agent: owns reusable global career/profile facts, evidence, and global CV/application preferences. It must never invent user facts.
+- Application Agent: owns one application workspace and uses only that application conversation, job/application state, relevant profile facts, relevant sources, and global preferences. It must not pollute unrelated applications or the global profile.
+- General Agent: owns cross-application and platform-level work. It is the primary intake/router for new job descriptions and profile-change handoffs.
 
-## Phase 1: Documentation, Scope, and Tracking
+The General Chat becomes the front door for creating applications:
 
-Status: planned.
+- The user can paste or discuss a job description in General Chat.
+- The General Agent can propose a deterministic backend action to create an application.
+- Backend code validates, creates the application/job state, creates the isolated application conversation, and returns an action button to open the new application chat.
+- The Applications sidebar becomes navigation/search/status, not the primary creation surface.
+
+The General Chat also routes profile-related changes:
+
+- If the user discusses reusable profile facts or global CV preferences in General Chat, the General Agent does not silently mutate the profile.
+- It offers a handoff action to continue in Profile Chat.
+- The destination Profile Chat receives a concise, auditable handoff note explaining why the user is there and what should be confirmed or saved.
+
+## Production Standards
+
+Every phase must meet these standards before it is marked complete:
+
+- Existing working behavior remains available unless explicitly replaced by a tested flow.
+- User/application ownership is checked in deterministic backend code.
+- The model never directly writes database state.
+- AI-proposed actions are validated by backend schemas before execution.
+- Profile writes happen only through Profile Agent flows or explicit deterministic promotion flows.
+- Application writes stay scoped to the selected application.
+- Context builders enforce scope before text reaches the model.
+- Prompt/context size is bounded.
+- New behavior has automated tests at the right level.
+- `npm run typecheck` and relevant Vitest suites pass.
+- Important decisions and trade-offs are documented.
+
+## Phase 1: Documentation and Architecture Lock
+
+Goal:
+
+Bring docs in line with the real repository and lock the new three-agent direction before code changes.
 
 Work:
 
-- Add planning docs.
-- Define MVP, beta, and full-working scopes.
-- Record current decisions and open decisions.
-- Create acceptance criteria that can drive implementation and testing.
+- Update current implementation docs to remove stale claims about missing artifacts, billing, and tests.
+- Document Profile, Application, and General Agent responsibilities.
+- Document General Chat as the application creation and routing surface.
+- Document deterministic backend actions and handoff behavior.
+- Document proposed files, schema changes, and test strategy.
 
 Deliverables:
 
 - `docs/IMPLEMENTATION_PLAN.md`
-- `docs/ACCEPTANCE_CRITERIA.md`
-- `docs/WHATS_DONE.md`
-- `docs/DECISIONS.md`
 - `docs/PHASE_CHECKLIST.md`
+- `docs/DECISIONS.md`
+- `docs/ACCEPTANCE_CRITERIA.md`
+- `docs/CHAT_ARCHITECTURE.md`
+- `docs/WHATS_DONE.md`
 
 Tests:
 
-- No runtime tests required for this documentation-only phase.
-- Validate that the plan maps to current schema/API reality.
+- Documentation-only phase. No runtime tests required.
+- Run a repository status check and inspect changed docs.
 
-## Phase 2: Data Model and Application Memory
-
-Status: planned.
+## Phase 2: Refactor Foundations Without Behavior Change
 
 Goal:
 
-Make profile memory and application memory first-class instead of relying mostly on JSON blobs plus chat transcripts.
+Make `/api/chat` a thin coordinator without changing current API behavior.
 
 Work:
 
-- Keep the current JSON columns where they are useful, but define stable shapes for each JSON field.
-- Extend `Application` data to store the equivalent of ProofCV files:
-  - candidate snapshot
-  - target company and role
-  - job post source and extracted text
-  - fit tags
-  - selected projects
-  - selected research
-  - selected experience
-  - selected skills
-  - profile summary for this role
-  - honesty notes and risk notes
-  - application notes
-  - draft CV bullets
-  - cover letter or recruiter note drafts
-  - application Q&A drafts
-  - generated/exported artifacts
-  - status and next action
-- Add an application memory update step after application chat turns.
-- Add profile memory update rules after profile-builder chat turns.
-- Add source provenance to saved facts so the app can explain where a claim came from.
-- Add `Conversation` support for multiple chat threads per application if needed:
-  - default application chat
-  - CV tailoring chat
-  - cover letter chat
-  - interview prep chat
-  - application questions chat
-- Review the current `@@unique([applicationId, mode])` constraint because it currently allows only one conversation per application/mode.
+- Add shared chat mode/types helpers.
+- Add central model selection/cost policy helper.
+- Add shared JSON parsing helper for model sidecar outputs.
+- Add agent definitions for Profile, Application, and General.
+- Add shared CVHelp global rules.
+- Add user preference extraction from existing `ProfileBank.masterProfile.preferences` and `constraints`.
+- Move profile/application memory update functions out of `/api/chat`.
+- Keep public `build_profile` mode for backwards compatibility while internally naming the agent `profile`.
+- Keep current request and response shapes.
 
-Deliverables:
+Likely files:
 
-- Prisma migration for memory/artifact changes.
-- Types/helpers for profile memory and application memory JSON.
-- API update for profile memory write/read.
-- API update for application memory write/read.
-- Seed/import script or utility to map existing `proofcv/applications/*` data into the new database shape.
+- `src/lib/chat/types.ts`
+- `src/lib/ai/models.ts`
+- `src/lib/ai/json.ts`
+- `src/lib/ai/agents.ts`
+- `src/lib/ai/memory-updates.ts`
 
 Tests:
 
-- Unit tests for JSON shape validation.
-- API tests for creating an application and saving memory.
-- Regression test that one application chat cannot see another application's private memory.
-- Migration test against a fresh database.
+- Existing `/api/chat` tests still pass.
+- Unit tests for agent selection.
+- Unit tests for instruction ordering: global rules, user preferences, agent-specific instructions.
+- Regression test that profile chat still updates profile bank.
+- Regression test that application chat still updates only selected application memory.
 
-## Phase 3: Auth, Sessions, and Account Safety
-
-Status: planned.
+## Phase 3: Scoped Context Builder
 
 Goal:
 
-Make signin/signup reliable enough for real users.
+Replace inline prompt assembly with a scoped context builder that is explicit, bounded, and reusable.
 
 Work:
 
-- Keep email/password auth working.
-- Confirm production `NEXTAUTH_URL`, `NEXTAUTH_SECRET`, database envs, and OAuth callback URLs.
-- Add password reset route planning if email provider is added.
-- Improve signup/signin validation and error states.
-- Add account settings shell.
-- Add route guards for all workspace, API, payment, and export routes.
-- Decide whether OAuth is in MVP or after MVP.
+- Add conversation helpers for get/create/clear and ownership checks.
+- Add context builder for recent messages, user preferences, profile summary, application state, and source snippets.
+- Keep recent message behavior initially equivalent to today.
+- Ensure General Chat receives only general conversation context and selected safe summaries by default.
+- Ensure Application Chat receives only the selected application state.
+- Ensure Profile Chat receives profile bank context but no unrelated application memory.
 
-Deliverables:
+Likely files:
 
-- Hardened auth pages and API behavior.
-- Account settings page or modal.
-- Environment checklist for Vercel.
+- `src/lib/chat/conversations.ts`
+- `src/lib/chat/context.ts`
+- `src/lib/chat/context.test.ts`
 
 Tests:
 
-- Signup creates a user and signs in.
-- Duplicate signup is rejected.
-- Invalid credentials are rejected.
-- Signed-out users cannot access `/app` or private APIs.
-- Signed-in users cannot access another user's applications, conversations, files, or generated artifacts.
+- Application A context never includes Application B state.
+- Profile context never includes application memory.
+- General context does not include full application memories by default.
+- API response shape remains compatible with current frontend.
+- Rate limits still apply before model calls.
 
-## Phase 4: Profile Builder Chat System
-
-Status: planned.
+## Phase 4: General Chat Router and Handoffs
 
 Goal:
 
-Make the profile builder a guided AI intake system, not just a general chat box.
+Expose General Chat and make it the production application/profile routing layer.
 
 Work:
 
-- Define a profile schema with sections:
-  - identity and contact
-  - links
-  - education
-  - experience
-  - projects
-  - research
-  - skills
-  - achievements
-  - preferences
-  - constraints
-  - evidence
-  - open questions
-- Add guided intake states:
-  - initial CV upload or paste
-  - LinkedIn/GitHub/project import
-  - experience confirmation
-  - evidence and metrics collection
-  - role preferences
-  - final review
-- Make the agent ask one useful question at a time when profile gaps remain.
-- Add source cards and editable profile facts in the UI.
-- Add correction/delete flow for facts.
-- Add profile completeness scoring based on saved evidence, not just message count.
+- Add visible General Chat navigation with minimal UI changes.
+- De-emphasize or remove the existing "Add job description" form from the Applications sidebar after the General flow is working.
+- Add a typed chat action response format for assistant messages.
+- Render action buttons under assistant messages.
+- Add deterministic backend action `create_application_from_job_source`.
+- Reuse existing application creation logic for pasted job descriptions and URLs.
+- Return an `open_application_chat` action after successful application creation.
+- Add deterministic backend action `handoff_to_profile_chat`.
+- Create or update the destination profile conversation with a concise handoff note.
+- Return a `continue_in_profile_chat` action after profile handoff creation.
+- Preserve direct `/api/applications` creation for backwards compatibility and tests.
 
-Deliverables:
+Likely files:
 
-- Profile builder chat instructions.
-- Profile memory update function.
-- Profile review UI.
-- Source/fact editing UI.
-- Profile completeness panel.
+- `src/lib/tools/application-actions.ts`
+- `src/lib/chat/actions.ts`
+- `src/lib/chat/handoffs.ts`
+- `src/components/app-shell.tsx`
+- `src/app/api/chat/route.ts`
 
 Tests:
 
-- Uploading a CV stores a raw source and updates checklist.
-- Chat-provided facts are extracted into the profile bank.
-- Corrections replace facts instead of duplicating them.
-- Delete requests remove or mark facts as excluded.
-- The profile agent does not invent dates, employers, metrics, credentials, or links.
+- General Chat can propose application creation from pasted job text.
+- Backend creates the application only through the deterministic action.
+- New application has job post, summary, memory, and default application conversation.
+- Action button payload contains only user-owned application IDs.
+- Clicking/opening action loads the new isolated application chat.
+- General Chat profile-related content does not update profile bank directly.
+- Profile handoff creates an auditable destination note.
+- Existing application creation API still works.
 
-## Phase 5: Application Workspace System
-
-Status: planned.
+## Phase 5: First-Class Sources and Attachments
 
 Goal:
 
-Each application should behave like its own project folder from `proofcv`, but in the app.
+Stop treating attachments as appended message text and make sources first-class, scoped records.
 
 Work:
 
-- Improve application creation from pasted descriptions and URLs.
-- Save job post content, source URL, captured date, and extracted text.
-- Add application overview panel:
-  - company
-  - role
-  - status
-  - next action
-  - fit score or fit summary
-  - risks/gaps
-  - selected evidence
-  - draft outputs
-- Add per-application memory:
-  - job requirements
-  - responsibilities
-  - keywords
-  - must-have skills
-  - nice-to-have skills
-  - matched evidence
-  - gaps
-  - honesty notes
-  - selected projects/research/experience
-  - generated CV data
-- Add separate chats for each application workspace.
-- Add status transitions:
-  - draft
-  - researching
-  - tailoring CV
-  - cover note ready
-  - submitted
-  - interviewing
-  - rejected
-  - archived
-- Add application deletion/archive behavior.
+- Add normalized `Source` table.
+- Add `ChatMessageSource` join table.
+- Keep existing `ProfileBank.rawSources` during migration for backwards compatibility.
+- Update uploads to create source rows and preserve the current profile-source behavior.
+- Support source scopes: `profile`, `application`, and `general`.
+- Allow General Chat to attach a job source and convert it into an application source during creation.
+- Allow Application Chat to attach application-specific files without polluting the profile bank.
+- Context builder retrieves relevant source snippets by ID and scope.
 
-Deliverables:
+Likely schema:
 
-- Application detail route or rich in-app detail state.
-- Application memory panel.
-- Application chat memory updater.
-- Application status controls.
-- Import/export shape compatible with `proofcv` data.
+- `Source(id, userId, scope, applicationId, kind, name, mimeType, sizeBytes, textContent, metadata, createdAt, updatedAt)`
+- `ChatMessageSource(messageId, sourceId, userId, createdAt)`
+- Optional `ChatMessage.metadata Json?`
 
 Tests:
 
-- Creating an application saves the job post and creates a scoped chat.
-- Switching applications loads the correct chat and memory.
-- Application A chat cannot read Application B memory.
-- Job post updates preserve previous notes and drafts.
-- Application status changes persist.
+- Source ownership checks reject cross-user source IDs.
+- Application source cannot be attached to another application chat.
+- General source converted into a new application remains scoped to that application.
+- Existing profile-source UI still shows older raw sources.
+- Upload limits and billing gates still apply.
 
-## Phase 6: Generation and Outputs
-
-Status: planned.
+## Phase 6: Conversation Summaries and Relevant Retrieval
 
 Goal:
 
-Turn saved profile and application memory into concrete artifacts.
+Keep chat fast and inexpensive as histories grow.
 
 Work:
 
-- Generate role-specific CV data from profile bank plus application memory.
-- Generate CV bullets with source-backed claims.
-- Generate cover notes, recruiter emails, and application answers.
-- Add an output review screen before export.
-- Add regenerate/refine flows.
-- Add PDF/TeX rendering strategy:
-  - either integrate existing `proofcv/services/pdf-renderer`
-  - or add a Vercel-compatible rendering path
-  - or keep TeX/PDF generation as a background/export service
-- Store generated artifacts with version history.
-- Add artifact status:
-  - draft
-  - reviewed
-  - exported
-  - submitted
+- Add conversation summary storage.
+- Summarize only after threshold crossings, not on every message.
+- Use recent messages plus summary plus relevant older messages.
+- Start with deterministic keyword retrieval scoped to the conversation.
+- Add model-assisted relevance only if deterministic retrieval is insufficient.
+- Bound prompt size by character/token budgets.
 
-Deliverables:
+Likely schema:
 
-- `/api/applications/[id]/generate`
-- `/api/applications/[id]/artifacts`
-- Artifact review UI.
-- Export/download flow.
-- ProofCV-compatible `cv_data` export.
+- `Conversation.summary Json?`
+- `Conversation.lastSummarizedMessageId String?`
 
 Tests:
 
-- Generated output uses only saved profile/application evidence.
-- Regeneration creates a new version instead of overwriting history silently.
-- Exports are scoped to the signed-in user.
-- PDF generation failure returns a useful error without losing drafts.
+- Summary is skipped below threshold.
+- Summary updates preserve recent message behavior.
+- Older-message retrieval stays scoped to one conversation.
+- Context budget truncates predictable sections before dropping current user message.
 
-## Phase 7: Payments and Subscription Routes
-
-Status: planned.
+## Phase 7: Memory Write Discipline
 
 Goal:
 
-Add payment boundaries now so Stripe can be connected after pricing is decided.
+Make memory/state updates explicit, validated, and scoped.
 
 Work:
 
-- Add payment route placeholders:
-  - `POST /api/billing/checkout`
-  - `POST /api/billing/portal`
-  - `POST /api/billing/webhook`
-  - `GET /api/billing/status`
-- Add subscription fields or related model:
-  - provider
-  - providerCustomerId
-  - providerSubscriptionId
-  - plan
-  - status
-  - currentPeriodEnd
-  - trialEndsAt
-- Add feature gating helper:
-  - free profile builder limits
-  - application count limits
-  - generation/export limits
-  - paid unlimited or higher limits
-- Keep pricing strategy undecided for now.
-- Avoid hardcoding product IDs until Stripe products are created.
-
-Deliverables:
-
-- Billing schema.
-- Billing API route skeletons.
-- Billing status UI placeholder.
-- Feature gate helper.
-- Stripe integration notes in docs.
+- Profile Agent may update global profile facts and preferences.
+- Application Agent may update only selected application memory by default.
+- General Agent may propose deterministic actions and handoffs, but does not directly write profile facts.
+- Add explicit deterministic promotion flow if application evidence should become reusable profile memory.
+- Validate sidecar model JSON with strict schemas before saving.
+- Preserve existing memory on invalid sidecar output.
+- Log memory-update failures without leaking CV/job content.
 
 Tests:
 
-- Signed-out users cannot call billing routes.
-- Billing status returns a predictable free/default state.
-- Feature gates block over-limit actions with clear messages.
-- Webhook route validates signatures once Stripe is connected.
+- Application chat never calls `profileBank.update` without explicit supported promotion.
+- Profile chat never updates application memory.
+- General chat never directly writes profile bank facts.
+- Malformed memory update JSON preserves existing data.
+- Corrections replace facts instead of duplicating conflicting facts.
 
-## Phase 8: UI Polish and Product Flow
-
-Status: planned.
+## Phase 8: Deterministic Platform Tools
 
 Goal:
 
-Make the app feel like a serious workspace rather than a single chat page.
+Let agents invoke safe backend actions while backend code remains the source of truth.
 
 Work:
 
-- Redesign workspace layout around:
-  - left navigation
-  - application list
-  - profile bank status
-  - main chat/detail panel
-  - right-side memory/output panel where useful
-- Add clear empty states.
-- Add loading, saving, error, and success states.
-- Add mobile layout.
-- Add profile review and application overview screens.
-- Add artifact cards for CV, cover note, recruiter message, and Q&A.
-- Add status badges and progress indicators.
-- Improve message rendering for structured outputs.
-
-Deliverables:
-
-- Polished authenticated workspace.
-- Responsive application/profile screens.
-- Stable component structure.
-- Accessible controls and keyboard-friendly flows.
+- Define action registry with schemas, permissions, and audit metadata.
+- Candidate actions:
+  - `create_application_from_job_source`
+  - `open_application_chat`
+  - `handoff_to_profile_chat`
+  - `archive_application`
+  - `restore_application`
+  - `update_application_status`
+  - `rename_application`
+  - `compare_applications`
+- Separate action proposal from action execution.
+- Require explicit user click/confirmation for destructive or status-changing actions.
 
 Tests:
 
-- Browser tests for desktop and mobile.
-- No overlapping text or broken layout at common viewport sizes.
-- Core flows are usable without console errors.
-- Loading/error/empty states render correctly.
+- Cross-user application IDs are rejected.
+- Archive/restore/status update actions validate allowed transitions.
+- Model-proposed malformed action payloads are ignored or returned as safe errors.
+- Action audit metadata is saved where appropriate.
 
-## Phase 9: End-to-End Tests and Quality Gates
-
-Status: planned.
+## Phase 9: UI Flow and Regression Polish
 
 Goal:
 
-Make every core feature testable before deployment.
+Make the new workflow feel native without a major redesign.
 
 Work:
 
-- Add a test runner and browser test setup.
-- Add mocked OpenAI responses for deterministic tests.
-- Add test database setup.
-- Add fixtures for CV text, job post text, and application data.
-- Add CI or local quality script.
+- Add General Chat as a top-level rail entry.
+- Keep Profile and Application chat layouts familiar.
+- Convert Applications sidebar into navigation/search/status.
+- Render assistant action buttons consistently.
+- Add clear empty states:
+  - General Chat: paste a job, ask career/application questions, or route profile changes.
+  - Profile Chat: add or confirm reusable facts/preferences.
+  - Application Chat: tailor outputs for this saved application.
+- Ensure mobile layout still works after adding General Chat.
 
-Required end-to-end tests:
+Tests:
 
-- User signs up, signs in, and reaches `/app`.
-- User uploads/pastes profile info and profile bank updates.
-- User creates Application A and Application B.
-- Each application has separate chat history.
-- Application memory updates after chat.
-- Generated draft is saved to the correct application.
-- Signed-out user is redirected away from workspace.
-- User cannot access another user's application by ID.
-- Billing status route returns the expected state.
+- Component-level tests where practical.
+- Browser smoke tests for General Chat, Profile Chat, and Application Chat.
+- Desktop and mobile visual checks.
+- No text overlap in navigation/actions/composer.
 
-Quality gates:
+## Phase 10: Production Readiness
+
+Goal:
+
+Ship the refactor safely.
+
+Work:
+
+- Run full quality gate.
+- Verify Prisma migrations on a fresh database.
+- Verify migration path from existing data.
+- Confirm Vercel environment variables.
+- Confirm OpenAI model settings.
+- Confirm billing route behavior after changes.
+- Run production smoke tests after deployment.
+
+Tests:
 
 - `npm run typecheck`
+- `npm test`
 - `npm run build`
-- unit/API tests
-- browser E2E tests
-- migration status check before deploy
-
-## Phase 10: Production Readiness and Vercel Deployment
-
-Status: planned.
-
-Goal:
-
-Deploy a reliable first production version.
-
-Work:
-
-- Rotate any exposed local secrets.
-- Confirm Vercel env vars:
-  - `DATABASE_URL`
-  - `DATABASE_URL_UNPOOLED`
-  - `NEXTAUTH_URL`
-  - `NEXTAUTH_SECRET`
-  - `OPENAI_API_KEY`
-  - `OPENAI_MODEL`
-  - OAuth provider vars if enabled
-  - Stripe vars once billing is connected
-- Add deployment checklist.
-- Add basic logging/error handling.
-- Add rate limits or abuse protection for AI and upload routes.
-- Add privacy/data deletion plan.
-- Verify deployed site manually and with browser tests.
-
-Deliverables:
-
-- Production deployment.
-- Deployment checklist.
-- Known issues list.
-- First beta release notes.
-
-Tests:
-
-- Production smoke test.
-- Signup/signin works on deployed URL.
-- AI chat works on deployed URL.
-- Profile upload works on deployed URL.
-- Application creation and application-specific chat work on deployed URL.
-- Billing status route works on deployed URL.
+- `npx prisma migrate status`
+- Deployed smoke test for auth.
+- Deployed smoke test for General Chat application creation.
+- Deployed smoke test for Profile Chat handoff.
+- Deployed smoke test for Application Chat isolation.
