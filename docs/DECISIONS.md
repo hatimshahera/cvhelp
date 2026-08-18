@@ -114,6 +114,16 @@ Reasoning:
 
 Application creation, archive/delete/status updates, profile handoffs, and other platform actions require ownership checks, schema validation, billing/rate gates, and predictable storage behavior. The model must not directly manipulate database state.
 
+### Platform Action Confirmation
+
+Decision:
+
+Archive, restore, status update, and rename actions require an explicit `confirmed: true` payload before backend execution. Compare actions are read-only and do not require confirmation.
+
+Reasoning:
+
+General Chat can help identify useful workspace actions, but state changes must be intentional and auditable. Requiring confirmation creates a deterministic boundary for actions that affect application state.
+
 ### Profile Handoffs from General Chat
 
 Decision:

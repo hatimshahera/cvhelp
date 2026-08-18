@@ -167,6 +167,8 @@ Tests:
 - Explicit profile update request creates or uses a supported profile update/handoff path.
 - General Chat profile discussion creates a handoff rather than mutating profile bank.
 - Deterministic action payloads reject unauthorized IDs.
+- Deterministic application management actions require explicit confirmation before mutation.
+- Application management actions append audit metadata to application notes.
 - AI failure rolls back only the failed chat turn when appropriate.
 - Long conversations use recent messages, rolling summaries, and scoped relevant older messages instead of sending unbounded history.
 - Conversation summaries are generated only after the configured threshold and remain scoped to the current conversation.

@@ -177,24 +177,25 @@ Tests:
 
 ## Phase 8: Deterministic Platform Tools
 
-- [ ] Add action registry schemas.
-- [ ] Add action permission checks.
-- [ ] Add action audit metadata.
-- [ ] Add `archive_application`.
-- [ ] Add `restore_application`.
-- [ ] Add `update_application_status`.
-- [ ] Add `rename_application`.
-- [ ] Add `compare_applications`.
-- [ ] Require explicit user confirmation for destructive/status-changing actions.
+- [x] Add action registry schemas.
+- [x] Add action permission checks.
+- [x] Add action audit metadata.
+- [x] Add `archive_application`.
+- [x] Add `restore_application`.
+- [x] Add `update_application_status`.
+- [x] Add `rename_application`.
+- [x] Add `compare_applications`.
+- [x] Require explicit user confirmation for destructive/status-changing actions.
 
 Tests:
 
-- [ ] Cross-user application IDs are rejected.
-- [ ] Invalid status transitions are rejected.
-- [ ] Malformed model action payloads are ignored safely.
-- [ ] Destructive actions require confirmation.
-- [ ] `npm run typecheck`.
-- [ ] `npm test`.
+- [x] Cross-user application IDs are rejected.
+- [x] Invalid status transitions are rejected.
+- [x] Malformed model action payloads are ignored safely.
+- [x] Destructive actions require confirmation.
+- [x] `npm run typecheck`.
+- [x] `npm test`.
+- [x] `npm run build`.
 
 ## Phase 9: UI Flow and Regression Polish
 

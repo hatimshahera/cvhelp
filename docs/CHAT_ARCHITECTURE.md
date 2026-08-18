@@ -190,6 +190,14 @@ Rules:
 - Destructive/status-changing actions require explicit user confirmation.
 - Malformed or unauthorized actions are ignored or returned as safe errors.
 
+Implemented platform action execution:
+
+- `POST /api/chat/actions` executes validated deterministic actions for signed-in users.
+- Mutating application actions require `confirmed: true`.
+- Application management actions check ownership with `userId` before writes.
+- Mutating actions append an audit note to `Application.notes.entries`.
+- `compare_applications` returns safe user-owned application summaries without mutating state.
+
 ## Memory Writes
 
 Profile memory:

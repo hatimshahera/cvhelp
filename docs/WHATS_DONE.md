@@ -99,6 +99,8 @@ Current `/api/chat` behavior:
 - Creates applications from General Chat through deterministic backend code.
 - Creates explicit Profile Chat handoffs from General Chat.
 - Creates explicit Profile Chat handoffs from Application Chat when the user asks to update reusable/global profile facts.
+- Provides `POST /api/chat/actions` for deterministic platform actions.
+- Supports confirmed archive, restore, status update, rename, and read-only comparison actions with ownership checks.
 - Uses extracted agent, context, source, handoff, application-action, and memory-update helpers.
 
 Current `/api/profile-sources` behavior:
@@ -178,10 +180,9 @@ ProofCV application data shape currently includes:
 ## Known Gaps
 
 - The README and older docs may understate current implementation and need updating as part of architecture work.
-- There is no deterministic chat action registry yet.
+- Browser smoke tests are still missing.
 - Application memory remains JSON-based and should be protected by stricter context and write boundaries.
 - Source retrieval uses scoped source records but does not yet chunk large files independently.
-- Browser smoke tests are still missing.
 - No end-to-end tests exist.
 - No production smoke test has been performed in this planning pass.
 - Secrets appear in local env files and should be treated carefully.
