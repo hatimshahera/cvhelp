@@ -51,26 +51,27 @@ Tests:
 
 ## Phase 3: Scoped Context Builder
 
-- [ ] Add `src/lib/chat/conversations.ts`.
-- [ ] Add `src/lib/chat/context.ts`.
-- [ ] Move get/create conversation logic out of `/api/chat`.
-- [ ] Move clear conversation logic out of `/api/chat`.
-- [ ] Move recent message loading out of `/api/chat`.
-- [ ] Build Profile Agent context from profile conversation, profile summary, profile sources, and user preferences.
-- [ ] Build Application Agent context from one application conversation, selected application state, relevant profile facts, global preferences, and relevant sources.
-- [ ] Build General Agent context from general conversation and safe high-level workspace summaries only.
-- [ ] Bound context size.
-- [ ] Ensure current user message is never dropped by truncation.
+- [x] Add `src/lib/chat/conversations.ts`.
+- [x] Add `src/lib/chat/context.ts`.
+- [x] Move get/create conversation logic out of `/api/chat`.
+- [x] Move clear conversation logic out of `/api/chat`.
+- [x] Move recent message loading out of `/api/chat`.
+- [x] Build Profile Agent context from profile conversation, profile summary, profile sources, and user preferences.
+- [x] Build Application Agent context from one application conversation, selected application state, relevant profile facts, global preferences, and relevant sources.
+- [x] Build General Agent context from general conversation and safe high-level workspace summaries only.
+- [x] Bound context size.
+- [x] Ensure current user message is never dropped by truncation.
 
 Tests:
 
-- [ ] Application A context excludes Application B memory and messages.
-- [ ] Profile context excludes application memory.
-- [ ] General context excludes full application memories by default.
-- [ ] Rate limits still run before model calls.
-- [ ] `/api/chat` response remains frontend-compatible.
-- [ ] `npm run typecheck`.
-- [ ] `npm test`.
+- [x] Application A context excludes Application B memory and messages.
+- [x] Profile context excludes application memory.
+- [x] General context excludes full application memories by default.
+- [x] Rate limits still run before model calls.
+- [x] `/api/chat` response remains frontend-compatible.
+- [x] `npm run typecheck`.
+- [x] `npm test`.
+- [x] `npm run build`.
 
 ## Phase 4: General Chat Router and Handoffs
 

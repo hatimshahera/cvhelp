@@ -7,7 +7,6 @@ import {
   appendRawSource,
   createDefaultProfileBankData,
   createInitialApplicationMemory,
-  getRecentSourceContext,
   markChecklistFromText,
   parseApplicationMemory,
   summarizeProfileBank
@@ -15,7 +14,15 @@ import {
 import { buildAgentInstructions } from "@/lib/ai/agents";
 import { getOpenAIModel } from "@/lib/ai/models";
 import { updateApplicationMemory, updateMasterProfile } from "@/lib/ai/memory-updates";
-import { chatModeSchema } from "@/lib/chat/types";
+import {
+  clearConversationMessages,
+  getLatestConversationWithMessages,
+  getOrCreateConversation,
+  getRecentConversationMessages,
+  listConversationMessages
+} from "@/lib/chat/conversations";
+import { buildChatPromptContext } from "@/lib/chat/context";
+import { chatModeSchema, conversationApplicationIdForMode } from "@/lib/chat/types";
 import { prisma } from "@/lib/prisma";
 import { checkRequestLimit, getIntegerEnv } from "@/lib/rate-limit";
 import { logError } from "@/lib/server-log";
@@ -114,20 +121,10 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Choose an application first." }, { status: 400 });
   }
 
-  const conversation = await prisma.conversation.findFirst({
-    where: { userId: user.id, mode, applicationId: application?.id ?? null },
-    orderBy: { updatedAt: "desc" },
-    include: {
-      messages: {
-        orderBy: { createdAt: "asc" },
-        select: {
-          id: true,
-          role: true,
-          content: true,
-          createdAt: true
-        }
-      }
-    }
+  const conversation = await getLatestConversationWithMessages({
+    userId: user.id,
+    mode,
+    applicationId: conversationApplicationIdForMode(mode, application?.id)
   });
 
   return NextResponse.json({
@@ -161,30 +158,11 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: "Choose an application first." }, { status: 400 });
   }
 
-  const conversation = await prisma.conversation.findFirst({
-    where: {
-      userId: user.id,
-      mode,
-      applicationId: application?.id ?? null
-    }
+  const conversation = await clearConversationMessages({
+    userId: user.id,
+    mode,
+    applicationId: conversationApplicationIdForMode(mode, application?.id)
   });
-
-  if (conversation) {
-    await prisma.chatMessage.deleteMany({
-      where: {
-        conversationId: conversation.id,
-        userId: user.id
-      }
-    });
-
-    await prisma.conversation.update({
-      where: { id: conversation.id },
-      data: {
-        title: "New chat",
-        updatedAt: new Date()
-      }
-    });
-  }
 
   return NextResponse.json({
     conversationId: conversation?.id ?? null,
@@ -248,25 +226,13 @@ export async function POST(request: Request) {
     );
   }
 
-  const conversation = parsed.data.conversationId
-    ? await prisma.conversation.findFirst({
-      where: {
-        id: parsed.data.conversationId,
-        userId: user.id,
-        mode,
-        applicationId: application?.id ?? null,
-        threadKey: "default"
-      }
-    })
-    : await prisma.conversation.create({
-        data: {
-          userId: user.id,
-          mode,
-          applicationId: application?.id ?? null,
-          threadKey: "default",
-          title: toTitle(parsed.data.message)
-        }
-      });
+  const conversation = await getOrCreateConversation({
+    userId: user.id,
+    mode,
+    applicationId: conversationApplicationIdForMode(mode, application?.id),
+    conversationId: parsed.data.conversationId,
+    title: toTitle(parsed.data.message)
+  });
 
   if (!conversation) {
     return NextResponse.json({ error: "Conversation not found." }, { status: 404 });
@@ -290,54 +256,30 @@ export async function POST(request: Request) {
         })
       : profileBank;
 
-  const recentMessages = (
-    await prisma.chatMessage.findMany({
-      where: {
-        conversationId: conversation.id,
-        userId: user.id
-      },
-      orderBy: { createdAt: "desc" },
-      take: 24,
-      select: {
-        role: true,
-        content: true
-      }
-    })
-  ).reverse();
+  const recentMessages = await getRecentConversationMessages({
+    conversationId: conversation.id,
+    userId: user.id
+  });
 
   try {
     const openai = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY
     });
-    const transcript = recentMessages
-      .map((item) => `${item.role === "assistant" ? "Assistant" : "User"}: ${item.content}`)
-      .join("\n\n");
-    const profileContext =
-      mode === "build_profile" || mode === "application"
-        ? `\n\nCurrent profile bank summary:\n${JSON.stringify(
-            summarizeProfileBank(updatedProfileBank),
-            null,
-          2
-          )}\n\nRecent profile-bank sources:\n${getRecentSourceContext(updatedProfileBank?.rawSources) || "No sources yet."}`
-        : "";
-      const applicationContext =
-      mode === "application" && application
-        ? `\n\nSelected application:\n${JSON.stringify(
-            {
-              company: application.company,
-              role: application.role,
-              status: application.status,
-              nextAction: application.nextAction,
-              jobPost: application.jobPost,
-              jobSummary: application.jobSummary,
-              memory: application.memory,
-              notes: application.notes,
-              drafts: application.drafts
-            },
-            null,
-            2
-          )}`
-        : "";
+    const workspaceApplications =
+      mode === "general"
+        ? await prisma.application.findMany({
+            where: { userId: user.id },
+            orderBy: { updatedAt: "desc" },
+            take: 20,
+            select: {
+              id: true,
+              company: true,
+              role: true,
+              status: true,
+              nextAction: true
+            }
+          })
+        : [];
 
     const response = await openai.responses.create({
       model: getOpenAIModel("chat"),
@@ -345,7 +287,14 @@ export async function POST(request: Request) {
         mode,
         profileBank: updatedProfileBank
       }),
-      input: `The signed-in user's name is ${user.name}. Continue this private conversation.${profileContext}${applicationContext}\n\n${transcript}`
+      input: buildChatPromptContext({
+        mode,
+        userName: user.name,
+        recentMessages,
+        profileBank: updatedProfileBank,
+        application,
+        workspaceApplications
+      })
     });
 
     const assistantText =
@@ -455,18 +404,9 @@ export async function POST(request: Request) {
       });
     }
 
-    const conversationMessages = await prisma.chatMessage.findMany({
-      where: {
-        conversationId: conversation.id,
-        userId: user.id
-      },
-      orderBy: { createdAt: "asc" },
-      select: {
-        id: true,
-        role: true,
-        content: true,
-        createdAt: true
-      }
+    const conversationMessages = await listConversationMessages({
+      conversationId: conversation.id,
+      userId: user.id
     });
 
     return NextResponse.json({
